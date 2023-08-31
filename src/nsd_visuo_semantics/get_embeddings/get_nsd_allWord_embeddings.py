@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import nltk
 import numpy as np
 
-from .word_lists import verb_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
 
 GET_WORD_EMBEDDINGS = 1
 DO_SANITY_CHECK = 1

@@ -25,14 +25,14 @@ import time
 import numpy as np
 from scipy.spatial.distance import pdist
 
-from ..utils.batch_gen import BatchGen
-from ..utils.nsd_get_data_light import (
+from nsd_visuo_semantics.utils.batch_gen import BatchGen
+from nsd_visuo_semantics.utils.nsd_get_data_light import (
     get_conditions,
     get_conditions_515,
     get_model_rdms,
     get_rois,
 )
-from ..utils.tf_utils import corr_rdms
+from nsd_visuo_semantics.utils.tf_utils import corr_rdms
 
 pdb.set_trace()
 COMPUTE = False  # if False, load rdm correlations and skip directly to postprocessing/plotting

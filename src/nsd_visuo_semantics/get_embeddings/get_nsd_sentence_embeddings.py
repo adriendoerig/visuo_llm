@@ -7,7 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial
 
-from .embedding_models_zoo import get_embedding_model, get_embeddings
+from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import (
+    get_embedding_model,
+    get_embeddings,
+)
 
 SANITY_CHECK = 1
 GET_EMBEDDINGS = 1

@@ -25,7 +25,11 @@ from fracridge import FracRidgeRegressorCV
 from nsd_access import NSDAccess
 from scipy.spatial.distance import cdist, correlation, cosine, pdist
 
-from ..utils.nsd_get_data_light import (
+from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import (
+    get_embedding_model,
+    get_embeddings,
+)
+from nsd_visuo_semantics.utils.nsd_get_data_light import (
     get_conditions,
     get_conditions_515,
     get_rois,
@@ -121,11 +125,6 @@ sentences_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
 # prepare the test set embeddings
 embeddings_test_path = f"{nsd_embeddings_path}/captions_515_embeddings.npy"
 if not os.path.exists(embeddings_test_path):
-    from ..get_embeddings.embedding_models_zoo import (
-        get_embedding_model,
-        get_embeddings,
-    )
-
     embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
     captions_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
     dummy_embedding = get_embeddings(
@@ -231,11 +230,6 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                 f"{nsd_embeddings_path}/captions_not515_embeddings_{subj}.npy"
             )
             if not os.path.exists(train_embeddings_path):
-                from embedding_models_zoo import (
-                    get_embedding_model,
-                    get_embeddings,
-                )
-
                 embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
                 captions_not515 = get_sentence_lists(nsda, sample_train - 1)
                 embeddings_train = np.empty(

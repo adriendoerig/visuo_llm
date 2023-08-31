@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from tf_utils import chunking as ch
-from tf_utils import compute_rdm_batch
+
+from nsd_visuo_semantics.utils.tf_utils import chunking as ch
+from nsd_visuo_semantics.utils.tf_utils import compute_rdm_batch
 
 
 def tf_searchlight(betas_sampled, indices, sorted_indices, batch_size=50):

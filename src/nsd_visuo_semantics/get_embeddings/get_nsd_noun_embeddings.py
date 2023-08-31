@@ -8,7 +8,10 @@ import nltk
 import numpy as np
 from scipy.spatial.distance import cdist, correlation
 
-from .word_lists import coco_categories_91, noun_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import (
+    coco_categories_91,
+    noun_adjustments,
+)
 
 CHECK_FASTTEXT = 1
 GET_NOUN_EMBEDDINGS = 1

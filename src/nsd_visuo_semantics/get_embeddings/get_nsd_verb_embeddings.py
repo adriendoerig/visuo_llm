@@ -7,7 +7,7 @@ import nltk
 import numpy as np
 import scipy.spatial
 
-from .word_lists import verb_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
 
 CHECK_FASTTEXT = 1
 GET_VERB_EMBEDDINGS = 1
