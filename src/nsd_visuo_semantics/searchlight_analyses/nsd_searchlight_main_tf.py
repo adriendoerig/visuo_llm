@@ -4,15 +4,17 @@ import time
 import numpy as np
 from tf_utils import chunking, corr_rdms, sort_spheres
 
-from ..utils.batch_gen import BatchGen
-from ..utils.nsd_get_data_light import (
+from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import (
+    tf_searchlight as tfs,
+)
+from nsd_visuo_semantics.utils.batch_gen import BatchGen
+from nsd_visuo_semantics.utils.nsd_get_data_light import (
     get_conditions,
     get_conditions_515,
     get_masks,
     get_model_rdms,
 )
-from ..utils.utils import reorder_rdm
-from .tf_searchlight import tf_searchlight as tfs
+from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 initial_time = time.time()
 

@@ -13,7 +13,7 @@ import pandas as pd
 from PIL import Image
 from scipy.stats import zscore
 
-from .utils import reorder_rdm
+from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 
 def get_model_rdms(models_dir, subj, filt=None, only_names=False):

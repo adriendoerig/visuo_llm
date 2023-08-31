@@ -13,8 +13,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from .dataset_loader.make_tf_dataset import get_dataset
-from .task_helper_functions import (
+from nsd_visuo_semantics.get_dnn_activities.dataset_loader.make_tf_dataset import (
+    get_dataset,
+)
+from nsd_visuo_semantics.get_dnn_activities.task_helper_functions import (
     get_activities_model,
     load_and_override_hparams,
     load_model_from_path,
