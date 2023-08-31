@@ -5,9 +5,10 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial
-from embedding_models_zoo import get_embedding_model, get_embeddings
 from scipy import stats
-from word_lists import coco_categories_91
+
+from .embedding_models_zoo import get_embedding_model, get_embeddings
+from .word_lists import coco_categories_91
 
 MAKE_DATASET = 1  # loads ms_coco_guse dataset, and copies it in a new dataset, adding embeddings
 CHECK_DATASET = 1  # loads newly made dataset and runs a few sanity checks
