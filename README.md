@@ -17,11 +17,6 @@ This [KietzmannLab] package was generated with [Cookiecutter] using [@KietzmannL
 
 ## Installation
 
-You can install `nsd_visuo_semantics` via [pip]:
-
-    pip install nsd_visuo_semantics
-
-
 
 To install latest development version :
 
