@@ -27,6 +27,12 @@ To install latest development version :
 
     pip install git+https://github.com/KietzmannLab/nsd_visuo_semantics.git
 
+    
+To install the most stable version, please select a tagged release on Github (currently v0.0.1):
+
+    pip install  git+https://github.com/KietzmannLab/pytorch-dataset-loaders.git@v0.0.1
+    
+
 
 ## Contributing
 
