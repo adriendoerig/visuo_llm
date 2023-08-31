@@ -25,7 +25,9 @@ You can install `nsd_visuo_semantics` via [pip]:
 
 To install latest development version :
 
-    pip install git+https://github.com/KietzmannLab/nsd_visuo_semantics.git
+    git clone https://github.com/KietzmannLab/nsd_visuo_semantics.git
+    cd code_directory/
+    pip install -e . 
 
     
 To install the most stable version, please select a tagged release on Github (currently v0.0.2):
