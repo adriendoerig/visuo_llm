@@ -21,10 +21,8 @@ import os
 import pdb
 import pickle
 import time
-
 import numpy as np
 from scipy.spatial.distance import pdist
-
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
 from nsd_visuo_semantics.utils.nsd_get_data_light import (
     get_conditions,
@@ -48,11 +46,12 @@ MODEL_NAMES = [
     "fasttext_categories",
     "fasttext_all",
     "fasttext_verbs",
-    "dnn_mpnet_ff",
+    "fasttext_nouns",
+    # "dnn_mpnet_ff",
     "dnn_mpnet_rec",
-    "dnn_multihot_ff",
+    # "dnn_multihot_ff",
     "dnn_multihot_rec",
-    "dnn_guse_ff",
+    # "dnn_guse_ff",
     "dnn_guse_rec",
     "dnn_ecoset_category",
     "dnn_ecoset_fasttext",
