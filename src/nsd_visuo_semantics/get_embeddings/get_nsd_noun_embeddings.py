@@ -17,7 +17,15 @@ CHECK_FASTTEXT = 1
 GET_NOUN_EMBEDDINGS = 1
 DO_SANITY_CHECK = 1
 
-# MATCH_TO_COCO_CATEGORY_NOUNS = True  # if True, use the nearest coco object category embedding for each noun
+h5_dataset_path = "/mnt/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
+fasttext_embeddings_path = "./crawl-300d-2M.vec"
+nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"
+save_test_imgs_to = "./_check_imgs"
+os.makedirs(save_test_imgs_to, exist_ok=1)
+save_embeddings_to = "../results_dir/saved_embeddings"
+os.makedirs("../results_dir", exist_ok=1)
+os.makedirs(save_embeddings_to, exist_ok=1)
+
 
 for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
     if MATCH_TO_COCO_CATEGORY_NOUNS:
@@ -26,14 +34,6 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
         SAVE_SUFFIX = f"_closest_cocoCats_cut{CUTOFF}"
     else:
         SAVE_SUFFIX = ""
-    h5_dataset_path = "/rds/projects/c/charesti-start/projects/NSD/ms_coco_GUSE_square256.h5"  # '../ms_coco_GUSE_square256.h5'
-    fasttext_embeddings_path = "./crawl-300d-2M.vec"
-    nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"
-    save_test_imgs_to = "./_check_imgs"
-    os.makedirs(save_test_imgs_to, exist_ok=1)
-    save_embeddings_to = "../results_dir/saved_embeddings"
-    os.makedirs("../results_dir", exist_ok=1)
-    os.makedirs(save_embeddings_to, exist_ok=1)
 
     if CHECK_FASTTEXT or GET_NOUN_EMBEDDINGS:
         # get all word embeddings

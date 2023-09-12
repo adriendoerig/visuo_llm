@@ -1,6 +1,5 @@
 import os
 import pickle
-
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +14,7 @@ from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
 
 MAKE_DATASET = 1  # loads ms_coco_guse dataset, and copies it in a new dataset, adding embeddings
 CHECK_DATASET = 1  # loads newly made dataset and runs a few sanity checks
-MAKE_EMBEDDING_RDM_FOR_NSD = 0  # make RDM of cosine distances between fasttext embeddings for the whole NSD (here: test set of our version of ms-coco, which contains all nsd images)
+MAKE_EMBEDDING_RDM_FOR_NSD = 0  # make RDM of cosine distances between embeddings for the whole NSD (here: test set of our version of ms-coco, which contains all nsd images)
 LOAD_AND_CHECK_EMBEDDING_RDM_FOR_NSD = (
     0  # load the saved RDM to check it is alright
 )

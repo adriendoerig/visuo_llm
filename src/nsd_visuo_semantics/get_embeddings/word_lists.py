@@ -1,4 +1,15 @@
-# note: to take embeddings, you need to make the following adjustments:
+# NOTE: these are the coco categories, including the following modifications to match with existing fasttext embeddings
+# Fire hydrant - fireplug
+# Street sign - signpost
+# Parking meter - self-parking
+# Sports-ball - ball
+# Baseball-bat - mean(baseball, bat)
+# Baseball-glove - mean(baseball, glove)
+# Tennis-racket - mean(tennis, racket)
+# Potted-plant - houseplant
+# Hair-drier - hairdryer
+# Hair-brush - hairbrush
+# NOTE: to take embeddings, you need to make the following adjustments:
 # Baseball-bat - mean(baseball, bat)
 # Baseball-glove - mean(baseball, glove)
 # Tennis-racket - mean(tennis, racket)

@@ -1,10 +1,11 @@
 import os
-
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial
 from scipy import stats
+from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
+
 
 CHECK_FASTTEXT = 0  # loads fasttext embeddings and runs a few checks
 MAKE_DATASET = 0  # loads ms_coco_guse dataset, and copies it in a new dataset, adding fasttext embeddings
@@ -24,110 +25,6 @@ ecoset_fasttext_path = "/home/student/a/adoerig/code/semantic_scene_descriptions
 save_test_imgs_to = "./_tmp_playground"
 os.makedirs(save_test_imgs_to, exist_ok=1)
 
-# these are the coco categories, including the following modifications to match with existing fasttext embeddings
-# Fire hydrant - fireplug
-# Street sign - signpost
-# Parking meter - self-parking
-# Sports-ball - ball
-# Baseball-bat - mean(baseball, bat)
-# Baseball-glove - mean(baseball, glove)
-# Tennis-racket - mean(tennis, racket)
-# Potted-plant - houseplant
-# Hair-drier - hairdryer
-# Hair-brush - hairbrush
-coco_categories_91 = [
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "airplane",
-    "bus",
-    "train",
-    "truck",
-    "boat",
-    "traffic-light",
-    "fireplug",
-    "signpost",
-    "stop-sign",
-    "self-parking",
-    "bench",
-    "bird",
-    "cat",
-    "dog",
-    "horse",
-    "sheep",
-    "cow",
-    "elephant",
-    "bear",
-    "zebra",
-    "giraffe",
-    "hat",
-    "backpack",
-    "umbrella",
-    "shoe",
-    "eye-glasses",
-    "handbag",
-    "tie",
-    "suitcase",
-    "frisbee",
-    "skis",
-    "snowboard",
-    "ball",
-    "kite",
-    "baseball-bat",
-    "baseball-glove",
-    "skateboard",
-    "surfboard",
-    "tennis-racket",
-    "bottle",
-    "plate",
-    "wine-glass",
-    "cup",
-    "fork",
-    "knife",
-    "spoon",
-    "bowl",
-    "banana",
-    "apple",
-    "sandwich",
-    "orange",
-    "broccoli",
-    "carrot",
-    "hot-dog",
-    "pizza",
-    "donut",
-    "cake",
-    "chair",
-    "couch",
-    "houseplant",
-    "bed",
-    "mirror",
-    "dining-table",
-    "window",
-    "desk",
-    "toilet",
-    "door",
-    "tv",
-    "laptop",
-    "mouse",
-    "remote",
-    "keyboard",
-    "cell-phone",
-    "microwave",
-    "oven",
-    "toaster",
-    "sink",
-    "refrigerator",
-    "blender",
-    "book",
-    "clock",
-    "vase",
-    "scissors",
-    "teddy-bear",
-    "hairdryer",
-    "toothbrush",
-    "hairbrush",
-]
 
 if CHECK_FASTTEXT:
     # get all word embeddings
