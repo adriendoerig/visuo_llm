@@ -20,7 +20,7 @@ LOAD_AND_CHECK_EMBEDDING_RDM_FOR_NSD = (
 )
 
 EMBEDDING_MODEL_NAME = "all_mpnet_base_v2"  # , 'USE_CMLM_Base',  'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5'
-precomputed_embeddings_path = "./saved_embeddings"  # if not None, precomputed embeddings should be in precomputed_embeddings_path/{train/val/nsd}_{MODEL_NAME}_mean_embeddings.pkl
+precomputed_embeddings_path = "./saved_embeddings"  # if not None, precomputed embeddings should be in precomputed_embeddings_path/{train/val/test}_{MODEL_NAME}_mean_embeddings.pkl
 
 original_dataset_path = (
     "/home/student/a/adoerig/code/datasets/ms_coco_GUSE_fasttext_square256.h5"
