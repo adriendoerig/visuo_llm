@@ -1,19 +1,10 @@
 import os
 import time
-
 import numpy as np
-from tf_utils import chunking, corr_rdms, sort_spheres
-
-from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import (
-    tf_searchlight as tfs,
-)
+from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
+from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import tf_searchlight as tfs
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import (
-    get_conditions,
-    get_conditions_515,
-    get_masks,
-    get_model_rdms,
-)
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_masks, get_model_rdms
 from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 initial_time = time.time()
@@ -28,13 +19,6 @@ n_boot = 100
 n_sessions = 40
 targetspace = "func1pt8mm"
 
-# if True, use fracridge to fit RDMs from all model layer & timsteps at each voxel
-fracridge_fit = False
-n_alphas = 20
-fracs = np.linspace(
-    1 / n_alphas, 1 + 1 / n_alphas, n_alphas
-)  # from https://github.com/nrdg/fracridge/blob/master/examples/plot_alpha_vs_gamma.py
-
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
 remove_shared_515 = False
@@ -43,20 +27,17 @@ remove_shared_515 = False
 rdm_distance = "correlation"
 
 # set up directories
-base_dir = os.path.join("/rds", "projects", "c", "charesti-start")
-nsd_dir = os.path.join(base_dir, "data", "NSD")
-betas_dir = os.path.join(base_dir, "projects", "NSD", "derivatives", "betas")
-precompsl_dir = os.path.join(
-    base_dir, "projects", "NSD", "derivatives", "searchlights"
-)
-base_save_dir = "./save_dir"
+nsd_dir = '/share/klab/datasets/NSD'
+nsd_derivatives_dir = '/share/klab/datasets/NSD_derivatives'  # we will put data modified from nsd here
+betas_dir = os.path.join(nsd_derivatives_dir, "betas")
+precompsl_dir = os.path.join(nsd_derivatives_dir, "searchlights")
+base_save_dir = "../results_dir"
+os.makedirs(nsd_derivatives_dir, exist_ok=True)
+os.makedirs(betas_dir, exist_ok=True)
+os.makedirs(precompsl_dir, exist_ok=True)
 
-# ['dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec',
-# 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'openai_ada2',
-# 'dnn_ecoset_category', 'dnn_ecoset_fasttext', 'guse_SCRAMBLED_WORD_ORDER', 'mpnet_SCRAMBLED_WORD_ORDER']:
-for MODEL_NAME in ["dnn_ecoset_category"]:
-    # ['mpnet', 'multihot', 'guse', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'dnn_ecoset_category', 'dnn_ecoset_fasttext']:
-    # ['dnn_mpnet_ff', 'dnn_mpnet_rec', 'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec']:
+for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
+                   "dnn_multihot_rec", "dnn_mpnet_rec"]:
 
     print(f"Starting main searchlight computations for {MODEL_NAME}")
     models_dir = os.path.join(
@@ -93,22 +74,18 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
         searchlight_correlations_dir = os.path.join(
             results_dir,
             MODEL_NAME,
-            f'corr_vols{"_fracridgeFit" if fracridge_fit else ""}{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
+            f'corr_vols{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
         )
         os.makedirs(searchlight_correlations_dir, exist_ok=True)
 
-        print(
-            f"\tthe output files will be stored in {searchlight_correlations_dir}.."
-        )
+        print(f"\tthe output files will be stored in {searchlight_correlations_dir}..")
         print(f"\tlooking for saved samples in {samples_dir}..")
 
         # get model rdms for this subject
         model_rdms, model_names = get_model_rdms(
             models_dir, subj, filt=MODEL_NAME
         )  # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
-        n_models = (
-            1 if fracridge_fit else len(model_rdms)
-        )  # sometimes, we have many models (e.g. 1 per layer per timestep)
+        n_models = len(model_rdms)  # sometimes, we have many models (e.g. 1 per layer per timestep)
 
         # get subject brain mask (only used if searchlight indices are not computed yet).
         # We always want the same indices, radius, etcetc. across models
@@ -127,30 +104,33 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
         )
 
         if not os.path.exists(sl_indices):
-            raise FileNotFoundError(
-                f"Searchlight centers/indices not found for subj{subj}. Raising an error for security."
-                f"\n Looked in {sl_indices}"
-                "\nIf the SLs should already be computed, please check the sl_indices path."
-                "\nIf you are absolutely certain you want to recompute them, comment"
-                "out this error, and uncomment the following. Please make sure you are happy with"
-                "where sl_indices and other paths point to. Have a good day."
-            )
+            # raise FileNotFoundError(
+            #     f"Searchlight centers/indices not found for subj{subj}. Raising an error for security."
+            #     f"\n Looked in {sl_indices}"
+            #     "\nIf the SLs should already be computed, please check the sl_indices path."
+            #     "\nIf you are absolutely certain you want to recompute them, comment"
+            #     "out this error, and uncomment the following. Please make sure you are happy with"
+            #     "where sl_indices and other paths point to. Have a good day."
+            # )
             print("\tinitialising searchlight")
-            # # initiate searchlight indices for spheres restrained to valid brain masks
-            # SL = RSASearchLight(mask,
-            #                     radius=radius,
-            #                     thr=.5,
-            #                     njobs=n_jobs,
-            #                     verbose=True)
-            # # save allIndices
-            # all_indices = SL.allIndices
-            # center_indices = SL.centerIndices
-            # np.save(sl_indices, all_indices)
-            # np.save(sl_centers, center_indices)
+            # initiate searchlight indices for spheres restrained to valid brain masks
+            from nsd_visuo_semantics.searchlight_analyses.searchlight import RSASearchLight
+            SL = RSASearchLight(mask,
+                                radius=radius,
+                                thr=.5,
+                                njobs=n_jobs,
+                                verbose=True)
+            # save allIndices
+            all_indices = SL.allIndices
+            center_indices = SL.centerIndices
+            np.save(sl_indices, all_indices)
+            np.save(sl_centers, center_indices)
         else:
             print("\tloading pre-computed searchlight")
             indices = np.load(sl_indices, allow_pickle=True)
             centers = np.load(sl_centers, allow_pickle=True)
+        
+        import pdb; pdb.set_trace()
 
         # if N% of the sphere's voxel are have data, keep it. Then sort sphere by n_features. We will make batches where all
         # spheres have the same n_features (required to use tf). Then this is also used to rearrange spheres for brain corr maps
@@ -223,12 +203,8 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
         )
 
         print(f"loading betas for {subj}")
-        print(
-            "loaded data is still as int*300, remember to convert on the fly."
-        )
-        betas = np.load(
-            betas_file, allow_pickle=True
-        )  # [voxx, voxy, voxz, n_subj_conditions]
+        print("loaded data is still as int*300, remember to convert on the fly.")
+        betas = np.load(betas_file, allow_pickle=True)  # [voxx, voxy, voxz, n_subj_conditions]
         if remove_shared_515:
             # When removing the shared 515, we need to change the indices of the betas in the same way as we changed
             # the indices of the rdms, eetc, so as to keep everything consistent
@@ -236,14 +212,10 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
                 False if x in conditions_515 else True
                 for x in conditions_3repeats
             ]
-            betas = betas[
-                :, :, :, subj_sample_no515_bool
-            ]  # [voxx, voxy, voxz, n_subj_conditions-515]
+            betas = betas[:, :, :, subj_sample_no515_bool]  # [voxx, voxy, voxz, n_subj_conditions-515]
 
-        # initialise batch generator
-        batchg = BatchGen(
-            model_rdms, all_conditions
-        )  # retrieves 100x100 sampled RDM from upper tri of 10000x10000 full RDM
+        # initialise batch generator. Retrieves 100x100 sampled RDM from upper tri of 10000x10000 full RDM
+        batchg = BatchGen(model_rdms, all_conditions)
 
         # now we start the sampling procedure
         saved_samples_file = os.path.join(
@@ -258,10 +230,7 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
         # compute sampling if we are computing mpnet and it does not exist yet, else load
         if not os.path.exists(saved_samples_file):
             if MODEL_NAME == "mpnet":
-                print(
-                    "Running MPNET and DID NOT FIND existing saved_samples_file. Computing from scratch."
-                )
-
+                print("Running MPNET and DID NOT FIND existing saved_samples_file. Computing from scratch.")
                 subj_sample_pool = []
                 subj_shuffle_pool = []
                 for j in range(subj_n_samples):
@@ -290,9 +259,7 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
         else:
             print(f"Loading 100x100 sample choices from {saved_samples_file}")
             subj_sample_pool = np.load(saved_samples_file, allow_pickle=True)
-            subj_shuffle_pool = np.load(
-                saved_shuffled_samples_file, allow_pickle=True
-            )
+            subj_shuffle_pool = np.load(saved_shuffled_samples_file, allow_pickle=True)
 
         # run the searchlight mappings
         for j in range(subj_n_samples):
@@ -302,9 +269,7 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
             )
 
             if os.path.exists(file_save):
-                print(
-                    f"\n\n\n\tFound existing file at {file_save}, skipping..."
-                )
+                print(f"\n\n\n\tFound existing file at {file_save}, skipping...")
 
             else:
                 print(f"\n\n\n\tworking on {subj} - usual case: boot {j}\n")
@@ -313,153 +278,65 @@ for MODEL_NAME in ["dnn_ecoset_category"]:
                 # sample 100 stimuli from the subject's sample.
                 choices = subj_sample_pool[j]
 
-                if not fracridge_fit:
-                    # simple case without fitting RDMs from all model layers. We simply take our 100 samples and correlate
-                    # their brain RDM with the model RDMs of each layer
-                    betas_sampled = (
-                        betas[:, :, :, choices] / 300
-                    )  # /300 because kendrick saved in 300*value in int instead of float32
-                    betas_sampled = betas_sampled.astype(np.float32)
+                # simple case without fitting RDMs from all model layers. We simply take our 100 samples and correlate
+                # their brain RDM with the model RDMs of each layer
+                betas_sampled = (betas[:, :, :, choices] / 300)  # /300 because kendrick saved in 300*value in int instead of float32
+                betas_sampled = betas_sampled.astype(np.float32)
 
-                    # now get the models and correlate
-                    # this returns N_modelsx(upper_tri_sampled_model_rdm)
-                    model_rdms_sample = np.asarray(batchg.index_rdms(choices))
+                # now get the models and correlate
+                # this returns N_modelsx(upper_tri_sampled_model_rdm)
+                model_rdms_sample = np.asarray(batchg.index_rdms(choices))
 
-                    # tfs is tensorflow searchlight, an efficient GPU-powered way to compute the 100x100 brain rdms
-                    # returns n_voxelsx(upper_tri_sampled_brain_rdm)
-                    brain_sl_rdms_sample = tfs(
-                        betas_sampled, indices, sorted_indices, batch_size
-                    )
-                    # computes correlation between ALL searchlight brain rdms and the model rdm for this sampled 100x100 rdm
-                    brain_maps = corr_rdms(
-                        brain_sl_rdms_sample, model_rdms_sample
-                    )
-
-                else:
-                    # fitting RDMs from all model layers to create a single RDM optimized for each voxel and 100 samples.
-                    # we use 70 samples for learning this fit, and the remaining 30 for prediction
-                    choices_train = choices[:70]
-                    choices_test = choices[70:]
-
-                    # simple case without fitting RDMs from all model layers. We simply take our 100 samples and correlate
-                    # their brain RDM with the model RDMs of each layer
-                    betas_sampled_train = (
-                        betas[:, :, :, choices_train] / 300
-                    )  # /300 because kendrick saved in 300*value in int instead of float32
-                    betas_sampled_train = betas_sampled_train.astype(
-                        np.float32
-                    )
-                    betas_sampled_test = (
-                        betas[:, :, :, choices_test] / 300
-                    )  # /300 because kendrick saved in 300*value in int instead of float32
-                    betas_sampled_test = betas_sampled_test.astype(np.float32)
-
-                    # tfs is tensorflow searchlight, an efficient GPU-powered way to compute the 100x100 brain rdms
-                    # returns n_voxelsx(upper_tri_sampled_brain_rdm)
-                    brain_sl_rdms_sample_train = tfs(
-                        betas_sampled_train,
-                        indices,
-                        sorted_indices,
-                        batch_size,
-                    )
-                    brain_sl_rdms_sample_test = tfs(
-                        betas_sampled_test, indices, sorted_indices, batch_size
-                    )
-
-                    # now get the models and correlate
-                    # this returns N_modelsx(upper_tri_sampled_model_rdm)
-                    model_rdms_sample_train = np.asarray(
-                        batchg.index_rdms(choices_train)
-                    )
-                    model_rdms_sample_test = np.asarray(
-                        batchg.index_rdms(choices_test)
-                    )
-
-                    print("Starting RDM fitting for each voxel")
-                    from nsd_fracridge_searchlight_utils import (
-                        nsd_parallelize_fracridge_fit,
-                    )
-
-                    sl_locs_per_job = 36000
-                    n_chunk_jobs = (
-                        brain_sl_rdms_sample_train.shape[0] // sl_locs_per_job
-                    )
-                    fitted_model_corrs = nsd_parallelize_fracridge_fit(
-                        brain_sl_rdms_sample_train,
-                        brain_sl_rdms_sample_test,
-                        model_rdms_sample_train,
-                        model_rdms_sample_test,
-                        fracs,
-                        n_jobs=n_chunk_jobs,
-                        verbose=10,
-                    )
-
-                    brain_maps = fitted_model_corrs[
-                        :, None
-                    ]  # shape is [n_voxels, 1_fitted_model]
+                # tfs is tensorflow searchlight, an efficient GPU-powered way to compute the 100x100 brain rdms
+                # returns n_voxelsx(upper_tri_sampled_brain_rdm)
+                brain_sl_rdms_sample = tfs(betas_sampled, indices, sorted_indices, batch_size)
+                # computes correlation between ALL searchlight brain rdms and the model rdm for this sampled 100x100 rdm
+                brain_maps = corr_rdms(brain_sl_rdms_sample, model_rdms_sample)
 
                 # reshape into original volume
                 brain_vols = []
                 for map_i in range(n_models):
                     brain_map = brain_maps[:, map_i]
                     brain_vect = np.zeros(np.prod(n_voxels))
-                    brain_vect[
-                        rdms_sort
-                    ] = (
-                        brain_map.squeeze()
-                    )  # insert corr map in the right brain locations (each corr ends up in the right voxel)
-                    brain_vols.append(
-                        np.reshape(brain_vect, n_voxels)
-                    )  # reshape to original xyz fmrivolume
-                brain_vols = np.asarray(
-                    brain_vols
-                )  # vols is plural because there may be more than 1 model. when using 1 model there is just one vol
+                    brain_vect[rdms_sort] = brain_map.squeeze()  # insert corr map in the right brain locations (each corr ends up in the right voxel)
+                    brain_vols.append(np.reshape(brain_vect, n_voxels))  # reshape to original xyz fmrivolume
+                brain_vols = np.asarray(brain_vols)  # vols is plural because there may be more than 1 model. when using 1 model there is just one vol
 
                 # save correlation vol for that sample
                 np.save(file_save, brain_vols)
 
                 # now permute models and re-run correlation (used for statistical analysis at the single subject level, see above)
                 # exactly same steps as above
-                if (
-                    not fracridge_fit
-                ):  # shuffling not implemented for fracridge fit
-                    shuffler = subj_shuffle_pool[j]
-                    shuffled_rdms = np.asarray(
-                        [
-                            reorder_rdm(utv, shuffler)
-                            for utv in model_rdms_sample
-                        ]
-                    )
-                    brain_maps_perm = corr_rdms(
-                        brain_sl_rdms_sample, shuffled_rdms
-                    )
+                shuffler = subj_shuffle_pool[j]
+                shuffled_rdms = np.asarray(
+                    [
+                        reorder_rdm(utv, shuffler)
+                        for utv in model_rdms_sample
+                    ]
+                )
+                brain_maps_perm = corr_rdms(
+                    brain_sl_rdms_sample, shuffled_rdms
+                )
 
-                    brain_vols_perm = []
-                    for map_i in range(n_models):
-                        brain_map = brain_maps_perm[:, map_i]
-                        brain_vect = np.zeros(np.prod(n_voxels))
-                        brain_vect[rdms_sort] = brain_map.squeeze()
-                        brain_vols_perm.append(
-                            np.reshape(brain_vect, n_voxels)
-                        )
-                    brain_vols_perm = np.asarray(brain_vols_perm)
+                brain_vols_perm = []
+                for map_i in range(n_models):
+                    brain_map = brain_maps_perm[:, map_i]
+                    brain_vect = np.zeros(np.prod(n_voxels))
+                    brain_vect[rdms_sort] = brain_map.squeeze()
+                    brain_vols_perm.append(np.reshape(brain_vect, n_voxels))
+                brain_vols_perm = np.asarray(brain_vols_perm)
 
-                    # save correlation maps for that shuffle
-                    file_save = os.path.join(
-                        searchlight_correlations_dir,
-                        f'{subj}_nsd-{MODEL_NAME}_{targetspace}{"_noShared515" if remove_shared_515 else ""}_shuffle-{j}.npy',
-                    )
-                    np.save(file_save, brain_vols_perm)
+                # save correlation maps for that shuffle
+                file_save = os.path.join(
+                    searchlight_correlations_dir,
+                    f'{subj}_nsd-{MODEL_NAME}_{targetspace}{"_noShared515" if remove_shared_515 else ""}_shuffle-{j}.npy',
+                )
+                np.save(file_save, brain_vols_perm)
 
                 elapsed_time = time.time() - start_time
-                print(
-                    f"boot {j} : elapsedtime : ",
-                    f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}',
-                )
+                print(f"boot {j} : elapsedtime : ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
         print("NSD searchlight mapping done.")
         elapsed_time = time.time() - initial_time
-        print(
-            "elapsedtime: ",
-            f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}',
-        )
+        print("elapsedtime: ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+

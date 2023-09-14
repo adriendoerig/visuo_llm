@@ -1,27 +1,21 @@
 import glob
 import os
 import time
-
 import numpy as np
-
-# import matplotlib.pyplot as plt
 from nsdcode.nsd_mapdata import NSDmapdata
 from tqdm import tqdm
 
-MODEL_SUFFIX = ""  # Default: '', or '_noShared515' or '_fracridgeFit' - append to the saved folder name, useful for distinguishing different runs.
+MODEL_SUFFIX = ""  # Default: '', or '_noShared515' - append to the saved folder name, useful for distinguishing different runs.
 
 # RDM distance measure NOTE: BRAIN RDMS ARE DONE WITH PEARSON CORR (needs to be the same as in nsd_prepare_rdms.py)
 rdm_distance = "correlation"
 
 # various paths
-base_dir = os.path.join("/rds", "projects", "c", "charesti-start")
-nsd_path = os.path.join(base_dir, "data", "NSD")
-base_save_dir = "./save_dir"
+nsd_dir = '/share/klab/datasets/NSD'
+base_save_dir = "../results_dir"
 
 # initiate NSDmapdata
-nsd = NSDmapdata(
-    nsd_path
-)  # ian and kendrick made this. Takes subject data in mni and project to freesurfer, etcetc. All the transformations that we can do to the data can be done with this
+nsd = NSDmapdata(nsd_dir)  # Takes subject data in mni and project to freesurfer, etcetc. All the transformations that we can do to the data can be done with this
 
 # NSD fsaverage stuff
 fs_dir = os.path.join(nsd.base_dir, "nsddata", "freesurfer", "fsaverage")
@@ -45,12 +39,9 @@ voxelsizes = [
 hemis = ["lh", "rh"]
 
 initial_time = time.time()
-# ['dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec',
-# 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'openai_ada2',
-# 'dnn_ecoset_category', 'dnn_ecoset_fasttext', 'guse_SCRAMBLED_WORD_ORDER', 'mpnet_SCRAMBLED_WORD_ORDER']:
-for MODEL_NAME in ["dnn_guse_rec"]:  # , 'dnn_guse_rec'
-    # for MODEL_NAME in ['mpnet', 'multihot', 'guse', 'fasttext_categories', 'fasttext_all',
-    #                   'dnn_mpnet_ff', 'dnn_mpnet_rec', 'dnn_multihot_ff', 'dnn_multihot_rec', 'fasttext_verbs', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_ecoset_category', 'dnn_ecoset_fasttext']:
+
+for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
+                   "dnn_multihot_rec", "dnn_mpnet_rec"]:
 
     # define where the searchlights are saved
     data_dir = os.path.join(

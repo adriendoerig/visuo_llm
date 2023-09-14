@@ -1,10 +1,6 @@
 """Get activities for all layers of a network on the nsd dataset.
 We average across space to keep size reasonable
-
-Bluebear modules:
-module load TensorFlow/2.6.0-foss-2021a-CUDA-11.3.1
-module load matplotlib/3.4.2-foss-2021a
-(incompatible with tf addons, so you'll need to comment out any imports of this)"""
+"""
 
 import os
 
@@ -22,18 +18,12 @@ from nsd_visuo_semantics.get_dnn_activities.task_helper_functions import (
     load_model_from_path,
 )
 
-# the below is needed for this to run on bluebear, I don't know why
 physical_devices = tf.config.list_physical_devices("GPU")
-[
-    tf.config.experimental.set_memory_growth(dev, True)
-    for dev in physical_devices
-]
+[tf.config.experimental.set_memory_growth(dev, True) for dev in physical_devices]
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"  # IMPORTANT: must be a dataset with NSD in nsd_id order as the test set
-networks_basedir = (
-    "/share/klab/adoerig/adoerig/semantics_paper_nets/semantics_paper_ms_coco_nets"
-)
+networks_basedir = "/share/klab/adoerig/adoerig/semantics_paper_nets/semantics_paper_ms_coco_nets"
 resuts_dir = f"{networks_basedir}/extracted_activities"
 os.makedirs(resuts_dir, exist_ok=True)
 safety_check_plots_dir = "./safety_check_plots_dir"
@@ -62,17 +52,8 @@ for model_name in ["multihot_rec", "mpnet_rec"]:
     print(modelname2path.keys())
     model_savedir = modelname2path[model_name]
     print(f"Creating {model_name} model and loading weights from {model_savedir}")
-    hparams = load_and_override_hparams(
-        model_savedir, dataset=dataset_path, batch_size=50
-    )  # CAREFUL: batch_size must divide 73000 to an int, otherwise there will be images missing at the end of the dataset
-    net, hparams = load_model_from_path(
-        model_savedir,
-        epoch,
-        hparams=hparams,
-        print_summary=True,
-        test_mode=True,
-    )
-
+    hparams = load_and_override_hparams(model_savedir, dataset=dataset_path, batch_size=50)  # CAREFUL: batch_size must divide 73000 to an int, otherwise there will be images missing at the end of the dataset
+    net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True, test_mode=True)
     activities_model, readout_layer_names, readout_layer_shapes = get_activities_model(net, n_layers, hparams)
     print(f"Reading from layers: {readout_layer_names}")
     

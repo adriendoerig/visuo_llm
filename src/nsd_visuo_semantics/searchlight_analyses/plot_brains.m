@@ -1,14 +1,7 @@
-% How to run:
-% ssh -X username@bluebear.bham.ac.uk
-% fisbatch_screen as usual
-% module load MATLAB/2020a
-% matlab
-% then, copy paste stuff from here in the matlab window (or simply type matlab, then plot_brains from matlab terminal)
-
 close all; clear all;
 
 base_dir = '/rds/projects/c/charesti-start/';
-searchlight_save_dir = '/rds/projects/c/charesti-start/projects/nsd_rsa/python_adrien/save_dir/searchlight_respectedsampling_correlation';
+searchlight_save_dir = '../results_dir/searchlight_respectedsampling_correlation';
 
 RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
 USE_FDR = 1;
@@ -19,7 +12,6 @@ addpath(genpath(fullfile(base_dir,'software','cvncode')));
 addpath(genpath(fullfile(base_dir,'software','knkutils')));
 addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
 addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
-%addpath(genpath(fullfile(base_dir,'software','MatlabTFCE')));
 
 % add path to freesurfer tools
 addpath(genpath(fullfile(base_dir,'software', 'freesurfer7', 'matlab')));
@@ -39,9 +31,9 @@ n_vertices = 327684;
 hemis = {'lh', 'rh'};
 
 ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'openai_ada2', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
-MODEL_NAMES = {'dnn_guse_rec'};
-MODEL_SUFFIX =  ''  % '_fracridgeFit'  % default is ''
-CONTRAST_MODEL_NAMES = {'guse'}  % ALL_MODEL_NAMES
+MODEL_NAMES = {'mpnet'};
+MODEL_SUFFIX =  ''  % default is ''
+CONTRAST_MODEL_NAMES = {'multihot'}  % ALL_MODEL_NAMES
 
 DNN_LAYER = 10  % 'all' to do all layers, else an int
 DNN_TIMESTEP = 6  % 'all' % 6  % 'all' to do all timesteps, else an int

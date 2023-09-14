@@ -7,7 +7,7 @@ import numpy as np
 import statsmodels.stats.multitest as multi
 from scipy import stats
 
-results_dir = "./save_dir/roi_analyses/streams_roi_results_correlation"
+results_dir = "../results_dir/roi_analyses/streams_roi_results_correlation"
 
 for fig_id in [5]:  # [2, 5]:
     print(f"Fig: {fig_id}")

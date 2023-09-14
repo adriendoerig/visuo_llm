@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 from joblib import Parallel, delayed
 from scipy.spatial.distance import cdist, pdist

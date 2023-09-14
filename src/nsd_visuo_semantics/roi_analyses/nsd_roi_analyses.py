@@ -4,18 +4,11 @@ import time
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import (
-    get_conditions,
-    get_conditions_515,
-    get_model_rdms,
-    get_rois,
-)
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_model_rdms, get_rois
 from nsd_visuo_semantics.utils.tf_utils import corr_rdms
 
 COMPUTE = False  # if False, load rdm correlations and skip directly to postprocessing/plotting
-overwrite = (
-    False  # if True, overwrite existing stuff. If False, load existing stuff
-)
+overwrite = False  # if True, overwrite existing stuff. If False, load existing stuff
 
 # model names for which to compute ROI-wise correlations with brain activities
 MODEL_NAMES = [
@@ -38,16 +31,14 @@ n_jobs = 38
 n_sessions = 40
 n_subjects = 8
 subs = [f"subj0{x+1}" for x in range(n_subjects)]
-which_rois = (
-    "streams"  # streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
-)
+which_rois =  "streams"  # streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
 
 # set up directories
-base_dir = os.path.join("/rds", "projects", "c", "charesti-start")
-nsd_dir = os.path.join(base_dir, "data", "NSD")
+base_dir = "../"
+nsd_dir = '/share/klab/datasets/NSD'
 betas_dir = os.path.join(base_dir, "projects", "NSD", "derivatives", "betas")
 
-base_save_dir = "./save_dir"
+base_save_dir = "../results_dir"
 models_dir = os.path.join(
     base_save_dir,
     f'serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
@@ -78,9 +69,7 @@ if COMPUTE:
     all_corrs = {}
     for subj in subs:
         # Betas per subject
-        betas_file = os.path.join(
-            betas_dir, f"{subj}_betas_average_{targetspace}.npy"
-        )
+        betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
         print(f"loading betas for {subj}")
         betas = np.load(betas_file, allow_pickle=True)
 
