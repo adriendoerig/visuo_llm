@@ -7,13 +7,13 @@ import nltk
 import numpy as np
 import scipy.spatial
 
-from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments, load_fasttext_vectors
 
 CHECK_FASTTEXT = 1
 GET_VERB_EMBEDDINGS = 1
 DO_SANITY_CHECK = 1
 
-h5_dataset_path = "../ms_coco_GUSE_square256.h5"
+h5_dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
 fasttext_embeddings_path = "./crawl-300d-2M.vec"
 nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"
 save_test_imgs_to = "./_check_imgs"
@@ -25,25 +25,7 @@ os.makedirs(save_embeddings_to, exist_ok=1)
 
 if CHECK_FASTTEXT or GET_VERB_EMBEDDINGS:
     # get all word embeddings
-    def load_vectors(fname):
-        try:
-            fin = open(fname, encoding="utf-8", newline="\n", errors="ignore")
-        except ValueError:
-            raise Exception(
-                f"{fname} not found. Localize the .vec containing the embeddings, or download "
-                '"wget https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip"'
-            )
-        n, d = map(int, fin.readline().split())
-        data = {}
-        for line in fin:
-            tokens = line.rstrip().split(" ")
-            data[tokens[0]] = map(float, tokens[1:])
-        return data
-
-    embeddings = load_vectors(fasttext_embeddings_path)
-
-    with open("./nsd_verbs_adjustments.pkl", "wb") as fp:  # Pickling
-        pickle.dump(verb_adjustments, fp)
+    embeddings = load_fasttext_vectors(fasttext_embeddings_path)
 
 
 if CHECK_FASTTEXT:

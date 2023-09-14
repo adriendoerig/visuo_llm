@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial
 from scipy import stats
-from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
+from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91, load_fasttext_vectors
 
 
 CHECK_FASTTEXT = 0  # loads fasttext embeddings and runs a few checks
@@ -25,17 +25,7 @@ save_test_imgs_to = "./_tmp_playground"
 os.makedirs(save_test_imgs_to, exist_ok=1)
 
 if CHECK_FASTTEXT:
-    # get all word embeddings
-    def load_vectors(fname):
-        fin = open(fname, encoding="utf-8", newline="\n", errors="ignore")
-        n, d = map(int, fin.readline().split())
-        data = {}
-        for line in fin:
-            tokens = line.rstrip().split(" ")
-            data[tokens[0]] = map(float, tokens[1:])
-        return data
-
-    embeddings = load_vectors(fasttext_embeddings_path)
+    embeddings = load_fasttext_vectors(fasttext_embeddings_path)
 
     # retrieve embeddings for coco categories
     # how to get one vector: v = np.array([i for i in embeddings['tree']])

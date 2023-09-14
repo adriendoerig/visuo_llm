@@ -9,21 +9,6 @@ import re
 import numpy as np
 import pandas as pd
 
-ppdata_folder = os.path.join(
-    "/rds",
-    "projects",
-    "c",
-    "charesti-start",
-    "data",
-    "NSD",
-    "nsddata",
-    "ppdata",
-)
-
-behaviour_file = os.path.join(
-    ppdata_folder, "{subject}", "behav", "responses.tsv"
-)
-
 
 def read_behavior(behaviour_file, subject, session_index, trial_index=[]):
     """read_behavior [summary]
@@ -285,6 +270,16 @@ def get_conditions(nsd_dir, sub, n_sessions):
     Returns:
         [type]: [description]
     """
+
+    ppdata_folder = os.path.join(
+    nsd_dir,
+    "nsddata",
+    "ppdata",
+    )
+
+    behaviour_file = os.path.join(
+        ppdata_folder, "{subject}", "behav", "responses.tsv"
+    )
 
     # read behaviour files for current subj
     conditions = []

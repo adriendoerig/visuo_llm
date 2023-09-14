@@ -30,9 +30,9 @@ physical_devices = tf.config.list_physical_devices("GPU")
 ]
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-dataset_path = "/rds/projects/c/charesti-start/projects/NSD/ms_coco_square256_GUSE_fasttext_all_mpnet_base_v2.h5"  # IMPORTANT: must be a dataset with NSD in nsd_id order as the test set
+dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"  # IMPORTANT: must be a dataset with NSD in nsd_id order as the test set
 networks_basedir = (
-    "/rds/projects/c/charesti-start/projects/NSD/ms_coco_GUSE_networks"
+    "/share/klab/adoerig/adoerig/semantics_paper_nets/semantics_paper_ms_coco_nets"
 )
 resuts_dir = f"{networks_basedir}/extracted_activities"
 os.makedirs(resuts_dir, exist_ok=True)
@@ -44,9 +44,7 @@ pre_post = "post"  # get activities pre or post norm
 epoch = 200
 
 n_nsd_imgs = 73000
-print_N_samples = (
-    20  # print shapes and plot images equally spaced throughout the dataset
-)
+print_N_samples = 20  # print shapes and plot images equally spaced throughout the dataset
 
 shared_model_prefix = "blt_vNet_half_channels_semPaper_from_scratch_"
 modelname2path = {
@@ -58,18 +56,12 @@ modelname2path = {
     "mpnet_rec": f"{networks_basedir}/{shared_model_prefix}all_mpnet_base_v2_mean_embeddings_rec",
 }
 
-for model_name in [
-    "multihot_rec",
-    "guse_ff",
-    "guse_rec",
-    "mpnet_ff",
-    "mpnet_rec",
-]:  # ['multihot_ff', 'multihot_rec', 'guse_ff', 'guse_rec', 'mpnet_ff', 'mpnet_rec']:
+for model_name in ["multihot_rec", "mpnet_rec"]:
+    # ['multihot_ff', 'multihot_rec', 'guse_ff', 'guse_rec', 'mpnet_ff', 'mpnet_rec']:
+
     print(modelname2path.keys())
     model_savedir = modelname2path[model_name]
-    print(
-        f"Creating {model_name} model and loading weights from {model_savedir}"
-    )
+    print(f"Creating {model_name} model and loading weights from {model_savedir}")
     hparams = load_and_override_hparams(
         model_savedir, dataset=dataset_path, batch_size=50
     )  # CAREFUL: batch_size must divide 73000 to an int, otherwise there will be images missing at the end of the dataset
@@ -80,16 +72,11 @@ for model_name in [
         print_summary=True,
         test_mode=True,
     )
-    (
-        activities_model,
-        readout_layer_names,
-        readout_layer_shapes,
-    ) = get_activities_model(net, n_layers, hparams)
-    print(f"Reading from layers: {readout_layer_names}")
 
-    nsd_dataset = get_dataset(
-        hparams, dataset_path=dataset_path, dataset="test"
-    )
+    activities_model, readout_layer_names, readout_layer_shapes = get_activities_model(net, n_layers, hparams)
+    print(f"Reading from layers: {readout_layer_names}")
+    
+    nsd_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset="test")
     for x in nsd_dataset:
         btch_sz, imh, imw, imc = x[0].shape
         break
@@ -118,30 +105,20 @@ for model_name in [
             layer_activities = activities_model(batch_imgs)
 
             if i % print_every_N_batches == 0:
-                print(
-                    f'\nGetting NSD actifities for {model_name} dnn: {i/(hparams["batch_size"]*print_N_samples)*100}%'
-                )
+                print(f'\nGetting NSD actifities for {model_name} dnn: {i/(hparams["batch_size"]*print_N_samples)*100}%')
                 print(
                     "batch_imgs.shape, batch_labels['output_time_0'].shape: ",
                     batch_imgs.shape,
                     batch_labels["output_time_0"].shape,
                 )
                 img = batch_imgs[0].numpy()
-                print(
-                    f"Img min/max - should be in [-1, 1]: {np.min(img)}, {np.max(img)}"
-                )  # PLEASE MAKE SURE THIS IS IN [-1,1]
+                print(f"Img min/max - should be in [-1, 1]: {np.min(img)}, {np.max(img)}")  # PLEASE MAKE SURE THIS IS IN [-1,1]
                 plt.imshow(img)
                 plt.savefig(f"{safety_check_plots_dir}/check_batch_{i}.png")
-                [
-                    print(
-                        f"l={readout_layer_names[lin]}, t={t} activities shape: {layer[t].numpy().shape}"
-                    )
+                [print(f"l={readout_layer_names[lin]}, t={t} activities shape: {layer[t].numpy().shape}")
                     for (lin, layer) in enumerate(layer_activities)
-                    for t in range(hparams["n_recurrent_steps"])
-                ]
+                    for t in range(hparams["n_recurrent_steps"])]
 
             for lin in range(n_layers):
                 for t in range(hparams["n_recurrent_steps"]):
-                    activations_file[readout_layer_names[lin][t]][
-                        i * btch_sz : (i + 1) * btch_sz
-                    ] = np.mean(layer_activities[lin][t], axis=(1, 2))
+                    activations_file[readout_layer_names[lin][t]][i * btch_sz : (i + 1) * btch_sz] = np.mean(layer_activities[lin][t], axis=(1, 2))

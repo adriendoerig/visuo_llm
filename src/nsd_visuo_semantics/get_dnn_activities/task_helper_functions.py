@@ -21,16 +21,7 @@ def get_model(hparams, n_classes, saved_model_path=None):
     """get model from model function"""
 
     # get input shape, using None as batch size so user can feed any batch size
-    if hparams["sequence_input"]:
-        input_shape = [
-            None,
-            hparams["n_recurrent_steps"],
-            hparams["image_size"],
-            hparams["image_size"],
-            3,
-        ]
-    else:
-        input_shape = [None, hparams["image_size"], hparams["image_size"], 3]
+    input_shape = [None, hparams["image_size"], hparams["image_size"], 3]
 
     file_path = saved_model_path + "/_code_used_for_training/models"
     module_name = "setup_model"
@@ -246,9 +237,7 @@ def get_activities_model(net, n_layers, hparams, pre_post_norm="post"):
     return activities_model, readout_layer_names, readout_layer_shapes
 
 
-def get_n_classes(
-    hparams=None, dataset_path=None, dataset_subset=None, n_classes_manual=None
-):
+def get_n_classes(hparams=None, dataset_path=None, n_classes_manual=None):
     if n_classes_manual is not None:
         print("returned manually specified n_classes")
         return n_classes_manual
@@ -261,9 +250,6 @@ def get_n_classes(
         dataset = dataset_path
 
     with h5py.File(dataset, "r") as f:
-        if dataset_subset is not None:
-            print(f"n_classes using specified subset: {dataset_subset}")
-            f = f[dataset_subset]
         if dataset_path is None:
             if hparams["embeddings_path"]:
                 print("n_classes using hparams embeddings path")

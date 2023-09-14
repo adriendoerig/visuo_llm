@@ -1,24 +1,4 @@
-"""[nsd_highlevel_rois_full]
-
-    GPU
-    module load slurm-interactive
-    fisbatch_screen --nodes 1-1 --ntasks 10 --mem=100G --time 240:0:0 --qos=bbgpu --gres=gpu:a100:1
-    module load SciPy-bundle/2020.03-fosscuda-2020a-Python-3.8.2
-    module load TensorFlow/2.3.1-fosscuda-2020a-Python-3.8.2
-    module load NiBabel/3.2.1-fosscuda-2020a-Python-3.8.2
-    module load matplotlib/3.2.1-fosscuda-2020a-Python-3.8.2
-
-    CPU
-    module load slurm-interactive
-    fisbatch_screen --nodes 1-1 --ntasks 10 --mem=100G --time 240:0:0 --qos=bbdefault
-    module load SciPy-bundle/2020.03-foss-2020a-Python-3.8.2
-    module load TensorFlow/2.3.1-foss-2020a-Python-3.8.2
-    module load NiBabel/3.2.1-foss-2020a-Python-3.8.2
-    module load matplotlib/3.2.1-foss-2020a-Python-3.8.2
-"""
-
 import os
-import pdb
 import pickle
 import time
 import numpy as np
@@ -32,7 +12,6 @@ from nsd_visuo_semantics.utils.nsd_get_data_light import (
 )
 from nsd_visuo_semantics.utils.tf_utils import corr_rdms
 
-pdb.set_trace()
 COMPUTE = False  # if False, load rdm correlations and skip directly to postprocessing/plotting
 overwrite = (
     False  # if True, overwrite existing stuff. If False, load existing stuff
@@ -40,21 +19,12 @@ overwrite = (
 
 # model names for which to compute ROI-wise correlations with brain activities
 MODEL_NAMES = [
-    "mpnet",
     "multihot",
-    "guse",
-    "fasttext_categories",
-    "fasttext_all",
-    "fasttext_verbs",
+    "mpnet",
     "fasttext_nouns",
-    # "dnn_mpnet_ff",
-    "dnn_mpnet_rec",
-    # "dnn_multihot_ff",
+    "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
     "dnn_multihot_rec",
-    # "dnn_guse_ff",
-    "dnn_guse_rec",
-    "dnn_ecoset_category",
-    "dnn_ecoset_fasttext",
+    "dnn_mpnet_rec"
 ]
 
 # if we are using a DNN, use last layer (and last timestep if recurrent). If you want another layer,

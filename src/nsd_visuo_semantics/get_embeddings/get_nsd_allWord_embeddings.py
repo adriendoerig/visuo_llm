@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 import nltk
 import numpy as np
 
-from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments, load_fasttext_vectors
 
 GET_WORD_EMBEDDINGS = 1
 DO_SANITY_CHECK = 1
 
-h5_dataset_path = "../ms_coco_GUSE_square256.h5"
+h5_dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
 fasttext_embeddings_path = "./crawl-300d-2M.vec"
 nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"
 save_test_imgs_to = "./_check_imgs"
@@ -23,22 +23,7 @@ os.makedirs(save_embeddings_to, exist_ok=1)
 
 if GET_WORD_EMBEDDINGS:
     # get all word embeddings
-    def load_vectors(fname):
-        try:
-            fin = open(fname, encoding="utf-8", newline="\n", errors="ignore")
-        except ValueError:
-            raise Exception(
-                f"{fname} not found. Localize the .vec containing the embeddings, or download "
-                f'"wget https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip"'
-            )
-        n, d = map(int, fin.readline().split())
-        data = {}
-        for line in fin:
-            tokens = line.rstrip().split(" ")
-            data[tokens[0]] = map(float, tokens[1:])
-        return data
-
-    embeddings = load_vectors(fasttext_embeddings_path)
+    embeddings = load_fasttext_vectors(fasttext_embeddings_path)
 
     ms_coco_mean_allWord_embeddings = {}
 

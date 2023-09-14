@@ -1,3 +1,10 @@
+# Custom
+src/nsd_visuo_semantics/get_embeddings/crawl-300d-2M.vec
+src/nsd_visuo_semantics/get_embeddings/_check_imgs
+src/nsd_visuo_semantics/get_embeddings/_tmp_playground
+src/nsd_visuo_semantics/get_dnn_activities/safety_check_plots_dir
+src/nsd_visuo_semantics/results_dir
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

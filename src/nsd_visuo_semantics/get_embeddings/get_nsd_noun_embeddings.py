@@ -1,23 +1,22 @@
 import os
 import pdb
 import pickle
-
 import h5py
 import matplotlib.pyplot as plt
 import nltk
 import numpy as np
 from scipy.spatial.distance import cdist, correlation
-
 from nsd_visuo_semantics.get_embeddings.word_lists import (
     coco_categories_91,
     noun_adjustments,
+    load_fasttext_vectors
 )
 
 CHECK_FASTTEXT = 1
 GET_NOUN_EMBEDDINGS = 1
 DO_SANITY_CHECK = 1
 
-h5_dataset_path = "/mnt/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
+h5_dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
 fasttext_embeddings_path = "./crawl-300d-2M.vec"
 nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"
 save_test_imgs_to = "./_check_imgs"
@@ -35,26 +34,11 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
     else:
         SAVE_SUFFIX = ""
 
+
     if CHECK_FASTTEXT or GET_NOUN_EMBEDDINGS:
         # get all word embeddings
-        def load_vectors(fname):
-            try:
-                fin = open(
-                    fname, encoding="utf-8", newline="\n", errors="ignore"
-                )
-            except ValueError:
-                raise Exception(
-                    f"{fname} not found. Localize the .vec containing the embeddings, or download "
-                    '"wget https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip"'
-                )
-            n, d = map(int, fin.readline().split())
-            data = {}
-            for line in fin:
-                tokens = line.rstrip().split(" ")
-                data[tokens[0]] = map(float, tokens[1:])
-            return data
+        embeddings = load_fasttext_vectors(fasttext_embeddings_path)
 
-        embeddings = load_vectors(fasttext_embeddings_path)
 
     if CHECK_FASTTEXT:
         # retrieve embeddings for coco categories
@@ -109,6 +93,7 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
         )
     else:
         ms_coco_noun_embeddings = {}
+
 
     if GET_NOUN_EMBEDDINGS:
 
@@ -265,7 +250,7 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
                         new_embedding = np.array([i for i in embeddings[v]])
                         img_noun_embeddings.append(new_embedding)
                         ms_coco_noun_embeddings[v] = new_embedding
-                    except ValueError:
+                    except KeyError:
                         # if the noun does not exist in fasttext (e.g. "unpealed"), skip.
                         final_skipped_nouns.append(v)
 
@@ -334,6 +319,7 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
         )
         print(f"n_imgs with NO noun for ANY caption: {no_nouns_counter}")
 
+
     if DO_SANITY_CHECK:
         if not os.path.exists(h5_dataset_path):
             raise Exception(
@@ -370,6 +356,3 @@ for MATCH_TO_COCO_CATEGORY_NOUNS in [True, False]:
                     f"{save_test_imgs_to}/NSD_noun_embeddings_check_{i}{SAVE_SUFFIX}.png"
                 )
                 plt.close()
-
-
-pdb.set_trace()

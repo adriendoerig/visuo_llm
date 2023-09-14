@@ -1,7 +1,6 @@
 import os
 import pickle
 from random import shuffle
-
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,8 +11,8 @@ from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import (
     get_embeddings,
 )
 
-SANITY_CHECK = 1
-GET_EMBEDDINGS = 1
+SANITY_CHECK = 0
+GET_EMBEDDINGS = 0
 FINAL_CHECK = 1
 
 RANDOMIZE_WORD_ORDER = (
@@ -23,7 +22,7 @@ RANDOMIZE_WORD_ORDER = (
 save_every_n = 0  # if >0, save a checkpoint after every 10000 embeddings
 load_intermediate_result = 0  # if >0, load checkpoitn from f"./nsd_{embedding_model_type}_mean_embeddings_intermediate_{i}.pkl"
 
-ms_coco_GUSE_path = "../ms_coco_GUSE_square256.h5"
+h5_dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
 ms_coco_nsd_train_captions = "./ms_coco_nsd_captions_train.pkl"
 ms_coco_nsd_val_captions = "./ms_coco_nsd_captions_val.pkl"
 nsd_captions_path = "./ms_coco_nsd_captions_test.pkl"  # (nsd this is the ms_coco_nsd_test set))
@@ -36,10 +35,10 @@ os.makedirs(save_embeddings_to, exist_ok=1)
 
 captions_to_embed_path = nsd_captions_path
 
-for embedding_model_type in [
-    "GUSE_DAN",
-    "all_mpnet_base_v2",
-]:  # ['all_mpnet_base_v2', 'USE_CMLM_Base', 'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5']:
+# Pick one of the embedding models from the zoo 
+# ['all_mpnet_base_v2', 'USE_CMLM_Base', 'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5']:
+for embedding_model_type in ["all_mpnet_base_v2"]: 
+     
     embedding_model = get_embedding_model(embedding_model_type)
 
     if SANITY_CHECK:
@@ -148,7 +147,7 @@ for embedding_model_type in [
             pickle.dump(mean_embeddings, fp)
 
     if FINAL_CHECK:
-        with h5py.File(ms_coco_GUSE_path, "r") as h5_dataset:
+        with h5py.File(h5_dataset_path, "r") as h5_dataset:
             total_n_stims = h5_dataset["test"]["labels"][:].shape[0]
             plot_n_imgs = 10
             step_size = total_n_stims // plot_n_imgs
@@ -156,7 +155,7 @@ for embedding_model_type in [
             with open("./ms_coco_nsd_captions_test.pkl", "rb") as fp:
                 loaded_captions = pickle.load(fp)
             with open(
-                f"./nsd_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}.pkl",
+                f"{save_embeddings_to}/nsd_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}.pkl",
                 "rb",
             ) as fp:
                 loaded_mean_embeddings = pickle.load(fp)

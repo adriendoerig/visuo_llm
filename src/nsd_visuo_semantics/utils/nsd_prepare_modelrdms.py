@@ -1,25 +1,15 @@
-"""[nsd_prepare_vnet_rdms]
-
-    module to gather the subject's full model RDMs (MPNet, multihot, etc, model)
+"""
+    module to gather the full model RDMs for different models (MPNet, multihot, DNNs, etc) 
+    correspoding to each subject's images.
     Need quite some RAM, but no need for GPU.
 
-    Run on bluebear:
-    module load slurm-interactive
-    fisbatch_screen --nodes 1-1 --ntasks 10 --mem=96G --time 240:0:0 --qos=bbdefault --account=charesti-start
-    module load SciPy-bundle/2020.03-foss-2020a-Python-3.8.2
-    module load TensorFlow/2.3.1-foss-2020a-Python-3.8.2
 """
 import os
 import pickle
-
 import h5py
 import numpy as np
 from scipy.spatial.distance import pdist
-
-from nsd_visuo_semantics.utils.nsd_get_conditions import (
-    get_conditions,
-    get_conditions_515,
-)
+from nsd_visuo_semantics.utils.nsd_get_conditions import get_conditions, get_conditions_515
 
 # initialise parameters
 n_sessions = 40
@@ -30,20 +20,16 @@ subs = [f"subj0{x+1}" for x in range(n_subjects)]
 # based on searchlight maps while avoiding double-dipping)
 remove_shared_515 = False
 
-# RDM distance measure NOTE: BRAIN RDMS ARE DONE WITH PEARSON CORR
+# RDM distance measure NOTE: BRAIN RDMS ARE DONE WITH CORRELATION DISTANCE
 rdm_distance = "correlation"
 
 # set up directories
-base_dir = os.path.join("/rds", "projects", "c", "charesti-start")
-nsd_dir = os.path.join(base_dir, "data", "NSD")
-base_save_dir = "./results_dir"
+nsd_dir = '/share/klab/datasets/NSD'
+base_save_dir = "../results_dir"
 saved_embeddings_dir = f"{base_save_dir}/saved_embeddings"
-ms_coco_saved_dnn_activities_dir = (
-    f"{base_dir}/projects/NSD/paper_ms_coco_networks/extracted_activities"
-)
-ecoset_saved_dnn_activities_dir = (
-    f"{base_dir}/projects/NSD/paper_ecoset_networks/extracted_activities"
-)
+base_networks_dir = '/share/klab/adoerig/adoerig/semantics_paper_nets'
+ms_coco_saved_dnn_activities_dir = f"{base_networks_dir}/semantics_paper_ms_coco_nets/extracted_activities"
+ecoset_saved_dnn_activities_dir = f"{base_networks_dir}/semantics_paper_ecoset_nets/extracted_activities"
 rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}'
 os.makedirs(rdms_dir, exist_ok=True)
 
@@ -70,9 +56,14 @@ modelname2file = {
 }
 
 for MODEL_NAME in [
+    "multihot",
+    "mpnet",
     "fasttext_nouns",
     "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
+    "dnn_multihot_rec",
+    "dnn_mpnet_rec"
 ]:
+    
     save_dir = os.path.join(rdms_dir, MODEL_NAME)
     os.makedirs(save_dir, exist_ok=True)
 
@@ -83,9 +74,7 @@ for MODEL_NAME in [
     elif modelname2file[MODEL_NAME][-4:] == ".npy":
         embeddings = np.load(modelname2file[MODEL_NAME], allow_pickle=True)
     elif "dnn" in MODEL_NAME:
-        print(
-            "You requested rdm for DNN activities, creating one rdm per layer & timestep"
-        )
+        print("You requested rdm for DNN activities, creating one rdm per layer & timestep")
     else:
         raise Exception(
             f"Embeddings file type not understood. "
@@ -148,11 +137,7 @@ for MODEL_NAME in [
                 print(f"Found file at {save_name}. Skipping...")
             else:
                 print(f"Creating {MODEL_NAME} rdm for {sub}")
-                this_embedding = embeddings[
-                    sample - 1, :
-                ]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
-                this_rdm = pdist(this_embedding, rdm_distance).astype(
-                    np.float32
-                )  # subject based RDM for 10000 items
+                this_embedding = embeddings[sample - 1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                 print(f"Saving in {save_name}")
                 np.save(save_name, this_rdm)
