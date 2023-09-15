@@ -3,8 +3,7 @@ import boto3
 import numpy as np
 
 # deal with paths where we want the output
-base_dir =  os.path.join('/home', 'charestlab')
-to_nsd_dir = os.path.join(base_dir, 'data', 'natural-scenes-dataset')
+to_nsd_dir = os.path.join('/share/klab/datasets/', 'NSD_for_visuo_semantics')
 
 # we are downloading the natural scenes dataset
 bucket = 'natural-scenes-dataset'
@@ -41,8 +40,9 @@ for file in nsd.objects.filter(Prefix="nsddata/"):
         os.path.basename(file.key)
     )
 
-    # let's move it!
-    nsdc.download_file(bucket, file.key, target_file)
+    # let's move it (but not the imagery data, which we don't have access to)!
+    if 'nsdimagery' not in target_file and 'nsdsynthetic' not in target_file:
+        nsdc.download_file(bucket, file.key, target_file) 
 
     c+=1
     size += file.size

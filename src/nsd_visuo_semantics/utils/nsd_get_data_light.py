@@ -141,7 +141,7 @@ def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
                 img_lh = (
                     nb.load(
                         os.path.join(
-                            data_folder, f"lh.betas_session{si_str}.mgz"
+                            data_folder, f"lh.betas_session{si_str}.mgh"
                         )
                     )
                     .get_data()

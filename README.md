@@ -30,37 +30,31 @@ To install the most stable version, please select a tagged release on Github (cu
     pip install  git+https://github.com/KietzmannLab/pytorch-dataset-loaders.git@v0.0.2
     
 
+## Downloading the NSD dat and RCNN weights
 
-## Contributing
+### Download the required elements of NSD
 
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
+NSD is hosted on AWS. We will download the required parts of the dataset using boto3.
+You will need to create an AWS account and configure your access keys as described here:
+[https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html)
+
+Then, you can download the data using the following command:
+```python
+import nsd_visuo_semantics.utils.download_nsd_visuo_semantics as dl
+dl.get_nsd('path_to_where_you_want_to_download')
+```
+
+### Download RCNN weights
+
+You also need to download the RCNN weights 
+
+## Citation
+
+Please cite Doerig et al., Nature, 2023 if you use any of this code in your work.
+
 
 ## License
 
 Distributed under the terms of the [BSD-3] license,
-"nsd_visuo_semantics" is free and open source software
+"nsd_visuo_semantics" is free and open source software.
 
-## Issues
-
-If you encounter any problems, please [file an issue] along with a detailed description.
-
-
-[pip]: https://pypi.org/project/pip/
-[KietzmannLab]: https://github.com/KietzmannLab/
-[Cookiecutter]: https://github.com/audreyr/cookiecutter
-[@KietzmannLab]: https://github.com/KietzmannLab/
-[MIT]: http://opensource.org/licenses/MIT
-[BSD-3]: http://opensource.org/licenses/BSD-3-Clause
-[GNU GPL v3.0]: http://www.gnu.org/licenses/gpl-3.0.txt
-[GNU LGPL v3.0]: http://www.gnu.org/licenses/lgpl-3.0.txt
-[Apache Software License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
-[Mozilla Public License 2.0]: https://www.mozilla.org/media/MPL/2.0/index.txt
-[cookiecutter-template]: https://github.com/KietzmannLab/cookiecutter-kietzmannlab-template
-
-[file an issue]: https://github.com/KietzmannLab/nsd_visuo_semantics/issues
-
-[KietzmannLab]: https://github.com/KietzmannLab/
-[tox]: https://tox.readthedocs.io/en/latest/
-[pip]: https://pypi.org/project/pip/
-[PyPI]: https://pypi.org/
