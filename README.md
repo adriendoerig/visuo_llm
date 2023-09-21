@@ -41,12 +41,12 @@ You will need to create an AWS account and configure your access keys as describ
 Then, you can download the data using the following command:
 ```python
 import nsd_visuo_semantics.utils.download_nsd_visuo_semantics as dl
-dl.get_nsd('path_to_where_you_want_to_download')
+dl.get_nsd('path_to_desired_download_location')
 ```
 
 ### Download RCNN weights
 
-You also need to download the RCNN weights 
+You also need to download the RCNN weights. [NEED TO UPDATE WHEN WE DECIDE HOW TO DO IT]
 
 ## Citation
 

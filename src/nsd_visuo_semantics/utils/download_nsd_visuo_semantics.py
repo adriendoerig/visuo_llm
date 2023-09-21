@@ -20,7 +20,6 @@ nsdc = boto3.client('s3', region_name='us-east-2')
 c = 0
 size = 0
 for file in nsd.objects.filter(Prefix="nsddata/"):
-    this_file = file.key
     print(f'Downloading {file.key}')
     # deal with directory hierarchy
 
@@ -55,14 +54,13 @@ print('Total size of nsddata in GB: ' + str(size / (1000**3)))
 exclusion = ['meanbeta']
 c = 0
 size = 0
-# subjects = ['subj01']
+
 subjects = [f'subj0{x}' for x in range(1,9)]
 for sub in subjects:
     inclusion = ['fsaverage', 'betas_fithrf_GLMdenoise_RR', 'mgh', 'betas_session', sub]
 
     for file in nsd.objects.filter(Prefix="nsddata_betas/ppdata"):
         if np.all([x in file.key for x in inclusion]) and not np.all([x in file.key for x in exclusion]):
-            this_file = file.key
             print(f'Downloading {file.key}')
             # deal with directory hierarchy
             # check if we can dl it
@@ -103,7 +101,6 @@ for sub in subjects:
 
     for file in nsd.objects.filter(Prefix="nsddata_betas/ppdata"):
         if np.all([x in file.key for x in inclusion]) and not np.all([x in file.key for x in exclusion]):
-            this_file = file.key
             print(f'Downloading {file.key}')
             # deal with directory hierarchy
             # check if we can dl it
@@ -130,4 +127,16 @@ for sub in subjects:
 
             c+=1
             size += file.size
+
+nsd_stimuli_dir = os.path.join(to_nsd_dir, 'nsddata_stimuli/stimuli/nsd')
+os.makedirs(nsd_stimuli_dir, exist_ok=True)
+file = [x for x in nsd.objects.filter(Prefix='nsddata_stimuli/stimuli/nsd/nsd_stimuli.hdf5')][0]
+nsdc.download_file(bucket, file.key, nsd_stimuli_dir+'/nsd_stimuli.hdf5')
+c+=1
+size += file.size
+
+from nsd_access import NSDAccess
+nsda = NSDAccess(to_nsd_dir)
+nsda.download_coco_annotation_file()
+
 print('Total size of nsddata in GB: ' + str(size / (1000**3)))

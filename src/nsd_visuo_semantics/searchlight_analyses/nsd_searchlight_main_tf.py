@@ -4,7 +4,7 @@ import numpy as np
 from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
 from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import tf_searchlight as tfs
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_masks, get_model_rdms
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_masks, get_model_rdms, load_or_compute_betas_average
 from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 initial_time = time.time()
@@ -27,8 +27,8 @@ remove_shared_515 = False
 rdm_distance = "correlation"
 
 # set up directories
-nsd_dir = '/share/klab/datasets/NSD'
-nsd_derivatives_dir = '/share/klab/datasets/NSD_derivatives'  # we will put data modified from nsd here
+nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
+nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
 betas_dir = os.path.join(nsd_derivatives_dir, "betas")
 precompsl_dir = os.path.join(nsd_derivatives_dir, "searchlights")
 base_save_dir = "../results_dir"
@@ -104,14 +104,6 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         )
 
         if not os.path.exists(sl_indices):
-            # raise FileNotFoundError(
-            #     f"Searchlight centers/indices not found for subj{subj}. Raising an error for security."
-            #     f"\n Looked in {sl_indices}"
-            #     "\nIf the SLs should already be computed, please check the sl_indices path."
-            #     "\nIf you are absolutely certain you want to recompute them, comment"
-            #     "out this error, and uncomment the following. Please make sure you are happy with"
-            #     "where sl_indices and other paths point to. Have a good day."
-            # )
             print("\tinitialising searchlight")
             # initiate searchlight indices for spheres restrained to valid brain masks
             from nsd_visuo_semantics.searchlight_analyses.searchlight import RSASearchLight
@@ -165,24 +157,14 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         # find the avg_betas corresponding to the shared 515 images as done below with subj_indices_515 (hint: the trick to
         # go from an ordered list of nsd_ids to finding the idx as described above is to use enumerate).
         # For example sample[subj_indices_515[0]] = conditions_515[0].
-        conditions = np.asarray(
-            get_conditions(nsd_dir, subj, n_sessions)
-        ).ravel()
+        conditions = np.asarray(get_conditions(nsd_dir, subj, n_sessions)).ravel()
         # then we find the valid trials for which we do have 3 repetitions.
-        conditions_bool = [
-            True if np.sum(conditions == x) == 3 else False for x in conditions
-        ]
+        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
         if remove_shared_515:
-            conditions_3repeats = np.unique(
-                conditions[conditions_bool]
-            )  # save for later n_subj images WITH 515 -> THIS CAN INDEX THE BETAS CORRECTLY
+            conditions_3repeats = np.unique(conditions[conditions_bool])  # save for later n_subj images WITH 515 -> THIS CAN INDEX THE BETAS CORRECTLY
         if remove_shared_515:
-            conditions_515 = get_conditions_515(
-                nsd_dir
-            )  # [515,]  (nsd_indices for the 515 shared images)
-            conditions_515_bool = [
-                True if x in conditions_515 else False for x in conditions
-            ]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
+            conditions_515 = get_conditions_515(nsd_dir)  # [515,]  (nsd_indices for the 515 shared images)
+            conditions_515_bool = [True if x in conditions_515 else False for x in conditions]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
             conditions_bool = [
                 True if x and not y else False
                 for x, y in zip(conditions_bool, conditions_515_bool)
@@ -190,21 +172,17 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         # apply the condition boolean (which conditions had 3 repeats)
         conditions_sampled = conditions[conditions_bool]
         # find the subject's condition list (sample pool)
-        subj_sample = np.unique(
-            conditions_sampled
-        )  # ordered nsd_indices for single conditions seen 3x, optionally removing the shared515  (10000 if NSD subject completed all conds 3 times and we are not removing the 515)
+        subj_sample = np.unique(conditions_sampled)  # ordered nsd_indices for single conditions seen 3x, optionally removing the shared515  (10000 if NSD subject completed all conds 3 times and we are not removing the 515)
         subj_n_images = len(subj_sample)
         all_conditions = range(subj_n_images)
         subj_n_samples = int(subj_n_images // 100)
 
         # Betas per subject
-        betas_file = os.path.join(
-            betas_dir, f"{subj}_betas_average_{targetspace}.npy"
-        )
-
         print(f"loading betas for {subj}")
         print("loaded data is still as int*300, remember to convert on the fly.")
-        betas = np.load(betas_file, allow_pickle=True)  # [voxx, voxy, voxz, n_subj_conditions]
+        betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
+        betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
+        
         if remove_shared_515:
             # When removing the shared 515, we need to change the indices of the betas in the same way as we changed
             # the indices of the rdms, eetc, so as to keep everything consistent

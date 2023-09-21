@@ -4,10 +4,10 @@ import time
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_model_rdms, get_rois
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_model_rdms, get_rois, load_or_compute_betas_average
 from nsd_visuo_semantics.utils.tf_utils import corr_rdms
 
-COMPUTE = False  # if False, load rdm correlations and skip directly to postprocessing/plotting
+COMPUTE = True  # if False, load rdm correlations and skip directly to postprocessing/plotting
 overwrite = False  # if True, overwrite existing stuff. If False, load existing stuff
 
 # model names for which to compute ROI-wise correlations with brain activities
@@ -34,20 +34,15 @@ subs = [f"subj0{x+1}" for x in range(n_subjects)]
 which_rois =  "streams"  # streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
 
 # set up directories
-base_dir = "../"
-nsd_dir = '/share/klab/datasets/NSD'
-betas_dir = os.path.join(base_dir, "projects", "NSD", "derivatives", "betas")
-
+nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
+betas_dir = os.path.join(nsd_dir, '..', "NSD_for_visuo_semantics_derivatives", "betas")
+os.makedirs(betas_dir, exist_ok=True)
+rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 base_save_dir = "../results_dir"
-models_dir = os.path.join(
-    base_save_dir,
-    f'serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
-)
+models_dir = os.path.join(base_save_dir,f'serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}')
 roi_analyses_dir = os.path.join(base_save_dir, "roi_analyses")
 os.makedirs(roi_analyses_dir, exist_ok=True)
-results_dir = os.path.join(
-    roi_analyses_dir, f"{which_rois}_roi_results_{rdm_distance}"
-)
+results_dir = os.path.join(roi_analyses_dir, f"{which_rois}_roi_results_{rdm_distance}")
 os.makedirs(results_dir, exist_ok=True)
 subj_roi_rdms_path = os.path.join(results_dir, "subj_roi_rdms")
 os.makedirs(subj_roi_rdms_path, exist_ok=True)
@@ -56,9 +51,7 @@ os.makedirs(subj_roi_rdms_path, exist_ok=True)
 targetspace = "fsaverage"
 
 # Get roi info
-maskdata, ROIS = get_rois(
-    which_rois, os.path.join(roi_analyses_dir, "roi_defs")
-)
+maskdata, ROIS = get_rois(which_rois, rois_dir)
 
 if COMPUTE:
     # we'll also compute correlations between subjects on the 515 images that all subjects saw 3 times (for noise ceiling).
@@ -68,10 +61,6 @@ if COMPUTE:
     # here we go
     all_corrs = {}
     for subj in subs:
-        # Betas per subject
-        betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
-        print(f"loading betas for {subj}")
-        betas = np.load(betas_file, allow_pickle=True)
 
         # extract conditions data.
         # NOTES ABOUT HOW THIS WORKS:
@@ -91,26 +80,18 @@ if COMPUTE:
         # find the avg_betas corresponding to the shared 515 images as done below with subj_indices_515 (hint: the trick to
         # go from an ordered list of nsd_ids to finding the idx as described above is to use enumerate).
         # For example sample[subj_indices_515[0]] = conditions_515[0].
-        conditions = get_conditions(
-            nsd_dir, subj, n_sessions
-        )  # list of len=N_sessions. Each item contains 750_nsd_ids
-        conditions = np.asarray(
-            conditions
-        ).ravel()  # reshape to [N_images_seen,] (30000 for subjects who did all conditions)
-        conditions_bool = [
-            True if np.sum(conditions == x) == 3 else False for x in conditions
-        ]  # get valid trials for which we do have 3 repetitions.
-        conditions_sampled = conditions[
-            conditions_bool
-        ]  # shape=[N_images_seen,] (30000 for subjects who did all conditions 3x)
-        sample = np.unique(
-            conditions[conditions_bool]
-        )  # shape=[N_ordered_unique_nsd_ids,] (10000) for thorough subjects.
+        conditions = get_conditions(nsd_dir, subj, n_sessions)  # list of len=N_sessions. Each item contains 750_nsd_ids
+        conditions = np.asarray(conditions).ravel()  # reshape to [N_images_seen,] (30000 for subjects who did all conditions)
+        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]  # get valid trials for which we do have 3 repetitions.
+        conditions_sampled = conditions[conditions_bool]  # shape=[N_images_seen,] (30000 for subjects who did all conditions 3x)
+        sample = np.unique(conditions[conditions_bool])  # shape=[N_ordered_unique_nsd_ids,] (10000) for thorough subjects.
         all_conditions = range(sample.shape[0])
         n_samples = int(np.round(sample.shape[0] / 100))
-        subj_indices_515 = [
-            x for x, j in enumerate(sample) if j in conditions_515
-        ]
+        subj_indices_515 = [x for x, j in enumerate(sample) if j in conditions_515]
+
+        # Betas per subject
+        betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
+        betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
 
         # save the subject's full ROI RDMs
         roi_rdms = []
@@ -151,9 +132,7 @@ if COMPUTE:
 
             if overwrite or not os.path.exists(rdm_full_file):
                 # prepare for cosine distance
-                X = (
-                    masked_betas.T
-                )  # [n_conditions, n_roi_betas], i.e., we make an [n_conditionsxn_conditions] rdm
+                X = (masked_betas.T)  # [n_conditions, n_roi_betas], i.e., we make an [n_conditionsxn_conditions] rdm
 
                 print(f"computing RDM for roi: {mask_name}")
                 start_time = time.time()

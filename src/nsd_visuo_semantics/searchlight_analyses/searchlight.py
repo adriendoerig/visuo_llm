@@ -1,140 +1,5 @@
-import os
 import numpy as np
-from joblib import Parallel, delayed
-from scipy.spatial.distance import cdist, pdist
-from tqdm import tqdm
-
-
-def upper_tri_indexing(RDM):
-    """upper_tri_indexing returns the upper triangular index of an RDM
-
-    Args:
-        RDM 2Darray: squareform RDM
-
-    Returns:
-        1D array: upper triangular vector of the RDM
-    """
-    # returns the upper triangle
-    m = RDM.shape[0]
-    r, c = np.triu_indices(m, 1)
-    return RDM[r, c]
-
-
-def get_distance(data, ind):
-    """get_distance returns the correlation distance
-       across condition patterns in X
-       get_distance uses numpy's einsum
-
-    Args:
-        data (array): conditions x all channels.
-        ind (vector): subspace of voxels for that sphere.
-
-    Returns:
-        UTV: pairwise distances between condition patterns in X
-             (in upper triangular vector form)
-    """
-    ind = np.array(ind)
-    X = np.array(data[ind, :]).T
-    return pdist(X, metric="correlation")
-
-
-def fit_rsa(data, allIndices, n_jobs=1, verbose=True, save_file=None):
-    """
-    Fit Searchlight for RDM
-    Parameters:
-        data:       4D numpy array - (x, y, z, condition vols)
-        metric :    str or callable, optional
-                    The distance metric to use.
-                    If a string, the distance function can be
-                    'braycurtis', 'canberra', 'chebyshev',
-                    'cityblock', 'correlation', 'cosine', 'dice',
-                    'euclidean', 'hamming', 'jaccard', 'kulsinski',
-                    'mahalanobis', 'matching', 'minkowski',
-                    'rogerstanimoto', 'russellrao',
-                    'seuclidean', 'sokalmichener', 'sokalsneath',
-                    'sqeuclidean', 'wminkowski', 'yule'.
-    """
-    print("Running searchlight RSA")
-    # reshape the data to squish the first three dimensions
-    x, y, z, nobjects = data.shape
-
-    # now the first dimension of data is directly indexable by
-    # subspace index of the searchlight centers
-    data = data.reshape((x * y * z, nobjects))
-
-    if save_file is not None:
-        if os.path.exists(save_file):
-            # load pre-computed rdms
-            print(f"load pre-computed rdms from file:\n\t\t... {save_file}")
-            rdms = np.load(save_file, allow_pickle=True)
-        else:
-            # compute
-            if n_jobs == 1:
-                # single core
-                if verbose is True:
-                    rdms = np.asarray(
-                        [
-                            get_distance(data, x)
-                            for x in tqdm(
-                                allIndices,
-                                desc="spheres",
-                                ascii=True,
-                                ncols=60,
-                            )
-                        ]
-                    )
-                else:
-                    rdms = np.asarray(
-                        [get_distance(data, x) for x in allIndices]
-                    )
-            else:
-                # parallel
-                if verbose is True:
-                    rdms = Parallel(n_jobs=n_jobs)(
-                        delayed(get_distance)(data, x)
-                        for x in tqdm(
-                            allIndices, desc="spheres", ascii=True, ncols=60
-                        )
-                    )
-                else:
-                    rdms = Parallel(n_jobs=n_jobs)(
-                        delayed(get_distance)(data, x) for x in allIndices
-                    )
-                    rdms = np.asarray(rdms)
-
-            print(f"saving searchlight rdms to file:\n\t\t... {save_file}")
-            np.save(save_file, rdms)
-    else:
-        # run but don't save
-        if n_jobs == 1:
-            # single core
-            if verbose is True:
-                rdms = np.asarray(
-                    [
-                        get_distance(data, x)
-                        for x in tqdm(
-                            allIndices, desc="spheres", ascii=True, ncols=60
-                        )
-                    ]
-                )
-            else:
-                rdms = np.asarray([get_distance(data, x) for x in allIndices])
-        else:
-            # parallel
-            if verbose is True:
-                rdms = Parallel(n_jobs=n_jobs)(
-                    delayed(get_distance)(data, x)
-                    for x in tqdm(
-                        allIndices, desc="spheres", ascii=True, ncols=60
-                    )
-                )
-            else:
-                rdms = Parallel(n_jobs=n_jobs)(
-                    delayed(get_distance)(data, x) for x in allIndices
-                )
-                rdms = np.asarray(rdms)
-
-    return rdms
+from scipy.spatial.distance import cdist
 
 
 class RSASearchLight:
@@ -169,8 +34,11 @@ class RSASearchLight:
         good_center = []
         for center in centers:
             ind = self.searchlightInd(center)
-            if self.mask[ind].mean() >= self.thr:
-                good_center.append(center)
+            try:
+                if self.mask[ind].mean() >= self.thr:
+                    good_center.append(center)
+            except IndexError:
+                import pdb; pdb.set_trace()
         return np.array(good_center)
 
     def _findCenterIndices(self):
@@ -232,10 +100,3 @@ class RSASearchLight:
         distance = cdist(data, center.reshape(1, -1), "euclidean").ravel()
 
         return data[distance < self.radius].T.tolist()
-
-    def checkNaNs(X):
-        """
-        TODO - this function
-        """
-        # nans = np.all(np.isnan(X), axis=0)[0]
-        # return X[:,~nans]

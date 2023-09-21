@@ -1,19 +1,17 @@
 """[nds_get_data]
-
     utilies for nsd
 """
+
 import glob
 import json
 import os
 import re
-
 import nibabel as nb
 import numpy as np
 import pandas as pd
 from PIL import Image
 from scipy.stats import zscore
-
-from nsd_visuo_semantics.utils.utils import reorder_rdm
+from nsd_visuo_semantics.utils.utils import reorder_rdm, average_over_conditions
 
 
 def get_model_rdms(models_dir, subj, filt=None, only_names=False):
@@ -106,6 +104,44 @@ def read_behavior(nsd_dir, subject, session_index, trial_index=[]):
     return session_behavior.iloc[trial_index]
 
 
+def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace):
+    if not os.path.exists(betas_file):
+        print('betas average not found, computing..')
+        print('\tloading betas')
+        # get betas
+        betas = get_betas(
+            nsd_dir,
+            subj,
+            n_sessions,
+            targetspace=targetspace,
+            )
+        # note: betas at this stage are still int. and * 300
+
+        # concatenate trials
+        print('\tconcatenating betas across runs..')
+        betas = np.concatenate(betas, axis=-1)
+
+        # average betas across three repeats
+        print(f'\taveraging betas for {subj}')
+        betas = average_over_conditions(
+            betas,
+            conditions,
+            conditions_sampled,
+        )
+        betas = betas.astype(np.int16)
+
+        # saving betas
+        print(f'saving betas for {subj}')
+        print(f'data is saved as int*300 for space.')
+        np.save(betas_file, betas)
+    else:
+        print(f'loading betas for {subj}')
+        print(f'loaded data is still as int*300, remember to convert on the fly.')
+        betas = np.load(betas_file, allow_pickle=True)
+
+    return betas
+
+
 def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
     nsddata_betas_folder = os.path.join(nsd_dir, "nsddata_betas", "ppdata")
 
@@ -144,17 +180,17 @@ def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
                             data_folder, f"lh.betas_session{si_str}.mgh"
                         )
                     )
-                    .get_data()
+                    .get_fdata()
                     .squeeze()
                 )
                 # load rh
                 img_rh = (
                     nb.load(
                         os.path.join(
-                            data_folder, f"rh.betas_session{si_str}.mgz"
+                            data_folder, f"rh.betas_session{si_str}.mgh"
                         )
                     )
-                    .get_data()
+                    .get_fdata()
                     .squeeze()
                 )
                 # concatenate

@@ -1,46 +1,22 @@
 """Train a frac ridge regression between NSD voxels and embeddings.
-bluebear:
-
-IF YOU WANT TO GET EMBEDDINGS (BUT WILL BE SLOW FOR FRACRIDGE):
-module load bear-apps/2022a
-module load PyTorch/1.12.1-foss-2022a-CUDA-11.7.0
-source emb_mdls_env-${BB_CPU}/bin/activate
-
-IF YOU JUST WANT TO DO FRACRIDGE FAST
-module load bear-apps/2021b
-module load imkl/2021.4.0-iompi-2021b
-module load Python/3.9.6-GCCcore-11.2.0-bare
-source intel_optimized_env-${BB_CPU}/bin/activate
 """
-
 
 import os
 import pickle
 import time
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from fracridge import FracRidgeRegressorCV
 from nsd_access import NSDAccess
 from scipy.spatial.distance import cdist, correlation, cosine, pdist
-
-from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import (
-    get_embedding_model,
-    get_embeddings,
-)
-from nsd_visuo_semantics.utils.nsd_get_data_light import (
-    get_conditions,
-    get_conditions_515,
-    get_rois,
-    get_sentence_lists,
-)
-
-# matplotlib.use('TkAgg')
+from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, nsd_parallelize_fracridge_fit, restore_nan_dims
+from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists
 
 
 EMBEDDING_MODEL_NAME = "all_mpnet_base_v2"
-USE_ROIS = "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage'  # streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
+USE_ROIS = None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage' or streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
 METRIC = "correlation"  # 'correlation', 'cosine'
 PREDICT_X_FROM_Y = "embeddings_from_voxels"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
 USE_GCC_LOOKUP = True
@@ -57,64 +33,19 @@ n_subjects = 8
 subs = [f"subj0{x + 1}" for x in range(n_subjects)]
 targetspace = "fsaverage"
 
-# ridge regression parameters
+# fractional ridge regression parameters
 n_alphas = 20
-fracs = np.linspace(
-    1 / n_alphas, 1 + 1 / n_alphas, n_alphas
-)  # from https://github.com/nrdg/fracridge/blob/master/examples/plot_alpha_vs_gamma.py
+fracs = np.linspace(1 / n_alphas, 1 + 1 / n_alphas, n_alphas)  # from https://github.com/nrdg/fracridge/blob/master/examples/plot_alpha_vs_gamma.py
 
 # set up directories
-base_dir = os.path.join("/rds", "projects", "c", "charesti-start")
-nsd_dir = os.path.join(base_dir, "data", "NSD")
-betas_dir = os.path.join(base_dir, "projects", "NSD", "derivatives", "betas")
-base_save_dir = os.path.join("./save_dir", "decoding")
-os.makedirs(base_save_dir, exist_ok=True)
+nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
+nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
+betas_dir = os.path.join(nsd_derivatives_dir, "betas")
+base_save_dir = "../results_dir"
 nsd_embeddings_path = os.path.join(base_save_dir, "nsd_caption_embeddings")
 os.makedirs(nsd_embeddings_path, exist_ok=True)
 
 nsda = NSDAccess(nsd_dir)
-
-
-def remove_inert_embedding_dims(embeddings, cutoff=1e-20):
-    """Remove embedding dimensions whose mean is < embedding_mean*cutoff. This is done because some dims may contain
-    only minuscule numbers (e.g. all values smaller than 1e-33), which are pointless and lead to NaNs in fracridge.
-    We keep the mean value of these dims, so we can then use this to get the full embedding back.
-    """
-
-    mean = embeddings.mean()
-    mean_cols = embeddings.mean(axis=0)
-    drop_dims_bool = abs(mean_cols) < abs(mean) * cutoff
-    keep_dims_bool = abs(mean_cols) > abs(mean) * cutoff
-
-    drop_dims_idx = np.where(drop_dims_bool)[0]
-    drop_dims_avgs = [np.mean(embeddings[:, i]) for i in drop_dims_idx]
-    embeddings = embeddings[:, keep_dims_bool]
-
-    return embeddings, drop_dims_idx, drop_dims_avgs
-
-
-def restore_inert_embedding_dims(embeddings, drop_dims_idx, drop_dims_avgs):
-    """Add back the removed embedding dimensions (if any were removed, see remove_inert_embedding_dims())."""
-
-    out = None
-    prev_idx = 0
-    for i, idx in enumerate(drop_dims_idx):
-        insert_dim = np.expand_dims(
-            drop_dims_avgs[i] * np.ones_like(embeddings[:, idx]), axis=-1
-        )
-        if out is None:
-            if idx == 0:
-                out = insert_dim
-            else:
-                out = np.hstack([embeddings[:, prev_idx:idx], insert_dim])
-        else:
-            out = np.hstack([out, embeddings[:, prev_idx:idx], insert_dim])
-        if idx == drop_dims_idx[-1]:
-            out = np.hstack([out, embeddings[:, idx:]])
-        prev_idx = idx
-
-    return out
-
 
 # get the condition list for the special 515
 # these will be used as testing set for the guse predictions
@@ -127,18 +58,11 @@ embeddings_test_path = f"{nsd_embeddings_path}/captions_515_embeddings.npy"
 if not os.path.exists(embeddings_test_path):
     embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
     captions_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
-    dummy_embedding = get_embeddings(
-        captions_515[0], embedding_model, EMBEDDING_MODEL_NAME
-    )
+    dummy_embedding = get_embeddings(captions_515[0], embedding_model, EMBEDDING_MODEL_NAME)
     embedding_dim = dummy_embedding.shape[-1]
     embeddings_test = np.empty((515, embedding_dim))
     for i in range(len(captions_515)):
-        embeddings_test[i] = np.mean(
-            get_embeddings(
-                captions_515[i], embedding_model, EMBEDDING_MODEL_NAME
-            ),
-            axis=0,
-        )
+        embeddings_test[i] = np.mean(get_embeddings(captions_515[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
     np.save(embeddings_test_path, embeddings_test)
 else:
     embeddings_test = np.load(embeddings_test_path)
@@ -149,13 +73,6 @@ if USE_ROIS is not None:
     maskdata, roi_id2name = get_rois(
         USE_ROIS, "./save_dir/roi_analyses/roi_defs"
     )
-    # roi_analyses_dir = os.path.join('./save_dir/roi_analyses/roi_defs')
-    # roi_names_file = os.path.join(roi_analyses_dir, 'roi_defs', f'{USE_ROIS}.mgz.ctab')
-    # lh_file = os.path.join(roi_analyses_dir, 'roi_defs', f'lh.{USE_ROIS}.mgz')
-    # rh_file = os.path.join(roi_analyses_dir, 'roi_defs', f'rh.{USE_ROIS}.mgz')
-    # with open(roi_names_file, 'r') as f:
-    #     # get ROI names automatically. 0 is always "Unknown")
-    #     roi_id2name = {int(x[0]): x[2:-1] for x in f}
     roi_name2id = {v: k for k, v in roi_id2name.items()}
     ROI_NAMES = list(roi_name2id.keys())
     ROI_NAMES.remove("Unknown")
@@ -264,20 +181,14 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                     f"Applied ROI mask. Went from {orig_n_voxels} to {betas_mean.shape[0]}"
                 )
 
-            good_vertex = [
-                True if np.sum(np.isnan(x)) == 0 else False for x in betas_mean
-            ]
+            good_vertex = [True if np.sum(np.isnan(x)) == 0 else False for x in betas_mean]
             if np.sum(good_vertex) != len(good_vertex):
                 print(f"found some NaN for {subj}")
             betas_mean = betas_mean[good_vertex, :]
 
             # now we further split the brain data according to the 515 test set or the training set for that subject
-            betas_test = betas_mean[
-                :, sample_515_bool
-            ].T  # sub1: (515, 327673) (n_voxels may vary from subj to subj because of nans)
-            betas_train = betas_mean[
-                :, sample_train_bool
-            ].T  # sub1: (9485, 327673) (may vary from subj to subj)
+            betas_test = betas_mean[:, sample_515_bool].T  # sub1: (515, 327673) (n_voxels may vary from subj to subj because of nans)
+            betas_train = betas_mean[:, sample_train_bool].T  # sub1: (9485, 327673) (may vary from subj to subj)
             del betas_mean  # make space
 
             # format to float32, remove "inert" dimensions.
@@ -290,20 +201,13 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
 
             if PREDICT_X_FROM_Y == "embeddings_from_voxels":
                 # In this case, we use voxels to linearly predict voxels
-
-                (
-                    embeddings_train,
-                    drop_dims_idx,
-                    drop_dims_avgs,
-                ) = remove_inert_embedding_dims(embeddings_train)
+                embeddings_train, drop_dims_idx, drop_dims_avgs = remove_inert_embedding_dims(embeddings_train)
 
                 model_save_path = f"{fitted_models_dir}/{subj}_fittedFracridge_{ROI_NAME}.pkl"
 
                 if not os.path.exists(model_save_path):
                     print("Fitting fractional ridge regression...")
-                    frr = FracRidgeRegressorCV(
-                        jit=True, fit_intercept=True, n_jobs=n_jobs
-                    )
+                    frr = FracRidgeRegressorCV(jit=True, fit_intercept=True)#, n_jobs=n_jobs)
                     fitted_fracridge = frr.fit(
                         betas_train[:USE_N_STIMULI],
                         embeddings_train[:USE_N_STIMULI],
@@ -312,9 +216,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                     with open(model_save_path, "wb") as f:
                         pickle.dump(fitted_fracridge, f)
                 else:
-                    print(
-                        "Found saved fractional ridge regression, loading..."
-                    )
+                    print("Found saved fractional ridge regression, loading...")
                     with open(model_save_path, "rb") as f:
                         fitted_fracridge = pickle.load(f)
 
@@ -343,9 +245,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                     elif METRIC == "cosine":
                         this_distance = cosine(this_pred, this_target)
                     else:
-                        raise Exception(
-                            f"METRIC not understood. You entered {METRIC}."
-                        )
+                        raise Exception(f"METRIC not understood. You entered {METRIC}.")
                     image_corrs.append(this_distance)
                 image_corrs_argsort = np.argsort(image_corrs)
 
@@ -400,28 +300,9 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
 
                         plt.figure(figsize=(8, 8))
                         plt.imshow(this_image)
-                        plt.title(
-                            f"{METRIC} rank {i}\ntarget: {this_target_sentence}\npred: {this_pred_sentence}"
-                        )
+                        plt.title(f"{METRIC} rank {i}\ntarget: {this_target_sentence}\npred: {this_pred_sentence}")
                         plt.axis("off")
-                        plt.savefig(
-                            f"{this_results_dir}/predicted_sentence_{subj}_{METRIC}_rank{i}.svg"
-                        )
-                        plt.close()
-
-                    if USE_LAION_LOOKUP:
-                        this_pred_sentence = laion_overall_winner_sentences[
-                            s_n, image_corrs_argsort[i]
-                        ]
-                        plt.figure(figsize=(8, 8))
-                        plt.imshow(this_image)
-                        plt.title(
-                            f"{METRIC} rank {i}\ntarget: {this_target_sentence}\nLAION pred: {this_pred_sentence}"
-                        )
-                        plt.axis("off")
-                        plt.savefig(
-                            f"{this_results_dir}/predicted_sentence_LAION_{subj}_{METRIC}_rank{i}.svg"
-                        )
+                        plt.savefig(f"{this_results_dir}/predicted_sentence_{subj}_{METRIC}_rank{i}.svg")
                         plt.close()
 
                 print("Computing mean distance between test embeddings...")
@@ -429,27 +310,19 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                 print(f"\tmean_distance = {np.mean(distances)}")
 
                 print("Making predicted vs. target embeddings RDM...")
-                pred_target_rdm = 1 - cdist(
-                    test_preds, embeddings_test, metric=METRIC
-                )
+                pred_target_rdm = 1 - cdist(test_preds, embeddings_test, metric=METRIC)
                 im = plt.matshow(pred_target_rdm, cmap="magma")
                 plt.colorbar(im, shrink=0.8)
                 plt.axis("off")
-                plt.title(
-                    f"subject {subj}\npredicted (rows) vs. target (cols) embeddings"
-                )
-                plt.savefig(
-                    f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_{subj}.svg"
-                )
+                plt.title(f"subject {subj}\npredicted (rows) vs. target (cols) embeddings")
+                plt.savefig(f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_{subj}.svg")
                 plt.close()
                 np.save(
                     f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_{subj}.npy",
                     pred_target_rdm,
                 )
 
-                print(
-                    f"Mean correlation between predicted and target embeddings = {np.mean(np.diag(pred_target_rdm))}"
-                )
+                print(f"Mean correlation between predicted and target embeddings = {np.mean(np.diag(pred_target_rdm))}")
                 np.save(
                     f"{this_results_dir}/mean_corr(predtarget)_{METRIC}_{subj}.npy",
                     np.mean(np.diag(pred_target_rdm)),
@@ -463,9 +336,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                         False if x == i else True
                         for x in range(pred_target_rdm.shape[0])
                     ]
-                    hist_data[i] = pred_target_rdm[i, i] - np.mean(
-                        pred_target_rdm[i, off_diag_bool]
-                    )
+                    hist_data[i] = pred_target_rdm[i, i] - np.mean(pred_target_rdm[i, off_diag_bool])
                 plt.hist(
                     hist_data,
                     bins=hist_data.shape[0] // 10,
@@ -473,9 +344,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                     edgecolor="#169acf",
                     linewidth=0.5,
                 )
-                plt.savefig(
-                    f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_{METRIC}_{subj}.svg"
-                )
+                plt.savefig(f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_{METRIC}_{subj}.svg")
                 plt.close()
                 np.save(
                     f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_data_{METRIC}_{subj}.npy",
@@ -483,46 +352,28 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                 )
 
             elif PREDICT_X_FROM_Y == "voxels_from_embeddings":
-                # In this case, we use embeddings as an encoding model to linearly predict voxels
+            # In this case, we use embeddings as an encoding model to linearly predict voxels
 
                 corrs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeCorrMap_{ROI_NAME}.pkl"
 
                 if not os.path.exists(corrs_save_path):
                     print("Fitting fractional ridge regression...")
-                    from nsd_fracridge_searchlight_utils import (
-                        nsd_parallelize_fracridge_fit,
-                        restore_nan_dims,
-                    )
-
-                    voxels_per_job = 36000
-                    n_chunk_jobs = betas_train.shape[1] // voxels_per_job
-                    fitted_model_corrs = nsd_parallelize_fracridge_fit(
-                        betas_train.T,
-                        betas_test.T,
-                        embeddings_train.T,
-                        embeddings_test.T,
-                        fracs,
-                        n_jobs=n_chunk_jobs,
-                        verbose=10,
+                    frr = FracRidgeRegressorCV(jit=True, fit_intercept=True)#, n_jobs=n_jobs)
+                    fitted_fracridge = frr.fit(
+                        embeddings_train[:USE_N_STIMULI],
+                        betas_train[:USE_N_STIMULI],
+                        frac_grid=fracs,
                     )
 
                     # we removed NaNs in data before doing the fracridge. But we need all voxels to plot the brain maps,
                     # so we add them back at the right places here.
-                    nan_idx_to_restore = np.array(
-                        [i for i, x in enumerate(good_vertex) if not x]
-                    )
-                    fitted_model_corrs = restore_nan_dims(
-                        fitted_model_corrs, nan_idx_to_restore
-                    )
+                    nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
+                    fitted_model_corrs = restore_nan_dims(fitted_model_corrs, nan_idx_to_restore)
 
-                    nan_idx_to_restore = [
-                        i for i, x in enumerate(good_vertex) if not x
-                    ]
+                    nan_idx_to_restore = [i for i, x in enumerate(good_vertex) if not x]
                     with open(corrs_save_path, "wb") as f:
                         pickle.dump(fitted_model_corrs, f)
-                        print(
-                            f"... Encoding model predictions saved for {subj}"
-                        )
+                        print(f"... Encoding model predictions saved for {subj}")
                 else:
                     print("Found saved encoding model predictions, loading...")
                     with open(corrs_save_path, "rb") as f:
@@ -530,9 +381,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
 
                     with open(corrs_save_path, "wb") as f:
                         pickle.dump(fitted_model_corrs, f)
-                        print(
-                            f"... Encoding model predictions saved for {subj}"
-                        )
+                        print(f"... Encoding model predictions saved for {subj}")
             else:
                 raise Exception(
                     f"Please use PREDICT_X_FROM_Y = 'voxels_from_embeddings' or embeddings_from_voxels."
@@ -548,29 +397,21 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                         f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_{subj}.npy"
                     )
                 )
-            loaded_rdms = np.stack(
-                loaded_rdms
-            )  # np.array of shape n_subjx515x515
+            loaded_rdms = np.stack(loaded_rdms)  # np.array of shape n_subjx515x515
 
             mean_rdm = np.mean(loaded_rdms, axis=0)
             im = plt.matshow(mean_rdm, cmap="magma")
             plt.colorbar(im, shrink=0.8)
             plt.axis("off")
-            plt.title(
-                "mean across subjects\npredicted (rows) vs. target (cols) embeddings"
-            )
-            plt.savefig(
-                f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_subjMean.svg"
-            )
+            plt.title("mean across subjects\npredicted (rows) vs. target (cols) embeddings")
+            plt.savefig(f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_subjMean.svg")
             plt.close()
             np.save(
                 f"{this_results_dir}/predicted_vs_target_embeddings_RDM_{METRIC}_subjMean.npy",
                 mean_rdm,
             )
 
-            print(
-                f"Mean correlation between predicted and target embeddings = {np.mean(np.diag(mean_rdm))}"
-            )
+            print(f"Mean correlation between predicted and target embeddings = {np.mean(np.diag(mean_rdm))}")
             np.save(
                 f"{this_results_dir}/mean_corr(predtarget)_{METRIC}_subjMean.npy",
                 np.mean(np.diag(mean_rdm)),
@@ -595,9 +436,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                 edgecolor="#169acf",
                 linewidth=0.5,
             )
-            plt.savefig(
-                f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_{METRIC}_subjMean.svg"
-            )
+            plt.savefig(f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_{METRIC}_subjMean.svg")
             plt.close()
             np.save(
                 f"{this_results_dir}/predicted_vs_target_embeddings_RDM_diag-offdiag_data_{METRIC}_subjMean.npy",
