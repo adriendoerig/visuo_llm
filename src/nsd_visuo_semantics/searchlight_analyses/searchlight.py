@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist
 
 
 class RSASearchLight:
-    def __init__(self, mask, radius=1, thr=0.7, njobs=1, verbose=False):
+    def __init__(self, mask, radius=1, thr=0.7, verbose=False):
         """
         Parameters:
             mask:    3d spatial mask (of usable voxels set to 1)
@@ -14,7 +14,6 @@ class RSASearchLight:
         """
         self.verbose = verbose
         self.mask = mask
-        self.njobs = njobs
         self.radius = radius
         self.thr = thr
         print("finding centers")
@@ -23,7 +22,6 @@ class RSASearchLight:
         self.centerIndices = self._findCenterIndices()
         print("finding all sphere indices")
         self.allIndices = self._allSphereIndices()
-        self.NaNs = []
 
     def _findCenters(self):
         """
@@ -34,11 +32,17 @@ class RSASearchLight:
         good_center = []
         for center in centers:
             ind = self.searchlightInd(center)
-            try:
-                if self.mask[ind].mean() >= self.thr:
-                    good_center.append(center)
-            except IndexError:
-                import pdb; pdb.set_trace()
+            this_mask_mean = 0
+            for i in range(ind.shape[0]):
+                this_mask_mean += self.mask[tuple(ind[i,:])]/ind.shape[0]
+            if this_mask_mean >= self.thr:
+                good_center.append(center)
+            # ind = self.searchlightInd(center)
+            # try:
+            #     if self.mask[ind].mean() >= self.thr:
+            #         good_center.append(center)
+            # except IndexError:
+            #     import pdb; pdb.set_trace()
         return np.array(good_center)
 
     def _findCenterIndices(self):
@@ -69,21 +73,20 @@ class RSASearchLight:
 
             # Get indices from center
             ind = np.array(self.searchlightInd(cen))
-            allIndices.append(np.ravel_multi_index(np.array(ind), dims))
+            # allIndices.append(np.ravel_multi_index(np.array(ind), dims))
+            allIndices.append(np.ravel_multi_index(np.array(ind.T), dims))
         print("\n")
-        return allIndices
+        return np.array(allIndices, dtype=object)
 
     def searchlightInd(self, center):
         """Return indices for searchlight where distance < radius
 
         Parameters:
-            center: point around which to make searchlight sphere
-        Sets RDM variable to:
-            numpy array of shape (3, N_comparisons) for subsetting data
+            center: point around which to make searchlight sphere.
         """
         center = np.array(center)
         shape = self.mask.shape
-        cx, cy, cz = np.array(center)
+        cx, cy, cz = center
         x = np.arange(shape[0])
         y = np.arange(shape[1])
         z = np.arange(shape[2])
@@ -99,4 +102,5 @@ class RSASearchLight:
         data = np.vstack((X.ravel(), Y.ravel(), Z.ravel())).T
         distance = cdist(data, center.reshape(1, -1), "euclidean").ravel()
 
-        return data[distance < self.radius].T.tolist()
+        # return data[distance < self.radius].T.tolist()
+        return data[distance < self.radius]

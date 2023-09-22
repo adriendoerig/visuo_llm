@@ -66,7 +66,7 @@ def compute_rdm_batch(x):
 
 
 def sort_spheres(sphere_indices):
-    """[summary]
+    """sorts searchilght spheres by n_voxels in the sphere
 
     Args:
         sphere_indices ([type]): [description]
@@ -79,9 +79,7 @@ def sort_spheres(sphere_indices):
 
     if len(unique_sizes) > 1:
         # sort and find the sorting indices
-        sized_indices = [
-            np.where(all_sizes == size)[0] for size in unique_sizes
-        ]
+        sized_indices = [np.where(all_sizes == size)[0] for size in unique_sizes]
     else:
         sized_indices = list(range(len(all_sizes)))
 
@@ -119,11 +117,9 @@ def chunking(vect, num, chunknum=None):
         nchunk = int(np.ceil(len(vect) / num))
         f = []
         for point in range(nchunk):
-            f.append(
-                vect[point * num : np.min((len(vect), int((point + 1) * num)))]
-            )
+            f.append(vect[point * num : np.min((len(vect), int((point + 1) * num)))])
 
-        return np.asarray(f)
+        return np.asarray(f, dtype=object)
     else:
         f = chunking(vect, num)
         # double check that these behave like in matlab (xbegin)

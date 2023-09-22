@@ -10,9 +10,9 @@ import pandas as pd
 from fracridge import FracRidgeRegressorCV
 from nsd_access import NSDAccess
 from scipy.spatial.distance import cdist, correlation, cosine, pdist
-from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, nsd_parallelize_fracridge_fit, restore_nan_dims
+from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, restore_nan_dims
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average
 
 
 EMBEDDING_MODEL_NAME = "all_mpnet_base_v2"
@@ -20,7 +20,8 @@ USE_ROIS = None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noS
 METRIC = "correlation"  # 'correlation', 'cosine'
 PREDICT_X_FROM_Y = "embeddings_from_voxels"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
 USE_GCC_LOOKUP = True
-USE_LAION_LOOKUP = False  # if True, use LAION lookup in addition to Google Conceptual Captions lookup (makes small difference)
+if USE_GCC_LOOKUP:
+    gcc_dir = '/share/klab/datasets/google_conceptual_captions'
 
 # setup
 total_time = time.time()
@@ -41,7 +42,8 @@ fracs = np.linspace(1 / n_alphas, 1 + 1 / n_alphas, n_alphas)  # from https://gi
 nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
 nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
 betas_dir = os.path.join(nsd_derivatives_dir, "betas")
-base_save_dir = "../results_dir"
+base_save_dir = "../results_dir/decoding_analyses"
+os.makedirs(base_save_dir, exist_ok=True)
 nsd_embeddings_path = os.path.join(base_save_dir, "nsd_caption_embeddings")
 os.makedirs(nsd_embeddings_path, exist_ok=True)
 
@@ -90,27 +92,20 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
         os.makedirs(this_results_dir, exist_ok=True)
         fitted_models_dir = os.path.join(this_results_dir, "fitted_models")
         os.makedirs(fitted_models_dir, exist_ok=True)
-        laion_lookup_dir = os.path.join(this_results_dir, "laion600_lookup")
 
         if USE_GCC_LOOKUP:
             lookup_sentences_path = os.path.join(
-                base_save_dir,
-                "google_conceptual_captions_embeddings",
+                gcc_dir,
                 "conceptual_captions_{}.tsv",
             )
             lookup_embeddings_path = os.path.join(
-                base_save_dir,
-                "google_conceptual_captions_embeddings",
+                gcc_dir,
                 "conceptual_captions_mpnet_{}.npy",
             )
             lookup_datasets = [
                 "train",
                 "val",
             ]  # we can choose to use either the gcc train, val, or both for the lookup
-        if USE_LAION_LOOKUP:
-            laion_overall_winner_sentences = np.load(
-                f"{laion_lookup_dir}/all_subjects_decoded_sentences.npy"
-            )  # [n_subj, 515]
 
         for s_n, subj in enumerate(subs):
             # prepare the train/val set embeddings
@@ -121,10 +116,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
             # we also need to reshape conditions to be ntrials x 1
             conditions = np.asarray(conditions).ravel()
             # then we find the valid trials for which we do have 3 repetitions.
-            conditions_bool = [
-                True if np.sum(conditions == x) == 3 else False
-                for x in conditions
-            ]
+            conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
             # and identify those.
             conditions_sampled = conditions[conditions_bool]
             # find the subject's condition list (sample pool)
@@ -132,26 +124,18 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
             sample = np.unique(conditions[conditions_bool])
 
             # identify which image in the sample is a conditions_515
-            sample_515_bool = [
-                True if x in conditions_515 else False for x in sample
-            ]
+            sample_515_bool = [True if x in conditions_515 else False for x in sample]
             # and identify which sample image isn't in conditions_515
-            sample_train_bool = [
-                False if x in conditions_515 else True for x in sample
-            ]
+            sample_train_bool = [False if x in conditions_515 else True for x in sample]
             # also identify the training set (i.e. not the special 515)
             sample_train = sample[sample_train_bool]
 
             # get the guse embeddings for the training sample
-            train_embeddings_path = (
-                f"{nsd_embeddings_path}/captions_not515_embeddings_{subj}.npy"
-            )
+            train_embeddings_path = (f"{nsd_embeddings_path}/captions_not515_embeddings_{subj}.npy")
             if not os.path.exists(train_embeddings_path):
                 embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
                 captions_not515 = get_sentence_lists(nsda, sample_train - 1)
-                embeddings_train = np.empty(
-                    (len(captions_not515), embedding_dim)
-                )
+                embeddings_train = np.empty((len(captions_not515), embedding_dim))
                 for i in range(len(captions_not515)):
                     embeddings_train[i] = np.mean(
                         get_embeddings(
@@ -167,31 +151,28 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
 
             # Betas per subject
             print(f"loading betas for {subj}")
-            betas_file = os.path.join(
-                betas_dir, f"{subj}_betas_average_{targetspace}.npy"
-            )
-            betas_mean = np.load(betas_file, allow_pickle=True)
+            betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
+            betas_mean = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
 
             if USE_ROIS is not None:
                 # load the lh mask
                 orig_n_voxels = betas_mean.shape[0]
                 vs_mask = maskdata == roi_name2id[ROI_NAME]
                 betas_mean = betas_mean[vs_mask, :]
-                print(
-                    f"Applied ROI mask. Went from {orig_n_voxels} to {betas_mean.shape[0]}"
-                )
+                print(f"Applied ROI mask. Went from {orig_n_voxels} to {betas_mean.shape[0]}")
 
             good_vertex = [True if np.sum(np.isnan(x)) == 0 else False for x in betas_mean]
             if np.sum(good_vertex) != len(good_vertex):
                 print(f"found some NaN for {subj}")
             betas_mean = betas_mean[good_vertex, :]
+            betas_mean = (betas_mean/300).astype(np.float32)  # /300 because NSD saved in 300*value in int instead of float32
 
             # now we further split the brain data according to the 515 test set or the training set for that subject
             betas_test = betas_mean[:, sample_515_bool].T  # sub1: (515, 327673) (n_voxels may vary from subj to subj because of nans)
             betas_train = betas_mean[:, sample_train_bool].T  # sub1: (9485, 327673) (may vary from subj to subj)
             del betas_mean  # make space
 
-            # format to float32, remove "inert" dimensions.
+            # format to float32,
             embeddings_train, embeddings_test, betas_train, betas_test = (
                 embeddings_train.astype(np.float32),
                 embeddings_test.astype(np.float32),
@@ -255,9 +236,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                     for d in lookup_datasets:
                         # there is a train and val set in the gcc captions, we load the ones chosen by the user (concatenating them)
                         if lookup_embeddings is None:
-                            lookup_embeddings = np.load(
-                                lookup_embeddings_path.format(d)
-                            )
+                            lookup_embeddings = np.load(lookup_embeddings_path.format(d))
                             df = pd.read_csv(
                                 lookup_sentences_path.format(d),
                                 sep="\t",
@@ -267,10 +246,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                             lookup_sentences = df["sent"].to_list()
                         else:
                             lookup_embeddings = np.vstack(
-                                [
-                                    lookup_embeddings,
-                                    np.load(lookup_embeddings_path.format(d)),
-                                ]
+                                [lookup_embeddings, np.load(lookup_embeddings_path.format(d))]
                             )
                             df = pd.read_csv(
                                 lookup_sentences_path.format(d),
@@ -284,9 +260,7 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                 plot_n_examples = 10
                 for i in range(0, 515, 515 // 10):
                     this_image = images_515[image_corrs_argsort[i]]
-                    this_target_sentence = sentences_515[
-                        image_corrs_argsort[i]
-                    ][0]
+                    this_target_sentence = sentences_515[image_corrs_argsort[i]][0]
                     this_pred = test_preds[image_corrs_argsort[i]]
 
                     if USE_GCC_LOOKUP:

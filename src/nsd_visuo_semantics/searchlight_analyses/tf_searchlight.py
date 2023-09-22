@@ -34,7 +34,7 @@ def tf_searchlight(betas_sampled, indices, sorted_indices, batch_size=50):
     for i, ind in enumerate(sorted_indices):
         chunks = ch(ind, batch_size)
         for c, chunk in enumerate(chunks):
-            sl = tf.gather(betas_unrolled, np.stack(indices[chunk]))
+            sl = tf.gather(betas_unrolled, np.stack(indices[chunk.astype(np.int32)]))
             t = tf.transpose(sl, perm=[0, 2, 1])
             rdm = np.asarray(compute_rdm_batch(t))
             rdms.append(rdm)

@@ -1,5 +1,4 @@
-import os
-import time
+import os, time
 import numpy as np
 from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
 from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import tf_searchlight as tfs
@@ -10,7 +9,6 @@ from nsd_visuo_semantics.utils.utils import reorder_rdm
 initial_time = time.time()
 
 # general variables
-n_jobs = 10
 batch_size = 250
 
 # fixed parameters
@@ -55,19 +53,12 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         subj = f"subj0{sub}"
 
         # called like this because all models sample the same 100 images every time for fair comparison
-        results_dir = os.path.join(
-            base_save_dir,
-            f"searchlight_respectedsampling_{rdm_distance}",
-            f"{subj}",
-        )
+        results_dir = os.path.join(base_save_dir, f"searchlight_respectedsampling_{rdm_distance}", f"{subj}")
         os.makedirs(results_dir, exist_ok=True)
 
         # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
         # we compute them only once for guse, and then will reload them for others
-        samples_dir = os.path.join(
-            results_dir,
-            f'saved_sampling{"_noShared515" if remove_shared_515 else ""}',
-        )
+        samples_dir = os.path.join(results_dir, f'saved_sampling{"_noShared515" if remove_shared_515 else ""}')
         os.makedirs(samples_dir, exist_ok=True)
 
         # where to save searchlight correlations
@@ -82,9 +73,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         print(f"\tlooking for saved samples in {samples_dir}..")
 
         # get model rdms for this subject
-        model_rdms, model_names = get_model_rdms(
-            models_dir, subj, filt=MODEL_NAME
-        )  # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
+        model_rdms, model_names = get_model_rdms(models_dir, subj, filt=MODEL_NAME)  # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
         n_models = len(model_rdms)  # sometimes, we have many models (e.g. 1 per layer per timestep)
 
         # get subject brain mask (only used if searchlight indices are not computed yet).
@@ -92,14 +81,15 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         print("\tloading brain mask")
         mask = get_masks(nsd_dir, subj, targetspace)
         n_voxels = list(mask.shape)
+
+        subj_precompsl_dir = os.path.join(precompsl_dir, subj)
+        os.makedirs(subj_precompsl_dir, exist_ok=True)
         sl_indices = os.path.join(
-            precompsl_dir,
-            subj,
+            subj_precompsl_dir,
             f"{subj}-{targetspace}-{radius}rad-searchlight_indices.npy",
         )
         sl_centers = os.path.join(
-            precompsl_dir,
-            subj,
+            subj_precompsl_dir,
             f"{subj}-{targetspace}-{radius}rad-searchlight_centers.npy",
         )
 
@@ -107,11 +97,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
             print("\tinitialising searchlight")
             # initiate searchlight indices for spheres restrained to valid brain masks
             from nsd_visuo_semantics.searchlight_analyses.searchlight import RSASearchLight
-            SL = RSASearchLight(mask,
-                                radius=radius,
-                                thr=.5,
-                                njobs=n_jobs,
-                                verbose=True)
+            SL = RSASearchLight(mask, radius=radius, thr=.5, verbose=True)
             # save allIndices
             all_indices = SL.allIndices
             center_indices = SL.centerIndices
@@ -119,23 +105,18 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
             np.save(sl_centers, center_indices)
         else:
             print("\tloading pre-computed searchlight")
-            indices = np.load(sl_indices, allow_pickle=True)
-            centers = np.load(sl_centers, allow_pickle=True)
+            all_indices = np.load(sl_indices, allow_pickle=True)
+            center_indices = np.load(sl_centers, allow_pickle=True)
         
-        import pdb; pdb.set_trace()
-
-        # if N% of the sphere's voxel are have data, keep it. Then sort sphere by n_features. We will make batches where all
-        # spheres have the same n_features (required to use tf). Then this is also used to rearrange spheres for brain corr maps
-        sorted_indices = sort_spheres(indices)
+        # ort sphere by n_features. We will make batches where all spheres have the same n_voxels (required to use tf). 
+        sorted_indices = sort_spheres(all_indices)
 
         # pre-compute the final sorting order
         rdms_sort = []
         for i, ind in enumerate(sorted_indices):
             chunks = chunking(ind, batch_size)
             for c, chunk in enumerate(chunks):
-                rdms_sort.append(
-                    centers[chunk]
-                )  # this is where the sorting mentioned above happens
+                rdms_sort.append(center_indices[chunk.astype(np.int32)])  # this is where the sorting mentioned above happens
         rdms_sort = np.hstack(rdms_sort).astype(int)
 
         # extract conditions data and reshape conditions to be ntrials x 1
@@ -165,10 +146,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         if remove_shared_515:
             conditions_515 = get_conditions_515(nsd_dir)  # [515,]  (nsd_indices for the 515 shared images)
             conditions_515_bool = [True if x in conditions_515 else False for x in conditions]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
-            conditions_bool = [
-                True if x and not y else False
-                for x, y in zip(conditions_bool, conditions_515_bool)
-            ]  # [n_subj_stims-515,] array of nsd_indices
+            conditions_bool = [True if x and not y else False for x, y in zip(conditions_bool, conditions_515_bool)]  # [n_subj_stims-515,] array of nsd_indices
         # apply the condition boolean (which conditions had 3 repeats)
         conditions_sampled = conditions[conditions_bool]
         # find the subject's condition list (sample pool)
@@ -186,24 +164,16 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         if remove_shared_515:
             # When removing the shared 515, we need to change the indices of the betas in the same way as we changed
             # the indices of the rdms, eetc, so as to keep everything consistent
-            subj_sample_no515_bool = [
-                False if x in conditions_515 else True
-                for x in conditions_3repeats
-            ]
+            subj_sample_no515_bool = [False if x in conditions_515 else True for x in conditions_3repeats]
             betas = betas[:, :, :, subj_sample_no515_bool]  # [voxx, voxy, voxz, n_subj_conditions-515]
 
         # initialise batch generator. Retrieves 100x100 sampled RDM from upper tri of 10000x10000 full RDM
         batchg = BatchGen(model_rdms, all_conditions)
 
         # now we start the sampling procedure
-        saved_samples_file = os.path.join(
-            samples_dir,  # path the previous sample_ids for fair comparison
-            f"{subj}_nsd-allsubstim_sampling.npy",
-        )
-        saved_shuffled_samples_file = os.path.join(
-            samples_dir,  # shuffled for statistics on individual subjects: we also save shuffled indices to shuffle RDM rows and columns to use as a null hypothesis
-            f"{subj}_nsd-allsubstim_shuffling.npy",
-        )
+        saved_samples_file = os.path.join(samples_dir, f"{subj}_nsd-allsubstim_sampling.npy")
+        # we also save shuffled indices to shuffle RDM rows and columns to use as a null hypothesis (not used in paper)
+        saved_shuffled_samples_file = os.path.join(samples_dir, f"{subj}_nsd-allsubstim_shuffling.npy",)
 
         # compute sampling if we are computing mpnet and it does not exist yet, else load
         if not os.path.exists(saved_samples_file):
@@ -212,9 +182,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
                 subj_sample_pool = []
                 subj_shuffle_pool = []
                 for j in range(subj_n_samples):
-                    choices = np.random.choice(
-                        all_conditions, 100, replace=False
-                    )
+                    choices = np.random.choice(all_conditions, 100, replace=False)
                     choices.sort()
                     subj_sample_pool.append(choices)
                     all_conditions = np.setdiff1d(all_conditions, choices)
@@ -258,7 +226,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
 
                 # simple case without fitting RDMs from all model layers. We simply take our 100 samples and correlate
                 # their brain RDM with the model RDMs of each layer
-                betas_sampled = (betas[:, :, :, choices] / 300)  # /300 because kendrick saved in 300*value in int instead of float32
+                betas_sampled = betas[:, :, :, choices]/300  # /300 because NSD saved in 300*value in int instead of float32
                 betas_sampled = betas_sampled.astype(np.float32)
 
                 # now get the models and correlate
@@ -267,7 +235,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
 
                 # tfs is tensorflow searchlight, an efficient GPU-powered way to compute the 100x100 brain rdms
                 # returns n_voxelsx(upper_tri_sampled_brain_rdm)
-                brain_sl_rdms_sample = tfs(betas_sampled, indices, sorted_indices, batch_size)
+                brain_sl_rdms_sample = tfs(betas_sampled, all_indices, sorted_indices, batch_size)
                 # computes correlation between ALL searchlight brain rdms and the model rdm for this sampled 100x100 rdm
                 brain_maps = corr_rdms(brain_sl_rdms_sample, model_rdms_sample)
 
@@ -286,15 +254,8 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
                 # now permute models and re-run correlation (used for statistical analysis at the single subject level, see above)
                 # exactly same steps as above
                 shuffler = subj_shuffle_pool[j]
-                shuffled_rdms = np.asarray(
-                    [
-                        reorder_rdm(utv, shuffler)
-                        for utv in model_rdms_sample
-                    ]
-                )
-                brain_maps_perm = corr_rdms(
-                    brain_sl_rdms_sample, shuffled_rdms
-                )
+                shuffled_rdms = np.asarray([reorder_rdm(utv, shuffler) for utv in model_rdms_sample])
+                brain_maps_perm = corr_rdms(brain_sl_rdms_sample, shuffled_rdms)
 
                 brain_vols_perm = []
                 for map_i in range(n_models):

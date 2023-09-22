@@ -39,3 +39,19 @@ def restore_inert_embedding_dims(embeddings, drop_dims_idx, drop_dims_avgs):
         prev_idx = idx
 
     return out
+
+
+def restore_nan_dims(x, drop_rows_idx):
+    '''Add back the removed dimensions (if any were removed, see remove_nan_dims()).'''
+
+    nan_idx_offset = 0
+    prev = -1
+    for i in range(drop_rows_idx.shape[0]):
+        x = np.insert(x, drop_rows_idx[i - nan_idx_offset], np.nan)
+        if i == prev:
+            nan_idx_offset += 1
+        else:
+            nan_idx_offset = 0
+        prev += 1
+
+    return x
