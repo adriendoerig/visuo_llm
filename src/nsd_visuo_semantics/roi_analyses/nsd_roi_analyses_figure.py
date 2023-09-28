@@ -1,15 +1,15 @@
-import os
 import pickle
-
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import statsmodels.stats.multitest as multi
 from scipy import stats
 
+USE_NOISE_CEIL = 0
+
 results_dir = "../results_dir/roi_analyses/streams_roi_results_correlation"
 
-for fig_id in [5]:  # [2, 5]:
+for fig_id in [2, 5]:  # [2, 5]:
     print(f"Fig: {fig_id}")
 
     if fig_id == 2:
@@ -88,56 +88,34 @@ for fig_id in [5]:  # [2, 5]:
         for k, l, c in zip(roi_keys, roi_labels, roi_colors)
     }
 
-    with open(
-        os.path.join(
-            results_dir,
-            "subj_roi_rdms",
-            "subjWiseNoiseCeiling_group_corrs.pkl",
-        ),
-        "rb",
-    ) as g1, open(
-        os.path.join(
-            results_dir,
-            "subj_roi_rdms",
-            "subjWiseNoiseCeiling_group_mean_corrs.pkl",
-        ),
-        "rb",
-    ) as g2, open(
-        os.path.join(
-            results_dir,
-            "subj_roi_rdms",
-            "subjWiseNoiseCeiling_group_std_corrs.pkl",
-        ),
-        "rb",
-    ) as g3:
-        group_corrs = pickle.load(g1)
-        group_mean_corrs = pickle.load(g2)
-        group_std_corrs = pickle.load(g3)
+    if USE_NOISE_CEIL:
+        with open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_corrs.pkl', "rb") as g1, \
+            open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_mean_corrs.pkl', "rb") as g2, \
+            open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_std_corrs.pkl', "rb") as g3:
+            group_corrs = pickle.load(g1)
+            group_mean_corrs = pickle.load(g2)
+            group_std_corrs = pickle.load(g3)
+    else:
+        with open(f'{results_dir}/subj_roi_rdms/group_corrs_no_noise_ceiling.pkl', "rb") as g1, \
+            open(f'{results_dir}/subj_roi_rdms/group_mean_corrs_no_noise_ceiling.pkl', "rb") as g2, \
+            open(f'{results_dir}/subj_roi_rdms/group_std_corrs_no_noise_ceiling.pkl', "rb") as g3:
+            group_corrs = pickle.load(g1)
+            group_mean_corrs = pickle.load(g2)
+            group_std_corrs = pickle.load(g3)
+
+    import pdb; pdb.set_trace()
 
     group_mean_corrs = {k: group_mean_corrs[k] for k in model_keys}
-    means = {
-        roi_key: {
-            model_key: group_mean_corrs[model_key][roi_key]
-            for model_key in model_keys
-        }
-        for roi_key in roi_keys
-    }
-    stds = {
-        roi_key: {
-            model_key: group_std_corrs[model_key][roi_key]
-            / np.sqrt(8)  # because we have 8 subjects
-            for model_key in model_keys
-        }
-        for roi_key in roi_keys
-    }
+    means = {roi_key: {model_key: group_mean_corrs[model_key][roi_key] 
+                       for model_key in model_keys} 
+                       for roi_key in roi_keys}
+    stds = { roi_key: {model_key: group_std_corrs[model_key][roi_key]/np.sqrt(8) 
+                       for model_key in model_keys }
+                       for roi_key in roi_keys }
     corr_samples = {
-        roi_key: {
-            model_key: group_corrs[model_key][roi_key]
-            / np.sqrt(8)  # because we have 8 subjects
-            for model_key in model_keys
-        }
-        for roi_key in roi_keys
-    }
+        roi_key: {model_key: group_corrs[model_key][roi_key]/np.sqrt(8)
+                  for model_key in model_keys}
+                  for roi_key in roi_keys}
 
     my_stats = {
         "uncorrected": {
@@ -244,47 +222,28 @@ for fig_id in [5]:  # [2, 5]:
     from itertools import combinations as cb
 
     model_comps = list(cb(model_keys, 2))
-    n_comparisons = len(
-        my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][
-            roi_labels[0]
-        ].keys()
-    )
+    n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
     ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
     for this_roi in roi_labels:
         for idx, model_comp in enumerate(model_comps):
             ROI_wise_pvals[this_roi][idx] = my_stats["corrected"][
                 "model_comparisons_ttest_ind_2sided"
             ][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
-    np.save(
-        f"{results_dir}/PAPER_FIG{fig_id}_ROIwisePvals",
-        ROI_wise_pvals,
-        allow_pickle=True,
-    )
+    np.save(f"{results_dir}/PAPER_FIG{fig_id}_ROIwisePvals",  ROI_wise_pvals, allow_pickle=True)
 
     # Add axis labels
-    ax.set_ylabel(
-        "Noise-ceiling corrected\nPearson correlation\n(mean across subjects)"
-    )
-    ax.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4], fontsize="smaller")
+    ax.set_ylabel("Noise-ceiling corrected\nPearson correlation\n(mean across subjects)")
+    ax.set_yticks([0.0, 0.1, 0.2, 0.3, 0.4])#, fontsize="smaller")
     ax.set_xticks(x_positions)
-    ax.set_xticklabels(
-        model_labels * len(roi_keys), rotation=45, ha="right", fontsize="small"
-    )
+    ax.set_xticklabels(model_labels * len(roi_keys), rotation=45, ha="right", fontsize="small")
 
     # Add ROI names above each group of bars
     for i, roi_key in enumerate(roi_keys):
         center_position = i + 0.5 * (len(model_keys) - 1) * bar_width
         roi_label = roi_specs[roi_key]["label"]
-        ax.text(
-            center_position,
-            1.02,
-            roi_label,
-            ha="center",
-            transform=ax.get_xaxis_transform(),
-        )
+        ax.text(center_position, 1.02, roi_label, ha="center", transform=ax.get_xaxis_transform())
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(
-        f"{results_dir}/PAPER_FIG{fig_id}_SubjWiseNoiseCeiling.svg"
-    )  # , dpi=300)
+    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}.svg")  # , dpi=300)
+    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}.png")  # , dpi=300)

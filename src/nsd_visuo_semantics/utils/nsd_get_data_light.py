@@ -17,28 +17,16 @@ from nsd_visuo_semantics.utils.utils import reorder_rdm, average_over_conditions
 def get_model_rdms(models_dir, subj, filt=None, only_names=False):
     # filt is model name (e.g. fasttext_verbs_mean) - careful, uses a wildcard, so the wildcard must be specific
     if filt is not None:
-        model_files = glob.glob(
-            os.path.join(models_dir, f"{subj}_{filt}*_fullrdm.npy")
-        )
+        model_files = glob.glob(os.path.join(models_dir, f"{subj}_{filt}*_fullrdm.npy"))
     else:
-        model_files = glob.glob(
-            os.path.join(models_dir, f"{subj}*_fullrdm.npy")
-        )
+        model_files = glob.glob(os.path.join(models_dir, f"{subj}*_fullrdm.npy"))
     model_files.sort()
 
-    model_names = [
-        re.split(
-            f"{subj}_",
-            re.split("_fullrdm.npy", os.path.basename(model_file))[0],
-        )[1]
-        for model_file in model_files
-    ]
+    model_names = [re.split(f"{subj}_", re.split("_fullrdm.npy", os.path.basename(model_file))[0])[1]
+        for model_file in model_files]
 
     if not only_names:
-        all_rdms = [
-            np.load(model_file).astype(np.float32)
-            for model_file in model_files
-        ]
+        all_rdms = [np.load(model_file).astype(np.float32) for model_file in model_files]
         return all_rdms, model_names
     else:
         return model_names
@@ -105,17 +93,12 @@ def read_behavior(nsd_dir, subject, session_index, trial_index=[]):
 
 
 def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace):
+    
     if not os.path.exists(betas_file):
         print('betas average not found, computing..')
         print('\tloading betas')
         # get betas
-        betas = get_betas(
-            nsd_dir,
-            subj,
-            n_sessions,
-            targetspace=targetspace,
-            )
-        # note: betas at this stage are still int. and * 300
+        betas = get_betas(nsd_dir, subj, n_sessions, targetspace=targetspace)
 
         # concatenate trials
         print('\tconcatenating betas across runs..')
@@ -123,113 +106,65 @@ def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditi
 
         # average betas across three repeats
         print(f'\taveraging betas for {subj}')
-        betas = average_over_conditions(
-            betas,
-            conditions,
-            conditions_sampled,
-        )
-        betas = betas.astype(np.int16)
+        betas = average_over_conditions(betas, conditions, conditions_sampled)
 
         # saving betas
         print(f'saving betas for {subj}')
-        print(f'data is saved as int*300 for space.')
-        np.save(betas_file, betas)
+        np.save(betas_file, betas, allow_pickle=True)
     else:
         print(f'loading betas for {subj}')
-        print(f'loaded data is still as int*300, remember to convert on the fly.')
         betas = np.load(betas_file, allow_pickle=True)
 
     return betas
 
 
 def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
+    
     nsddata_betas_folder = os.path.join(nsd_dir, "nsddata_betas", "ppdata")
-
-    data_folder = os.path.join(
-        nsddata_betas_folder, sub, targetspace, "betas_fithrf_GLMdenoise_RR"
-    )
+    data_folder = os.path.join(nsddata_betas_folder, sub, targetspace, "betas_fithrf_GLMdenoise_RR")
 
     betas = []
     # loop over sessions
-    # trial_index=0
     for ses in range(n_sessions):
         ses_i = ses + 1
-        si_str = str(ses_i).zfill(2)
+        si_str = str(ses_i).zfill(2)  # e.g. '01'
 
-        # sess_slice = slice(trial_index, trial_index+750)
         print(f"\t\tsub: {sub} fetching betas for trials in session: {ses_i}")
-
-        # we only want to keep the shared_1000
         this_ses = read_behavior(nsd_dir, subject=sub, session_index=ses_i)
-
         # these are the 73K ids.
         ses_conditions = np.asarray(this_ses["73KID"])
-
         valid_trials = [j for j, x in enumerate(ses_conditions)]
 
         # this skips if say session 39 doesn't exist for subject x
-        # (see n_sessions comment above)
         if valid_trials:
             if targetspace == "fsaverage":
-                conaxis = 1
-
+                # no need to divide by 300 in this case
+                cond_axis = -1
                 # load lh
-                img_lh = (
-                    nb.load(
-                        os.path.join(
-                            data_folder, f"lh.betas_session{si_str}.mgh"
-                        )
-                    )
-                    .get_fdata()
-                    .squeeze()
-                )
+                img_lh = nb.load(os.path.join(data_folder, f"lh.betas_session{si_str}.mgh")).get_fdata().squeeze()
                 # load rh
-                img_rh = (
-                    nb.load(
-                        os.path.join(
-                            data_folder, f"rh.betas_session{si_str}.mgh"
-                        )
-                    )
-                    .get_fdata()
-                    .squeeze()
-                )
+                img_rh = nb.load(os.path.join(data_folder, f"rh.betas_session{si_str}.mgh")).get_fdata().squeeze()
                 # concatenate
                 all_verts = np.vstack((img_lh, img_rh))
-
                 # mask
                 if mask is not None:
-                    betas.append(
-                        (zscore(all_verts, axis=conaxis)[mask, :]).astype(
-                            np.float32
-                        )
-                    )
-
+                    betas.append((zscore(all_verts, axis=cond_axis)[mask, :]).astype(np.float32))
                 else:
-                    betas.append(
-                        (zscore(all_verts, axis=conaxis)).astype(np.float32)
-                    )
-            else:
-                conaxis = 1
-                img = nb.load(
-                    os.path.join(data_folder, f"betas_session{si_str}.nii.gz")
-                )
+                    betas.append((zscore(all_verts, axis=cond_axis)).astype(np.float32))
+
+            elif targetspace == "func1pt8mm":
+                # we will need to divide the loaded data by 300 in this case
+                cond_axis = -1
+                img = nb.load(os.path.join(data_folder, f"betas_session{si_str}.nii.gz")).get_fdata().squeeze()
+                # img = nb.load(os.path.join(data_folder, f"betas_session{si_str}.nii.gz"))
                 # re-hash the betas to save memory
-
                 if mask is not None:
-                    betas.append(
-                        (
-                            zscore(np.asarray(img.dataobj), axis=conaxis)[
-                                mask, :
-                            ]
-                            * 300
-                        ).astype(np.int16)
-                    )
+                    betas.append((zscore(img/300., axis=cond_axis)[mask, :]).astype(np.float32))
                 else:
-                    betas.append(
-                        (
-                            zscore(np.asarray(img.dataobj), axis=conaxis) * 300
-                        ).astype(np.int16)
-                    )
+                    betas.append((zscore(img/300., axis=cond_axis)).astype(np.float32))
+
+            else:
+                raise Exception("targetspace not recognized")
 
     return betas
 
@@ -255,9 +190,7 @@ def get_conditions(nsd_dir, sub, n_sessions):
         print(f"\t\tsub: {sub} fetching condition trials in session: {ses_i}")
 
         # we only want to keep the shared_1000
-        this_ses = np.asarray(
-            read_behavior(nsd_dir, subject=sub, session_index=ses_i)["73KID"]
-        )
+        this_ses = np.asarray(read_behavior(nsd_dir, subject=sub, session_index=ses_i)["73KID"])
 
         # these are the 73K ids.
         valid_trials = [j for j, x in enumerate(this_ses)]
@@ -432,14 +365,10 @@ def get_conditions_515(nsd_dir, n_sessions=40):
     for sub in range(8):
         subix = f"subj0{sub+1}"
         # extract conditions data and reshape conditions to be ntrials x 1
-        conditions = np.asarray(
-            get_conditions(nsd_dir, subix, n_sessions)
-        ).ravel()
+        conditions = np.asarray(get_conditions(nsd_dir, subix, n_sessions)).ravel()
 
         # find the 3 repeats
-        conditions_bool = [
-            True if np.sum(conditions == x) == 3 else False for x in conditions
-        ]
+        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
 
         conditions = conditions[conditions_bool]
 
@@ -456,122 +385,13 @@ def get_conditions_515(nsd_dir, n_sessions=40):
     return sub_conditions
 
 
-def load_json_data(data_dir):
-    """[loads nsd ma_task json file as dict]
-    Args:
-        data_dir ([path]): [path to the data]
-    Returns:
-        data_store ([dict]): [ma task dict]
-    """
-    json_file = os.path.join(
-        data_dir, "Meadows_nsd-multiple-arrangements_v_v2_tree.json"
-    )
-    # read in the meadows json file
-
-    with open(json_file) as file_data:
-        data_store = json.load(file_data)
-    # get the multiple arrangements data
-
-    return data_store
-
-
-def get_matask_stim(data_dir="data"):
-    """[return special 100 stimuli]
-    Args:
-        data_dir ([path]): [where is the data]
-        stim_ids ([list]): [names of the sorted stimuli]
-    Returns:
-        images ([dict]): [dict of stimuli images with key stim_id and value image array]
-    """
-    size = 128, 128
-    stim_list = glob.glob(os.path.join(data_dir, "special100", "*.png"))
-
-    images = {
-        re.split("\\\\", stim)[-1][:-4]: np.asarray(
-            Image.open(stim).resize(size=size, resample=Image.BICUBIC)
-        )
-        for stim in stim_list
-    }
-    # get a dictionary of stimulus images and IDs
-
-    return images
-
-
-def get_stim_ids(data_store, subject):
-    """[return sorted stim ids]
-    Args:
-        data_store ([json]): [ma task json data_store]
-        subject ([string]): [meadows subject name]
-    Returns:
-        indcs ([list]): [indices for stim sorting]
-        stim_ids ([list]): [names of the sorted stimuli]
-    """
-    stimuli = data_store[subject]["tasks"][1]["stimuli"]
-    # get the stimulus names from the data_store dictionary
-
-    stim_ids = [x["name"] for x in stimuli]
-    # get the 73K ids (used later for reading in the images)
-    # get the nsd integer value from the stimuli variable
-
-    stim_ids_np = np.asarray(
-        [int(re.split("nsd", x["name"])[1]) for x in stimuli]
-    )
-    indcs = np.argsort(stim_ids_np)
-    stim_ids = [stim_ids_np[i] for i in indcs]
-    # sort the ids (nsa.read_images needs sorted indices)
-    # by index sorting then listing using these indexes
-
-    return stim_ids, indcs
-
-
-def get_matask(data_dir, sub, monitor=True):
-    """[fetch the multiple arrangements data]
-    Args:
-        data_dir ([path]): [where is the data]
-        sub ([string]): [subject key]
-    Returns:
-        RDM utv ([array]): [upper triangular vector of the RDM]
-    """
-    subjects = {
-        "subj01": "chief-tick",
-        "subj02": "firm-squid",
-        "subj03": "mighty-squid",
-        "subj04": "sacred-hen",
-        "subj05": "sunny-cougar",
-        "subj06": "moved-seal",
-        "subj07": "sure-kiwi",
-        "subj08": "still-toad",
-    }
-    # meadows nicknames
-
-    this_subject = subjects[sub]
-
-    data_store = load_json_data(
-        os.path.join(data_dir, "nsddata", "bdata", "meadows")
-    )
-    # get the data
-
-    stim_ids, indcs = get_stim_ids(data_store, this_subject)
-    # get stim ids and sorting indices
-
-    this_data = data_store[this_subject]["tasks"][1]["rdm"]
-    # extract that subject's RDM from the json datastore
-
-    rdm_utv = reorder_rdm(this_data, indcs)
-    # reorder rdm according to sorting indices
-
-    return rdm_utv, stim_ids
-
-
 def get_sentence_lists(nsda, image_indices):
     """gets a list of captions from nsd given indices
     nsda must be an instance of NSDAccess: nsda = NSDAccess(nsd_dir)"""
 
     # Read in captions
     # print('reading coco captions for the requested images')
-    captions = nsda.read_image_coco_info(
-        image_indices, info_type="captions", show_annot=False
-    )
+    captions = nsda.read_image_coco_info(image_indices, info_type="captions", show_annot=False)
 
     sentence_lists = []
     for caption in captions:

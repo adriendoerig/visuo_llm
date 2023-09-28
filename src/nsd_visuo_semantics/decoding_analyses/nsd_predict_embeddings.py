@@ -165,7 +165,6 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
             if np.sum(good_vertex) != len(good_vertex):
                 print(f"found some NaN for {subj}")
             betas_mean = betas_mean[good_vertex, :]
-            betas_mean = (betas_mean/300).astype(np.float32)  # /300 because NSD saved in 300*value in int instead of float32
 
             # now we further split the brain data according to the 515 test set or the training set for that subject
             betas_test = betas_mean[:, sample_515_bool].T  # sub1: (515, 327673) (n_voxels may vary from subj to subj because of nans)

@@ -1,23 +1,24 @@
 close all; clear all;
 
-base_dir = '/rds/projects/c/charesti-start/';
+%base_dir = '/rds/projects/c/charesti-start/';
 searchlight_save_dir = '../results_dir/searchlight_respectedsampling_correlation';
 
 RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
-USE_FDR = 1;
-OVERWRITE = 0;  % if 0, do not redo existing plots
+USE_FDR = 0;
+OVERWRITE = 1;  % if 0, do not redo existing plots
+SAVE_TYPE = 'png';  % 'svg' or 'png'
 
 % add path to cvncode, utils, and heklper functions
-addpath(genpath(fullfile(base_dir,'software','cvncode')));
-addpath(genpath(fullfile(base_dir,'software','knkutils')));
-addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
-addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/cvncode')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/matlab')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/fsfast/toolbox')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/knkutils')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/npy-matlab/npy-matlab')));
+addpath(genpath(fullfile('../utils')));
 
-% add path to freesurfer tools
-addpath(genpath(fullfile(base_dir,'software', 'freesurfer7', 'matlab')));
 
 % we need to point to the subjects in NSD data
-setenv('SUBJECTS_DIR', fullfile(base_dir,'data','NSD','nsddata','freesurfer'));
+setenv('SUBJECTS_DIR', fullfile('/share/klab/datasets/NSD_for_visuo_semantics/nsddata/freesurfer'));
 
 % some parameters
 viewz_to_plot = {13};  % {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
@@ -30,10 +31,10 @@ extraopts = {'rgbnan', 1, 'hemibordercolor', [1 1 1], 'text',{'' ''}};
 n_vertices = 327684;
 hemis = {'lh', 'rh'};
 
-ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'openai_ada2', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
-MODEL_NAMES = {'mpnet'};
+ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
+MODEL_NAMES = {"mpnet"}  % , "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"};
 MODEL_SUFFIX =  ''  % default is ''
-CONTRAST_MODEL_NAMES = {'multihot'}  % ALL_MODEL_NAMES
+CONTRAST_MODEL_NAMES = {}  % ALL_MODEL_NAMES
 
 DNN_LAYER = 10  % 'all' to do all layers, else an int
 DNN_TIMESTEP = 6  % 'all' % 6  % 'all' to do all timesteps, else an int
@@ -89,7 +90,7 @@ for m1 = 1:length(MODEL_NAMES)
             else
                 map_id = 1
             end
-            datapath = fullfile(searchlight_save_dir, '%s', MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.mgz');
+            datapath = fullfile(searchlight_save_dir, '%s', MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
 
             % where to save
             figpath  = fullfile(searchlight_save_dir, 'Figures', MODEL_NAME);
@@ -104,7 +105,7 @@ for m1 = 1:length(MODEL_NAMES)
                 sub_data = [];
                 for hemi = 1:2
                     this_hemi = hemis{hemi};
-                    sub_data = cat(1, sub_data, MRIread(sprintf(datapath, subj, strcat(MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(map_id))).vol');
+                    sub_data = cat(1, sub_data, readNPY(sprintf(datapath, subj, strcat(MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(map_id))));
                 end
                 main_data(sub, :) = sub_data;
             end
@@ -120,10 +121,10 @@ for m1 = 1:length(MODEL_NAMES)
                     this_subj_data = squeeze(main_data(sub,  :));
                     for v = 1:length(viewz_to_plot)
                         this_view = viewz_to_plot{v};
-                        if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.svg')))
+                        if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                             [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-max(abs(main_data(:))), max(abs(main_data(:)))], cmapsign4(256),[],Lookup,wantfig,extraopts);
                              title(sprintf('%s \n max: %3.2f', subj, max(abs(main_data(:)))))
-                            saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME)), 'svg')
+                            saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
                         end
                         close all;
                     end
@@ -156,16 +157,16 @@ for m1 = 1:length(MODEL_NAMES)
             % plot
             for v = 1:length(viewz_to_plot)
                 this_view = viewz_to_plot{v};
-                if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.svg')))
+                if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                     % non-thresholded image
                     [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-max(mean_corrs(:)), max(mean_corrs(:))], cmapsign4(256), [], Lookup, wantfig, extraopts);
-                    % title(sprintf('group average max: %3.2f', max_corr))
-                    saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME)), 'svg')
+                    title(sprintf('group average max: %3.2f', max_corr))
+                    saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
                 end
                 close all;
-                if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.svg')))
+                if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                     % significant voxels only. Need hack to fix bug in cvnlookup
-                    cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME), SAVE_MODEL_NAME, extraopts)
+                    cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME), SAVE_MODEL_NAME, SAVE_TYPE, extraopts)
                 end
                 close all;
             end
@@ -203,7 +204,7 @@ for m1 = 1:length(MODEL_NAMES)
                     CONTRAST_SAVE_MODEL_NAME = strcat(CONTRAST_MODEL_NAME, '_l', string(contrast_layer), '_t', string(contrast_timestep), MODEL_SUFFIX)
                 end
 
-                contrast_datapath = fullfile(searchlight_save_dir, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.mgz');
+                contrast_datapath = fullfile(searchlight_save_dir, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
                 contrast_data = single(zeros(n_subjects, n_vertices));
 
                 % loop over subjects
@@ -212,7 +213,7 @@ for m1 = 1:length(MODEL_NAMES)
                     sub_contrast_data = [];
                     for hemi = 1:2
                         this_hemi = hemis{hemi};
-                        sub_contrast_data = cat(1, sub_contrast_data, MRIread(sprintf(contrast_datapath, subj, strcat(CONTRAST_MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(contrast_map_id))).vol');
+                        sub_contrast_data = cat(1, sub_contrast_data, readNPY(sprintf(contrast_datapath, subj, strcat(CONTRAST_MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(contrast_map_id))));
                     end
                     contrast_data(sub, :) = sub_contrast_data;
                 end
@@ -250,10 +251,10 @@ for m1 = 1:length(MODEL_NAMES)
                         this_subj_data = squeeze(difference_data(sub, :));
                         for v = 1:length(viewz_to_plot)
                             this_view = viewz_to_plot{v};
-                            if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.svg')))
+                            if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                                 [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-max(abs(difference_data(:))), max(abs(difference_data(:)))], cmapsign4(256),[],Lookup,wantfig,extraopts);
                                  title(sprintf('%s \n max: %3.2f', subj, max(abs(difference_data(:)))))
-                                saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), 'svg')
+                                saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE)
                             end
                             close all;
                         end
@@ -263,16 +264,16 @@ for m1 = 1:length(MODEL_NAMES)
                 % plot group contrast
                 for v = 1:length(viewz_to_plot)
                     this_view = viewz_to_plot{v};
-                    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.svg')))
+                    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                         % non-thresholded image
                         [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_diff', [-max(mean_diff(:)), max(mean_diff(:))], cmapsign4(256), [], Lookup, wantfig, extraopts);
                         % title(sprintf('%s vs. %s \n group max diff: %3.2f', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME, max(mean_diff(:))))
-                        saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), 'svg');
+                        saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE);
                     end
                     close all;
-                    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.svg')))
+                    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                         % significant voxels only. Need hack to fix bug in cvnlookup
-                        cvn_plot_fix(mean_diff_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix), sprintf('%s vs. %s', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME), extraopts)
+                        cvn_plot_fix(mean_diff_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix), sprintf('%s vs. %s', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME), SAVE_TYPE, extraopts)
                     end
                     close all;
                 end

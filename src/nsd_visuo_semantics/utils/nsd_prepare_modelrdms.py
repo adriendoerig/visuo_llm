@@ -9,7 +9,7 @@ import pickle
 import h5py
 import numpy as np
 from scipy.spatial.distance import pdist
-from nsd_visuo_semantics.utils.nsd_get_conditions import get_conditions, get_conditions_515
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515
 
 # initialise parameters
 n_sessions = 40
@@ -36,11 +36,11 @@ os.makedirs(rdms_dir, exist_ok=True)
 # specify where each set of nsd embeddings is saved
 modelname2file = {
     "multihot": f"{saved_embeddings_dir}/nsd_multihot.pkl",
-    "fasttext_categories": f"{saved_embeddings_dir}/NSD_fasttext_embeddings.npy",
+    "fasttext_categories": f"{saved_embeddings_dir}/nsd_fasttext_CATEGORY_mean_embeddings.pkl",
     "fasttext_nouns": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings.pkl",
     "nsd_fasttext_nouns_closest_cocoCats_cut0.33": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings_closest_cocoCats_cut0.33.pkl",
     "fasttext_verbs": f"{saved_embeddings_dir}/nsd_fasttext_VERB_mean_embeddings.pkl",
-    "fasttext_all": f"{saved_embeddings_dir}/nsd_fasttext_allWord_mean_embeddings.pkl",
+    "fasttext_all": f"{saved_embeddings_dir}/nsd_fasttext_ALLWORDS_mean_embeddings.pkl",
     "guse": f"{saved_embeddings_dir}/nsd_guse_mean_embeddings.pkl",
     "mpnet": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",
     # DNN activities
@@ -56,12 +56,10 @@ modelname2file = {
 }
 
 for MODEL_NAME in [
-    "multihot",
-    "mpnet",
-    "fasttext_nouns",
-    "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
-    "dnn_multihot_rec",
-    "dnn_mpnet_rec"
+    "fasttext_categories",
+    "fasttext_verbs",
+    "fasttext_all",
+    "guse"
 ]:
     
     save_dir = os.path.join(rdms_dir, MODEL_NAME)
@@ -88,56 +86,36 @@ for MODEL_NAME in [
         # we also need to reshape conditions to be ntrials x 1
         conditions = np.asarray(conditions).ravel()
         # then we find the valid trials for which we do have 3 repetitions.
-        conditions_bool = [
-            True if np.sum(conditions == x) == 3 else False for x in conditions
-        ]
+        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
         if remove_shared_515:
-            conditions_515 = get_conditions_515(
-                nsd_dir
-            )  # [515,]  (nsd_indices for the 515 shared images)
-            conditions_515_bool = [
-                True if x in conditions_515 else False for x in conditions
-            ]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
-            conditions_bool = [
-                True if x and not y else False
-                for x, y in zip(conditions_bool, conditions_515_bool)
-            ]  # [n_subj_stims-515,] array of nsd_indices
+            conditions_515 = get_conditions_515(nsd_dir)  # [515,]  (nsd_indices for the 515 shared images)
+            conditions_515_bool = [True if x in conditions_515 else False for x in conditions]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
+            conditions_bool = [True if x and not y else False for x, y in zip(conditions_bool, conditions_515_bool)]  # [n_subj_stims-515,] array of nsd_indices
         conditions_sampled = conditions[conditions_bool]
         # find the subject's condition list (sample pool)
         sample = np.unique(conditions[conditions_bool])
 
         if "dnn" in MODEL_NAME:
-            with h5py.File(
-                modelname2file[MODEL_NAME], "r"
-            ) as activations_file:
+            with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
                 layer_names = [x for x in activations_file.keys()]
                 for layer_name in layer_names:
-                    save_name = os.path.join(
-                        save_dir,
-                        f"{sub}_{MODEL_NAME}_{layer_name}_fullrdm.npy",
-                    )
+                    save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_{layer_name}_fullrdm.npy")
                     if os.path.exists(save_name):
                         print(f"Found file at {save_name}. Skipping...")
                     else:
                         print(f"Creating {MODEL_NAME} rdm for {sub}")
-                        this_embedding = activations_file[layer_name][
-                            sample - 1, :
-                        ]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
-                        this_rdm = pdist(this_embedding, rdm_distance).astype(
-                            np.float32
-                        )  # subject based RDM for 10000 items
+                        this_embedding = activations_file[layer_name][sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                        this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                         print(f"Saving in {save_name}")
                         np.save(save_name, this_rdm)
 
         else:
-            save_name = os.path.join(
-                save_dir, f"{sub}_{MODEL_NAME}_fullrdm.npy"
-            )
+            save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_fullrdm.npy")
             if os.path.exists(save_name):
                 print(f"Found file at {save_name}. Skipping...")
             else:
                 print(f"Creating {MODEL_NAME} rdm for {sub}")
-                this_embedding = embeddings[sample - 1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                this_embedding = embeddings[sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
                 this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                 print(f"Saving in {save_name}")
                 np.save(save_name, this_rdm)

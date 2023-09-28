@@ -1,6 +1,5 @@
 import os
 import pickle
-import time
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
@@ -14,6 +13,10 @@ overwrite = False  # if True, overwrite existing stuff. If False, load existing 
 MODEL_NAMES = [
     "multihot",
     "mpnet",
+    "fasttext_categories",
+    "fasttext_verbs",
+    "fasttext_all",
+    "guse",
     "fasttext_nouns",
     "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
     "dnn_multihot_rec",
@@ -27,7 +30,6 @@ dnn_layer_to_use = -1
 remove_shared_515 = False  # if True, use RDMs computed without the 515 stimuli seen by all subjects
 rdm_distance = "correlation"  # 'cosine', 'correlation', etc. NOTE: ONLY USED FOR HUMANS. FOR MODELS, WE ARE USING PRECOMPUTED RDMS WITH CORRELATION DIST
 
-n_jobs = 38
 n_sessions = 40
 n_subjects = 8
 subs = [f"subj0{x+1}" for x in range(n_subjects)]
@@ -92,25 +94,14 @@ if COMPUTE:
         # Betas per subject
         betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
         betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
-
         # save the subject's full ROI RDMs
         roi_rdms = []
         for roi in range(1, len(ROIS)):
             mask_name = ROIS[roi]
-            rdm_full_file = os.path.join(
-                subj_roi_rdms_path,
-                f"{subj}_{mask_name}_fullrdm_{rdm_distance}.npy",
-            )
-            rdm_515_file = os.path.join(
-                subj_roi_rdms_path,
-                f"{subj}_{mask_name}_515rdm_{rdm_distance}.npy",
-            )
+            rdm_full_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_fullrdm_{rdm_distance}.npy")
+            rdm_515_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_515rdm_{rdm_distance}.npy")
 
-            if (
-                overwrite
-                or not os.path.exists(rdm_full_file)
-                or not os.path.exists(rdm_515_file)
-            ):
+            if overwrite or not os.path.exists(rdm_full_file) or not os.path.exists(rdm_515_file):
                 print(f"Gathering betas for ROI: {rdm_515_file}")
                 # maskdata is an array of shape [n_voxels,], with a number corresponding to the
                 # ROI of each voxel (e.g. 0 means no ROI is associated with this voxel, 1 means voxel
@@ -122,29 +113,20 @@ if COMPUTE:
                 # masked betas is [n_roi_betas, n_conditions]
                 masked_betas = betas[vs_mask, :]
                 # remove vertices with a nan
-                good_vox = [
-                    True if np.sum(np.isnan(x)) == 0 else False
-                    for x in masked_betas
-                ]
+                good_vox = [True if np.sum(np.isnan(x)) == 0 else False for x in masked_betas]
+
                 if np.sum(good_vox) != len(good_vox):
                     print(f"found some NaN for ROI: {mask_name} - {subj}")
                 masked_betas = masked_betas[good_vox, :]
 
             if overwrite or not os.path.exists(rdm_full_file):
                 # prepare for cosine distance
-                X = (masked_betas.T)  # [n_conditions, n_roi_betas], i.e., we make an [n_conditionsxn_conditions] rdm
+                X = masked_betas.T  # [n_conditions, n_roi_betas], i.e., we make an [n_conditionsxn_conditions] rdm
 
                 print(f"computing RDM for roi: {mask_name}")
-                start_time = time.time()
                 rdm = pdist(X, metric=rdm_distance)
                 if np.any(np.isnan(rdm)):
                     raise ValueError(f"nan found in RDM for ROI {mask_name}")
-
-                elapsed_time = time.time() - start_time
-                print(
-                    "elapsedtime: ",
-                    f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}',
-                )
 
                 print(f"saving full rdm for {mask_name} : {subj}")
                 np.save(rdm_full_file, rdm)
@@ -154,9 +136,7 @@ if COMPUTE:
                 # rdm on the 515 conditions seen by all subjects (used later to compute the noise ceiling)
                 print(f"computing {subj} 515_RDM for roi: {mask_name}")
 
-                masked_betas_515 = masked_betas[
-                    :, subj_indices_515
-                ]  # [n_roi_betas, 515]
+                masked_betas_515 = masked_betas[:, subj_indices_515]  # [n_roi_betas, 515]
 
                 # prepare for cosine distance
                 X = masked_betas_515.T  # [515, n_roi_betas]
@@ -173,17 +153,12 @@ if COMPUTE:
                 rdm = np.load(rdm_full_file, allow_pickle=True)
                 roi_rdms.append(rdm.astype(np.float32))
 
-        # # make some rdm figures
-        rdm_figures = os.path.join(results_dir, "rdm_figures")
-        os.makedirs(rdm_figures, exist_ok=True)
-
         # This concludes the brain data rdm computations. Now, we move to model rdms
         all_corrs[subj] = {}
         for MODEL_NAME in MODEL_NAMES:
-            # fetch the model RDMs
-            model_rdms, model_names = get_model_rdms(
-                f"{models_dir}/{MODEL_NAME}", subj, filt=MODEL_NAME
-            )  # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
+            # fetch the model RDMs 
+            # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
+            model_rdms, model_names = get_model_rdms(f"{models_dir}/{MODEL_NAME}", subj, filt=MODEL_NAME)
 
             if "dnn_" in MODEL_NAME.lower():
                 model_rdm_idx = dnn_layer_to_use
@@ -191,23 +166,7 @@ if COMPUTE:
                 # otherwise, there is just one rdm anyway, so we use it
                 model_rdm_idx = 0
 
-            model_rdm = model_rdms[
-                model_rdm_idx
-            ]  # always shape [1, model_rdm_size] (as expected by batchg, etc)
-
-            rdm_fig_file = os.path.join(
-                rdm_figures, f"{subj}_{MODEL_NAME}_rdm_norank.svg"
-            )
-            # if overwrite or not os.path.exists(rdm_fig_file):
-            #     # make a figure of the RDM.
-            #     plt.imshow(squareform(rankdata(model_rdm)), cmap='magma')  # rdm_colormap())
-            #     plt.colorbar()
-            #     plt.savefig(rdm_fig_file)
-            #     plt.close('all')
-            #     plt.imshow(squareform(model_rdm), cmap='magma')  # rdm_colormap())
-            #     plt.colorbar()
-            #     rdm_fig_file = os.path.join(rdm_figures, f'{subj}_{MODEL_NAME}_rdm_norank.svg')
-            #     plt.savefig(rdm_fig_file)
+            model_rdm = model_rdms[model_rdm_idx]  # always shape [1, model_rdm_size] (as expected by batchg, etc)
 
             # initialise batch generator
             batchg_model = BatchGen(model_rdm, all_conditions)
@@ -216,15 +175,11 @@ if COMPUTE:
             # Compute correlations between model and all ROI rdms
             for roi in range(1, len(ROIS)):
                 # compute & save, or find and load, the data for that subject
-                save_rdmcorrs = os.path.join(
-                    subj_roi_rdms_path,
-                    f"{subj}_{MODEL_NAME}_{ROIS[roi]}ROI_corrs.npy",
-                )  # nr for new roi
+                save_rdmcorrs = os.path.join(subj_roi_rdms_path, f"{subj}_{MODEL_NAME}_{ROIS[roi]}ROI_corrs.npy")
 
                 if overwrite or not os.path.exists(save_rdmcorrs):
-                    batchg_roi = BatchGen(
-                        roi_rdms[roi - 1], all_conditions
-                    )  # -1 because roi indexing starts at 1
+                    
+                    batchg_roi = BatchGen(roi_rdms[roi - 1], all_conditions)  # -1 because roi indexing starts at 1
 
                     these_corrs = []
 
@@ -236,11 +191,8 @@ if COMPUTE:
                         "saved_sampling",
                         f"{subj}_nsd-allsubstim_sampling.npy",
                     )
-                    sample_pool = np.load(
-                        saved_samples_file, allow_pickle=True
-                    )
+                    sample_pool = np.load(saved_samples_file, allow_pickle=True)
 
-                    start_time = time.time()
                     for j in range(n_samples):
                         print(f"\rworking on usual case: boot {j}", end="")
 
@@ -249,29 +201,19 @@ if COMPUTE:
 
                         # now get the sampled 100x100 rdms for model and roi and correlate
                         # this returns 1_modelx(upper_tri_sampled_model_rdm)
-                        model_rdm_sample = np.asarray(
-                            batchg_model.index_rdms(choices)
-                        )
-                        roi_rdm_sample = np.asarray(
-                            batchg_roi.index_rdms(choices)
-                        )
+                        model_rdm_sample = np.asarray(batchg_model.index_rdms(choices), dtype=np.float32)
+                        roi_rdm_sample = np.asarray(batchg_roi.index_rdms(choices), dtype=np.float32)                        
 
-                        these_corrs.append(
-                            corr_rdms(model_rdm_sample, roi_rdm_sample)
-                        )
+                        these_corrs.append(corr_rdms(model_rdm_sample, roi_rdm_sample))
 
-                    elapsed_time = time.time() - start_time
-                    print(
-                        f' - elapsedtime: {time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}'
-                    )
                     np.save(save_rdmcorrs, these_corrs)
 
                 else:
                     these_corrs = np.load(save_rdmcorrs, allow_pickle=True)
 
-                all_corrs[subj][MODEL_NAME][f"{ROIS[roi]}ROI"] = np.squeeze(
-                    these_corrs
-                )
+                all_corrs[subj][MODEL_NAME][f"{ROIS[roi]}ROI"] = np.squeeze(these_corrs)
+
+        del betas
 
     with open(f"{results_dir}/all_{rdm_distance}_rdm_corrs.pkl", "wb") as fp:
         pickle.dump(all_corrs, fp)
@@ -329,46 +271,55 @@ with open(roi_noise_ceilings_per_sub_path, "wb") as f:
 
 # get mean corrs
 mean_corrs = {}
+mean_corrs_no_noise_ceiling = {}
 for subj in all_corrs.keys():  # ['subj01', ..., 'subj08']
     mean_corrs[subj] = {}
+    mean_corrs_no_noise_ceiling[subj] = {}
     for model in all_corrs[subj].keys():  # [model_name_1, ...]
         mean_corrs[subj][model] = {}
+        mean_corrs_no_noise_ceiling[subj][model] = {}
         for roi in all_corrs[subj][model].keys():  # ['earlyROI', ...]
-            # each all_corrs[k1][k2][k3] is 100 numbers (1 corr per 100 split). We mavg and divide by subj's noiseCeil
-            mean_corrs[subj][model][roi] = (
-                np.mean(all_corrs[subj][model][roi])
-                / roi_noise_ceilings_per_sub[roi][subj]
-            )
+            # each all_corrs[k1][k2][k3] is 100 numbers (1 corr per 100 split). We avg and divide by subj's noiseCeil
+            mean_corrs_no_noise_ceiling[subj][model][roi] = np.mean(all_corrs[subj][model][roi])
+            mean_corrs[subj][model][roi] = mean_corrs_no_noise_ceiling[subj][model][roi]/roi_noise_ceilings_per_sub[roi][subj]
 
 group_corrs = {}
 group_mean_corrs = {}
 group_std_corrs = {}
+group_corrs_no_noise_ceiling = {}
+group_mean_corrs_no_noise_ceiling = {}
+group_std_corrs_no_noise_ceiling = {}
 for model_name in mean_corrs[list(mean_corrs.keys())[0]].keys():
     group_corrs[model_name] = {}
     group_mean_corrs[model_name] = {}
     group_std_corrs[model_name] = {}
+    group_corrs_no_noise_ceiling[model_name] = {}
+    group_mean_corrs_no_noise_ceiling[model_name] = {}
+    group_std_corrs_no_noise_ceiling[model_name] = {}
     for roi in mean_corrs[list(mean_corrs.keys())[0]][model_name].keys():
         group_corrs[model_name][roi] = []
         group_mean_corrs[model_name][roi] = 0
         group_std_corrs[model_name][roi] = 0
+        group_corrs_no_noise_ceiling[model_name][roi] = []
+        group_mean_corrs_no_noise_ceiling[model_name][roi] = 0
+        group_std_corrs_no_noise_ceiling[model_name][roi] = 0
         for subj in mean_corrs.keys():
-            group_corrs[model_name][roi].append(
-                mean_corrs[subj][model_name][roi]
-            )
-        group_mean_corrs[model_name][roi] = np.mean(
-            group_corrs[model_name][roi]
-        )
+            group_corrs_no_noise_ceiling[model_name][roi].append(mean_corrs_no_noise_ceiling[subj][model_name][roi])
+            group_corrs[model_name][roi].append(mean_corrs[subj][model_name][roi])
+        group_mean_corrs[model_name][roi] = np.mean(group_corrs[model_name][roi])
         group_std_corrs[model_name][roi] = np.std(group_corrs[model_name][roi])
+        group_mean_corrs_no_noise_ceiling[model_name][roi] = np.mean(group_corrs_no_noise_ceiling[model_name][roi])
+        group_std_corrs_no_noise_ceiling[model_name][roi] = np.std(group_corrs_no_noise_ceiling[model_name][roi])
 
-with open(
-    f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_corrs.pkl", "wb"
-) as fp:
+with open(f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_corrs.pkl", "wb") as fp:
     pickle.dump(group_corrs, fp)
-with open(
-    f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_mean_corrs.pkl", "wb"
-) as fp:
+with open(f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_mean_corrs.pkl", "wb") as fp:
     pickle.dump(group_mean_corrs, fp)
-with open(
-    f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_std_corrs.pkl", "wb"
-) as fp:
+with open(f"{subj_roi_rdms_path}/subjWiseNoiseCeiling_group_std_corrs.pkl", "wb") as fp:
     pickle.dump(group_std_corrs, fp)
+with open(f"{subj_roi_rdms_path}/group_corrs_no_noise_ceiling.pkl", "wb") as fp:
+    pickle.dump(group_corrs_no_noise_ceiling, fp)
+with open(f"{subj_roi_rdms_path}/group_mean_corrs_no_noise_ceiling.pkl", "wb") as fp:
+    pickle.dump(group_mean_corrs_no_noise_ceiling, fp)
+with open(f"{subj_roi_rdms_path}/group_std_corrs_no_noise_ceiling.pkl", "wb") as fp:
+    pickle.dump(group_std_corrs_no_noise_ceiling, fp)

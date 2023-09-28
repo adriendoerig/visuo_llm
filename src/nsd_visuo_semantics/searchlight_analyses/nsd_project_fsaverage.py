@@ -11,7 +11,7 @@ MODEL_SUFFIX = ""  # Default: '', or '_noShared515' - append to the saved folder
 rdm_distance = "correlation"
 
 # various paths
-nsd_dir = '/share/klab/datasets/NSD'
+nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
 base_save_dir = "../results_dir"
 
 # initiate NSDmapdata
@@ -40,8 +40,7 @@ hemis = ["lh", "rh"]
 
 initial_time = time.time()
 
-for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33",
-                   "dnn_multihot_rec", "dnn_mpnet_rec"]:
+for MODEL_NAME in ["mpnet"]:#, "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"]:
 
     # define where the searchlights are saved
     data_dir = os.path.join(
@@ -99,14 +98,10 @@ for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_cl
             brain_vols = np.stack(brain_vols)  # 100xbrain_vol_dims
 
             # average
-            model_means = np.nanmean(
-                brain_vols, axis=0
-            )  # shape (brain_vol_dims,)
+            model_means = np.nanmean(brain_vols, axis=0)  # shape (brain_vol_dims,)
 
             # also compute T
-            t_brain = np.nanmean(brain_vols, axis=0) / (
-                np.nanstd(brain_vols, axis=0) / np.sqrt(n_samples)
-            )
+            t_brain = np.nanmean(brain_vols, axis=0)/(np.nanstd(brain_vols, axis=0)/np.sqrt(n_samples))
 
             print("projecting to fsaverage\n")
             model = model_means
@@ -119,9 +114,7 @@ for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_cl
             # for each hemisphere.
             for hemi in hemis:
                 hemi_data = []
-                for lay in range(
-                    3
-                ):  # part of NSD pipeline. Take average across 3 cortical depths.
+                for lay in range(3):  # part of NSD pipeline. Take average across 3 cortical depths.
                     hemi_data.append(
                         nsd.fit(  # goes from 'func1pt8' source space and projects to f'{hemi}.layerB{lay+1}' (subj native freesurfer space)
                             subjix + 1,
@@ -137,24 +130,22 @@ for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_cl
             # port the model
             for h, d in zip(hemis, data):
                 output_file = os.path.join(
-                    output_dir, f"{h}.{this_sub}-model-{model_i+1}-surf.mgz"
+                    output_dir, f"{h}.{this_sub}-model-{model_i+1}-surf.npy"
                 )
 
                 print(f"\t\tsaving {output_file} to disk")
-                nsd.fit(  # projects to fsaverage
-                    subjix + 1,
-                    f"{h}.white",
-                    "fsaverage",
-                    d,
-                    interptype=None,
-                    badval=0,
-                    outputfile=output_file,
-                    fsdir=fs_dir,
-                )
+                transformed_data = nsd.fit(  # projects to fsaverage
+                                            subjix + 1,
+                                            f"{h}.white",
+                                            "fsaverage",
+                                            d,
+                                            interptype=None,
+                                            badval=0,
+                                            fsdir=fs_dir,
+                                        )
+                np.save(output_file, transformed_data, allow_pickle=True)
 
-            print(
-                f"\tprojecting t-values for model {model_i} out of {n_models} models"
-            )
+            print(f"\tprojecting t-values for model {model_i} out of {n_models} models")
             # exactly the same idea as above but for tvals
             data = []
             # project the data to three
@@ -179,16 +170,16 @@ for MODEL_NAME in ["multihot", "mpnet", "fasttext_nouns", "nsd_fasttext_nouns_cl
             for h, d in zip(hemis, data):
                 output_file = os.path.join(
                     output_dir,
-                    f"{h}.{this_sub}-model-{model_i+1}-surf-tvals.mgz",
+                    f"{h}.{this_sub}-model-{model_i+1}-surf-tvals.npy",
                 )
                 print(f"\t\tsaving {output_file} to disk")
-                nsd.fit(
-                    subjix + 1,
-                    f"{h}.white",
-                    "fsaverage",
-                    d,
-                    interptype=None,
-                    badval=0,
-                    outputfile=output_file,
-                    fsdir=fs_dir,
-                )
+                transformed_data = nsd.fit(
+                                        subjix + 1,
+                                        f"{h}.white",
+                                        "fsaverage",
+                                        d,
+                                        interptype=None,
+                                        badval=0,
+                                        fsdir=fs_dir,
+                                        )
+                np.save(output_file, transformed_data, allow_pickle=True)

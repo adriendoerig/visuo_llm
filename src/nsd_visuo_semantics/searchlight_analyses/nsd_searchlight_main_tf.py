@@ -27,8 +27,8 @@ rdm_distance = "correlation"
 # set up directories
 nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
 nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
-betas_dir = os.path.join(nsd_derivatives_dir, "betas")
-precompsl_dir = os.path.join(nsd_derivatives_dir, "searchlights")
+betas_dir = f"{nsd_derivatives_dir}/betas"
+precompsl_dir = f"{nsd_derivatives_dir}/searchlights"
 base_save_dir = "../results_dir"
 os.makedirs(nsd_derivatives_dir, exist_ok=True)
 os.makedirs(betas_dir, exist_ok=True)
@@ -38,11 +38,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
                    "dnn_multihot_rec", "dnn_mpnet_rec"]:
 
     print(f"Starting main searchlight computations for {MODEL_NAME}")
-    models_dir = os.path.join(
-        base_save_dir,
-        f'serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
-        MODEL_NAME,
-    )
+    models_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}/{MODEL_NAME}'
     print(f"Loading serialised model rdms from {models_dir}")
 
     # loop over subjects
@@ -53,20 +49,16 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
         subj = f"subj0{sub}"
 
         # called like this because all models sample the same 100 images every time for fair comparison
-        results_dir = os.path.join(base_save_dir, f"searchlight_respectedsampling_{rdm_distance}", f"{subj}")
+        results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}/{subj}"
         os.makedirs(results_dir, exist_ok=True)
 
         # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
         # we compute them only once for guse, and then will reload them for others
-        samples_dir = os.path.join(results_dir, f'saved_sampling{"_noShared515" if remove_shared_515 else ""}')
+        samples_dir = f'{results_dir}/saved_sampling{"_noShared515" if remove_shared_515 else ""}'
         os.makedirs(samples_dir, exist_ok=True)
 
         # where to save searchlight correlations
-        searchlight_correlations_dir = os.path.join(
-            results_dir,
-            MODEL_NAME,
-            f'corr_vols{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}',
-        )
+        searchlight_correlations_dir = f'{results_dir}/{MODEL_NAME}/corr_vols{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}'
         os.makedirs(searchlight_correlations_dir, exist_ok=True)
 
         print(f"\tthe output files will be stored in {searchlight_correlations_dir}..")
@@ -84,14 +76,8 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
 
         subj_precompsl_dir = os.path.join(precompsl_dir, subj)
         os.makedirs(subj_precompsl_dir, exist_ok=True)
-        sl_indices = os.path.join(
-            subj_precompsl_dir,
-            f"{subj}-{targetspace}-{radius}rad-searchlight_indices.npy",
-        )
-        sl_centers = os.path.join(
-            subj_precompsl_dir,
-            f"{subj}-{targetspace}-{radius}rad-searchlight_centers.npy",
-        )
+        sl_indices = f"{subj_precompsl_dir}/{subj}-{targetspace}-{radius}rad-searchlight_indices.npy"
+        sl_centers = f"{subj_precompsl_dir}/{subj}-{targetspace}-{radius}rad-searchlight_centers.npy"
 
         if not os.path.exists(sl_indices):
             print("\tinitialising searchlight")
@@ -157,7 +143,6 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
 
         # Betas per subject
         print(f"loading betas for {subj}")
-        print("loaded data is still as int*300, remember to convert on the fly.")
         betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
         betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
         
@@ -226,7 +211,7 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
 
                 # simple case without fitting RDMs from all model layers. We simply take our 100 samples and correlate
                 # their brain RDM with the model RDMs of each layer
-                betas_sampled = betas[:, :, :, choices]/300  # /300 because NSD saved in 300*value in int instead of float32
+                betas_sampled = betas[:, :, :, choices]
                 betas_sampled = betas_sampled.astype(np.float32)
 
                 # now get the models and correlate
@@ -275,7 +260,8 @@ for MODEL_NAME in ["mpnet", "multihot",  "fasttext_nouns", "nsd_fasttext_nouns_c
                 elapsed_time = time.time() - start_time
                 print(f"boot {j} : elapsedtime : ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
+        del betas
+        
         print("NSD searchlight mapping done.")
         elapsed_time = time.time() - initial_time
         print("elapsedtime: ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
-

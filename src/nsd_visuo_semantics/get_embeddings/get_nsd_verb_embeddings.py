@@ -1,12 +1,10 @@
 import os
 import pickle
-
 import h5py
 import matplotlib.pyplot as plt
 import nltk
 import numpy as np
 import scipy.spatial
-
 from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments, load_fasttext_vectors
 
 CHECK_FASTTEXT = 1
@@ -35,9 +33,7 @@ if CHECK_FASTTEXT:
     ms_coco_verb_embeddings["runs"] = np.array([i for i in embeddings["runs"]])
     ms_coco_verb_embeddings["run"] = np.array([i for i in embeddings["run"]])
     ms_coco_verb_embeddings["eats"] = np.array([i for i in embeddings["eats"]])
-    ms_coco_verb_embeddings["eating"] = np.array(
-        [i for i in embeddings["eating"]]
-    )
+    ms_coco_verb_embeddings["eating"] = np.array([i for i in embeddings["eating"]])
     ms_coco_verb_embeddings["is"] = np.array([i for i in embeddings["is"]])
 
     # sanity checks
@@ -129,7 +125,7 @@ if GET_VERB_EMBEDDINGS:
                     new_embedding = np.array([i for i in embeddings[v]])
                     img_verb_embeddings.append(new_embedding)
                     ms_coco_verb_embeddings[v] = new_embedding
-                except ValueError:
+                except KeyError:
                     # if the verb does not exist in fasttext (e.g. "unpealed"), skip.
                     final_skipped_verbs.append(v)
 
@@ -143,13 +139,9 @@ if GET_VERB_EMBEDDINGS:
                 np.asarray(img_verb_embeddings), axis=0
             )
 
-    with open(
-        f"{save_embeddings_to}/nsd_fasttext_VERB_mean_embeddings.pkl", "wb"
-    ) as fp:  # Pickling
+    with open(f"{save_embeddings_to}/nsd_fasttext_VERB_mean_embeddings.pkl", "wb") as fp:  # Pickling
         pickle.dump(mean_verb_embeddings, fp)
-    with open(
-        f"{save_embeddings_to}/nsd_verbs_per_image.pkl", "wb"
-    ) as fp:  # Pickling
+    with open(f"{save_embeddings_to}/nsd_verbs_per_image.pkl", "wb") as fp:  # Pickling
         pickle.dump(img_verbs, fp)
 
     print(
@@ -178,11 +170,9 @@ if DO_SANITY_CHECK:
 
         with open("./ms_coco_nsd_captions_test.pkl", "rb") as fp:
             loaded_captions = pickle.load(fp)
-        with open("./nsd_verbs_per_image.pkl", "rb") as fp:  # Pickling
+        with open(f"{save_embeddings_to}/nsd_verbs_per_image.pkl", "rb") as fp:  # Pickling
             loaded_verbs = pickle.load(fp)
-        with open(
-            "./nsd_fasttext_VERB_mean_embeddings.pkl", "rb"
-        ) as fp:  # Pickling
+        with open(f"{save_embeddings_to}/nsd_fasttext_VERB_mean_embeddings.pkl", "rb") as fp:  # Pickling
             loaded_verb_mean_embeddings = pickle.load(fp)
 
         for i in range(0, total_n_stims, step_size):
@@ -192,7 +182,5 @@ if DO_SANITY_CHECK:
                 f"{loaded_verbs[i]}\n"
                 f"Emb shape, min, max, mean: {loaded_verb_mean_embeddings[i].shape, loaded_verb_mean_embeddings[i].min(), loaded_verb_mean_embeddings[i].max(), loaded_verb_mean_embeddings[i].mean()}"
             )
-            plt.savefig(
-                f"{save_test_imgs_to}/NSD_verb_embeddings_check_{i}.png"
-            )
+            plt.savefig(f"{save_test_imgs_to}/NSD_verb_embeddings_check_{i}.png")
             plt.close()

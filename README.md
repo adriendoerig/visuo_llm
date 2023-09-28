@@ -48,6 +48,23 @@ dl.get_nsd('path_to_desired_download_location')
 
 You also need to download the RCNN weights. [NEED TO UPDATE WHEN WE DECIDE HOW TO DO IT]
 
+
+### Running analyses
+
+Please note that most analyses require a large amount of memory. The searchlight analyses benefit from running on GPUs.
+
+
+### Plotting brain maps
+
+This is done in MATLAB and requires an installation of the following libraries:
+
+Freesurfer: wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz
+cvncode: git clone https://github.com/cvnlab/cvncode.git
+knkutils: git clone https://github.com/cvnlab/knkutils.git
+npy-matlab: git clone https://github.com/kwikteam/npy-matlab.git
+
+Then edit the paths in the matlab plot_brains.m script to point to the locations where this is downloaded.
+
 ## Citation
 
 Please cite Doerig et al., Nature, 2023 if you use any of this code in your work.

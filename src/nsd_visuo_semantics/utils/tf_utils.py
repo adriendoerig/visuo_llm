@@ -127,16 +127,6 @@ def chunking(vect, num, chunknum=None):
         return np.asarray(f[num - 1]), xbegin
 
 
-# def rank(x, axis=1):
-#     """[summary]
-
-#     Args:
-#         x ([tensor]): [description]
-#         axis (int, optional): [description]. Defaults to 0.
-#     """
-#     return rankdata(x, axis=axis)
-
-
 def get_rank(y_pred):
     rank = (
         tf.argsort(tf.argsort(y_pred, axis=-1, direction="ASCENDING"), axis=-1)
@@ -174,24 +164,6 @@ def corr_rdms_rank_slow(x, y, n_inchunks=100000):
     return np.asarray(tf.concat(corrs, axis=0))
 
 
-# def corr_rdms_rank(x, y, n_inchunks=100000):
-#     y = tf.convert_to_tensor(y)
-#     y = tf.py_function(func=rank, inp=[y], Tout=[tf.float32])[0]
-#     y = y - tf.reduce_mean(y, axis=1, keepdims=True)
-#     y /= tf.sqrt(tf.einsum('ij,ij->i', y, y))[:, None]
-
-#     chunks = chunking(x, n_inchunks)
-#     corrs = []
-#     for chunki in chunks:
-#         chunk = tf.convert_to_tensor(chunki)
-#         chunk = tf.py_function(func=rank, inp=[chunk], Tout=[tf.float32])[0]
-#         chunk = chunk - tf.reduce_mean(chunk, axis=1, keepdims=True)
-#         chunk /= tf.sqrt(tf.einsum('ij,ij->i', chunk, chunk))[:, None]
-#         corrs.append(tf.einsum('ik,jk', chunk, y))
-
-#     return np.asarray(tf.concat(corrs, axis=0))
-
-
 def corr_rdms(x, y, n_inchunks=100000):
     """corr_rdms useful for correlation of RDMs (e.g. in multimodal RSA fusion)
         where you correlate two ndim RDM stacks.
@@ -203,16 +175,19 @@ def corr_rdms(x, y, n_inchunks=100000):
     Returns:
         [type]: correlations between X and Y, of shape dim0 of X by dim0 of Y
     """
-    y = tf.convert_to_tensor(y)
+    y = tf.convert_to_tensor(y.astype(np.float32))
     y = y - tf.reduce_mean(y, axis=1, keepdims=True)
     y /= tf.sqrt(tf.einsum("ij,ij->i", y, y))[:, None]
 
     chunks = chunking(x, n_inchunks)
     corrs = []
-    for chunki in chunks:
-        chunk = tf.convert_to_tensor(chunki)
+    for i, chunki in enumerate(chunks):
+        chunk = tf.convert_to_tensor(chunki.astype(np.float32))
         chunk = chunk - tf.reduce_mean(chunk, axis=1, keepdims=True)
         chunk /= tf.sqrt(tf.einsum("ij,ij->i", chunk, chunk))[:, None]
-        corrs.append(tf.einsum("ik,jk", chunk, y))
+        try:
+            corrs.append(tf.einsum("ik,jk", chunk, y))
+        except Exception as e:
+            import pdb; pdb.set_trace()
 
     return np.asarray(tf.concat(corrs, axis=0))
