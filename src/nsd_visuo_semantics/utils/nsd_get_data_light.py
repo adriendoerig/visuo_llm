@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from scipy.stats import zscore
-from nsd_visuo_semantics.utils.utils import reorder_rdm, average_over_conditions
+# from nsd_visuo_semantics.utils.utils import average_over_conditions
 
 
 def get_model_rdms(models_dir, subj, filt=None, only_names=False):
@@ -90,6 +90,35 @@ def read_behavior(nsd_dir, subject, session_index, trial_index=[]):
         trial_index = slice(0, len(session_behavior))
 
     return session_behavior.iloc[trial_index]
+
+
+def average_over_conditions(data, conditions, conditions_to_avg):
+    lookup = np.unique(conditions_to_avg)
+    n_conds = lookup.shape[0]
+    n_dims = data.ndim
+
+    if n_dims == 2:
+        n_voxels, _ = data.shape
+        avg_data = np.empty((n_voxels, n_conds))
+    else:
+        x, y, z, _ = data.shape
+        avg_data = np.empty((x, y, z, n_conds))
+
+    for j, x in enumerate(lookup):
+        conditions_bool = conditions == x
+        if n_dims == 2:
+            if np.sum(conditions_bool) == 0:
+                break
+            # print((j, np.sum(conditions_bool)))
+            sliced = data[:, conditions_bool]
+
+            avg_data[:, j] = np.nanmean(sliced, axis=1)
+        else:
+            avg_data[:, :, :, j] = np.nanmean(
+                data[:, :, :, conditions_bool], axis=3
+            )
+
+    return avg_data
 
 
 def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace):

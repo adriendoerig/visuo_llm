@@ -87,12 +87,12 @@ def sort_spheres(sphere_indices):
 
 
 def chunking(vect, num, chunknum=None):
-    """chunking
+    """ chunking
     Input:
         <vect> is a array
         <num> is desired length of a chunk
         <chunknum> is chunk number desired (here we use a 1-based
-              indexing, i.e. you may want the first chunk, or the second
+              indexing, i.e. you may want the frist chunk, or the second
               chunk, but not the zeroth chunk)
     Returns:
         [numpy array object]:
@@ -100,8 +100,8 @@ def chunking(vect, num, chunknum=None):
         return a numpy array object of chunks.  the last vector
         may have fewer than <num> elements.
 
-        also return the beginning indices associated with
-        this chunk in <xbegin>.
+        also return the beginning and ending indices associated with
+        this chunk in <xbegin> and <xend>.
 
     Examples:
 
@@ -114,17 +114,22 @@ def chunking(vect, num, chunknum=None):
 
     """
     if chunknum is None:
-        nchunk = int(np.ceil(len(vect) / num))
-        f = []
-        for point in range(nchunk):
-            f.append(vect[point * num : np.min((len(vect), int((point + 1) * num)))])
+        nchunk = int(np.ceil(len(vect)/num))
+
+        f = np.array_split(vect, nchunk)
+        # f = []
+        # for point in range(nchunk):
+        #     f.append(vect[point*num:np.min((len(vect), int((point+1)*num)))])
 
         return np.asarray(f, dtype=object)
     else:
         f = chunking(vect, num)
         # double check that these behave like in matlab (xbegin)
-        xbegin = (chunknum - 1) * num + 1
-        return np.asarray(f[num - 1]), xbegin
+        xbegin = (chunknum-1)*num+1
+        # double check that these behave like in matlab (xend)
+        xend = np.min((len(vect), chunknum*num))
+
+        return np.asarray(f[num-1], dtype=object), xbegin, xend
 
 
 def get_rank(y_pred):
@@ -185,9 +190,6 @@ def corr_rdms(x, y, n_inchunks=100000):
         chunk = tf.convert_to_tensor(chunki.astype(np.float32))
         chunk = chunk - tf.reduce_mean(chunk, axis=1, keepdims=True)
         chunk /= tf.sqrt(tf.einsum("ij,ij->i", chunk, chunk))[:, None]
-        try:
-            corrs.append(tf.einsum("ik,jk", chunk, y))
-        except Exception as e:
-            import pdb; pdb.set_trace()
+        corrs.append(tf.einsum("ik,jk", chunk, y))
 
     return np.asarray(tf.concat(corrs, axis=0))
