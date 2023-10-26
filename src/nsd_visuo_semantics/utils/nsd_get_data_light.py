@@ -126,6 +126,7 @@ def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditi
     if not os.path.exists(betas_file):
         print('betas average not found, computing..')
         print('\tloading betas')
+
         # get betas
         betas = get_betas(nsd_dir, subj, n_sessions, targetspace=targetspace)
 
@@ -140,6 +141,7 @@ def load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditi
         # saving betas
         print(f'saving betas for {subj}')
         np.save(betas_file, betas, allow_pickle=True)
+        
     else:
         print(f'loading betas for {subj}')
         betas = np.load(betas_file, allow_pickle=True)
@@ -180,6 +182,7 @@ def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
                     betas.append((zscore(all_verts, axis=cond_axis)[mask, :]).astype(np.float32))
                 else:
                     betas.append((zscore(all_verts, axis=cond_axis)).astype(np.float32))
+                import pdb; pdb.set_trace()
 
             elif targetspace == "func1pt8mm":
                 # we will need to divide the loaded data by 300 in this case

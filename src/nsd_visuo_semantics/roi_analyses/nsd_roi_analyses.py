@@ -71,6 +71,9 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
             # Betas per subject
             betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
             betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
+
+            betas /= 300
+
             # save the subject's full ROI RDMs
             roi_rdms = []
             for roi in range(1, len(ROIS)):
@@ -133,7 +136,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
             # This concludes the brain data rdm computations. Now, we move to model rdms
             all_corrs[subj] = {}
             for MODEL_NAME in MODEL_NAMES:
-                # fetch the model RDMs 
+                # fetch the model RDMs
                 # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
                 model_rdms, model_names = get_model_rdms(f"{models_dir}/{MODEL_NAME}", subj, filt=MODEL_NAME)
 
@@ -154,15 +157,15 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     # compute & save, or find and load, the data for that subject
                     save_rdmcorrs = os.path.join(subj_roi_rdms_path, f"{subj}_{MODEL_NAME}_{ROIS[roi]}ROI_corrs.npy")
 
-                    if True:# OVERWRITE or not os.path.exists(save_rdmcorrs):
-                        
+                    if OVERWRITE or not os.path.exists(save_rdmcorrs):
+
                         batchg_roi = BatchGen(roi_rdms[roi - 1], all_conditions)  # -1 because roi indexing starts at 1
 
                         these_corrs = []
 
                         # path the sample_ids used in searchlight analysis for fair comparison
                         saved_samples_file = os.path.join(
-                            base_save_dir,
+                            '/rds/projects/c/charesti-start/projects/nsd_rsa/python_adrien/save_dir',
                             f"searchlight_respectedsampling_{rdm_distance}",
                             f"{subj}",
                             "saved_sampling",
@@ -179,7 +182,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                             # now get the sampled 100x100 rdms for model and roi and correlate
                             # this returns 1_modelx(upper_tri_sampled_model_rdm)
                             model_rdm_sample = np.asarray(batchg_model.index_rdms(choices), dtype=np.float32)
-                            roi_rdm_sample = np.asarray(batchg_roi.index_rdms(choices), dtype=np.float32)                        
+                            roi_rdm_sample = np.asarray(batchg_roi.index_rdms(choices), dtype=np.float32)
 
                             these_corrs.append(corr_rdms(model_rdm_sample, roi_rdm_sample))
 
