@@ -1,24 +1,4 @@
-close all; clear all;
-
-%base_dir = '/rds/projects/c/charesti-start/';
-searchlight_save_dir = '../results_dir/searchlight_respectedsampling_correlation';
-
-RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
-USE_FDR = 0;
-OVERWRITE = 1;  % if 0, do not redo existing plots
-SAVE_TYPE = 'png';  % 'svg' or 'png'
-
-% add path to cvncode, utils, and heklper functions
-addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/cvncode')));
-addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/matlab')));
-addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/fsfast/toolbox')));
-addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/knkutils')));
-addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/npy-matlab/npy-matlab')));
-addpath(genpath(fullfile('../utils')));
-
-
-% we need to point to the subjects in NSD data
-setenv('SUBJECTS_DIR', fullfile('/share/klab/datasets/NSD_for_visuo_semantics/nsddata/freesurfer'));
+USE_FDR = 1;
 
 % some parameters
 viewz_to_plot = {13};  % {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
@@ -30,18 +10,6 @@ extraopts = {'rgbnan', 1, 'hemibordercolor', [1 1 1], 'text',{'' ''}};
 
 n_vertices = 327684;
 hemis = {'lh', 'rh'};
-
-ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
-MODEL_NAMES = {"mpnet"}  % , "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"};
-MODEL_SUFFIX =  ''  % default is ''
-CONTRAST_MODEL_NAMES = {}  % ALL_MODEL_NAMES
-
-DNN_LAYER = 10  % 'all' to do all layers, else an int
-DNN_TIMESTEP = 6  % 'all' % 6  % 'all' to do all timesteps, else an int
-DNN_CONTRAST_LAYER = 'same'  % same: compare net1 layer l time t with net2 same lt. 'first': compare with first timestep
-CONTRAST_SAME_MODEL = 1  % if 0, do not contrast model with itself. else, do it. useful for e.g. contrasting t6 vs t0
-
-PLOT_INDIVIDUAL_SUBJECTS = 0  % if 0, only do group level maps
 
 for m1 = 1:length(MODEL_NAMES)
 
@@ -90,10 +58,10 @@ for m1 = 1:length(MODEL_NAMES)
             else
                 map_id = 1
             end
-            datapath = fullfile(searchlight_save_dir, '%s', MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
+            datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
 
             % where to save
-            figpath  = fullfile(searchlight_save_dir, 'Figures', MODEL_NAME);
+            figpath  = fullfile(SEARCHLIGHT_SAVE_DIR, 'Figures', MODEL_NAME);
             if ~exist(figpath)
                 mkdir(figpath)
             end
@@ -204,7 +172,7 @@ for m1 = 1:length(MODEL_NAMES)
                     CONTRAST_SAVE_MODEL_NAME = strcat(CONTRAST_MODEL_NAME, '_l', string(contrast_layer), '_t', string(contrast_timestep), MODEL_SUFFIX)
                 end
 
-                contrast_datapath = fullfile(searchlight_save_dir, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
+                contrast_datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
                 contrast_data = single(zeros(n_subjects, n_vertices));
 
                 % loop over subjects

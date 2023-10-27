@@ -1,7 +1,6 @@
 from math import ceil, floor
 
 import numpy as np
-from fracridge import FracRidgeRegressorCV
 from scipy.optimize import nnls
 from scipy.spatial.distance import cdist, squareform
 
@@ -137,15 +136,14 @@ def corr_rdms(X, Y):
     Returns:
         [type]: correlations between X and Y, of shape dim0 of X by dim0 of Y
     """
-    X[np.isnan(X)] = 0
-    Y[np.isnan(Y)] = 0
-    return pearsonr(X.squeeze(), Y.squeeze())[0]
-    # X = X - X.mean(axis=1, keepdims=True)
-    # X /= np.sqrt(np.einsum("ij,ij->i", X, X))[:, None]
-    # Y = Y - Y.mean(axis=1, keepdims=True)
-    # Y /= np.sqrt(np.einsum("ij,ij->i", Y, Y))[:, None]
-
-    # return np.einsum("ik,jk", X, Y)
+    # X[np.isnan(X)] = 0
+    # Y[np.isnan(Y)] = 0
+    # return pearsonr(X.squeeze(), Y.squeeze())[0]
+    X = X - X.mean(axis=1, keepdims=True)
+    X /= np.sqrt(np.einsum("ij,ij->i", X, X))[:, None]
+    Y = Y - Y.mean(axis=1, keepdims=True)
+    Y /= np.sqrt(np.einsum("ij,ij->i", Y, Y))[:, None]
+    return np.einsum("ik,jk", X, Y)
 
 
 # def chunking(vect, num, chunknum=None):
@@ -266,7 +264,7 @@ def corr_rdms(X, Y):
 #     return flatmap
 
 
-# def reorder_rdm(utv, newOrder):
-#     ax, bx = np.ix_(newOrder, newOrder)
-#     newOrderRDM = squareform(utv)[ax, bx]
-#     return squareform(newOrderRDM, "tovector", 0)
+def reorder_rdm(utv, newOrder):
+    ax, bx = np.ix_(newOrder, newOrder)
+    newOrderRDM = squareform(utv)[ax, bx]
+    return squareform(newOrderRDM, "tovector", 0)

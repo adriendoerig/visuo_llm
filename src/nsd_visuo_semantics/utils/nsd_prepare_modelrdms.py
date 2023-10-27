@@ -25,7 +25,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
     # specify where each set of nsd embeddings is saved
     modelname2file = {
         "multihot": f"{saved_embeddings_dir}/nsd_multihot.pkl",
-        "fasttext_categories": f"{saved_embeddings_dir}/nsd_fasttext_CATEGORY_mean_embeddings.npy",
+        "fasttext_categories": f"{saved_embeddings_dir}/nsd_fasttext_CATEGORY_mean_embeddings.pkl",
         "fasttext_nouns": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings.pkl",
         "nsd_fasttext_nouns_closest_cocoCats_cut0.33": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings_closest_cocoCats_cut0.33.pkl",
         "fasttext_verbs": f"{saved_embeddings_dir}/nsd_fasttext_VERB_mean_embeddings.pkl",

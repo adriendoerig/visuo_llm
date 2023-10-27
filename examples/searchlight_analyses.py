@@ -1,7 +1,7 @@
 import os
 from nsd_visuo_semantics.utils.nsd_prepare_modelrdms import nsd_prepare_modelrdms
-from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses import nsd_roi_analyses
-from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_figure import nsd_roi_analyses_figure
+from nsd_visuo_semantics.searchlight_analyses.nsd_searchlight_main_tf import nsd_searchlight_main_tf
+from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage import nsd_project_fsaverage
 
 
 ### DECLARE PARAMS
@@ -10,8 +10,8 @@ OVERWRITE = False
 
 # models to test
 MODEL_NAMES = [
-    "multihot",
     "mpnet",
+    "multihot",
     "fasttext_categories",
     "fasttext_verbs",
     "fasttext_all",
@@ -38,27 +38,33 @@ plot_noise_ceiling = True  # if True, plot noise-ceiling corrected corrs. If fal
 ### PATHS
 base_save_dir = "../results_dir"  # base dir from which to load model RDMs and in which to save results
 nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
+nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
+betas_dir = f"{nsd_derivatives_dir}/betas"
+precompsl_dir = f"{nsd_derivatives_dir}/searchlights"
+
 saved_embeddings_dir = f"{base_save_dir}/saved_embeddings"
 base_networks_dir = '/share/klab/adoerig/adoerig/semantics_paper_nets'
 ms_coco_saved_dnn_activities_dir = f"{base_networks_dir}/semantics_paper_ms_coco_nets/extracted_activities"
 ecoset_saved_dnn_activities_dir = f"{base_networks_dir}/semantics_paper_ecoset_nets/extracted_activities"
 rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_515 else ""}_{models_rdm_distance}'
-betas_dir = os.path.join(nsd_dir, '..', "NSD_for_visuo_semantics_derivatives", "betas")
 rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 
 
+
 ### PREPARE RDMs FOR EACH REQUESTED MODEL
+nsd_prepare_modelrdms(MODEL_NAMES, models_rdm_distance,
+                      saved_embeddings_dir, rdms_dir, nsd_dir,
+                      ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
+                      remove_shared_515, OVERWRITE)
 
-# nsd_prepare_modelrdms(MODEL_NAMES, models_rdm_distance,
-#                       saved_embeddings_dir, rdms_dir, nsd_dir,
-#                       ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
-#                       remove_shared_515, OVERWRITE)
+
+### RUN SEARCHLIGHT
+nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                        remove_shared_515, OVERWRITE)
 
 
-### RUN ROI ANALYSES
-
-nsd_roi_analyses(MODEL_NAMES, models_rdm_distance, roi_analysis_dnn_layer_to_use, which_rois,
-                 nsd_dir, betas_dir, rois_dir, base_save_dir,
-                 remove_shared_515, OVERWRITE)
-
-nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling)
+### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE
+nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, 
+                      nsd_dir, base_save_dir, 
+                      remove_shared_515)

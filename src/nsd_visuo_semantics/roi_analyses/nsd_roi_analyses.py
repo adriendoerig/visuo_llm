@@ -165,7 +165,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
 
                         # path the sample_ids used in searchlight analysis for fair comparison
                         saved_samples_file = os.path.join(
-                            '/rds/projects/c/charesti-start/projects/nsd_rsa/python_adrien/save_dir',
+                            base_save_dir,
                             f"searchlight_respectedsampling_{rdm_distance}",
                             f"{subj}",
                             "saved_sampling",

@@ -182,7 +182,6 @@ def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
                     betas.append((zscore(all_verts, axis=cond_axis)[mask, :]).astype(np.float32))
                 else:
                     betas.append((zscore(all_verts, axis=cond_axis)).astype(np.float32))
-                import pdb; pdb.set_trace()
 
             elif targetspace == "func1pt8mm":
                 # we will need to divide the loaded data by 300 in this case
