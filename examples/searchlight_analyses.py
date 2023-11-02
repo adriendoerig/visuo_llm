@@ -52,16 +52,16 @@ rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 
 
 ### PREPARE RDMs FOR EACH REQUESTED MODEL
-nsd_prepare_modelrdms(MODEL_NAMES, models_rdm_distance,
-                      saved_embeddings_dir, rdms_dir, nsd_dir,
-                      ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
-                      remove_shared_515, OVERWRITE)
+# nsd_prepare_modelrdms(MODEL_NAMES, models_rdm_distance,
+#                       saved_embeddings_dir, rdms_dir, nsd_dir,
+#                       ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
+#                       remove_shared_515, OVERWRITE)
 
 
 ### RUN SEARCHLIGHT
-nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-                        remove_shared_515, OVERWRITE)
+# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+#                         remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE

@@ -1,3 +1,5 @@
+import numpy as np
+
 # NOTE: these are the coco categories, including the following modifications to match with existing fasttext embeddings
 # Fire hydrant - fireplug
 # Street sign - signpost
@@ -364,20 +366,3 @@ verb_adjustments = {
 # verbs by the nltk toolbox, but for which no embeddings exist. We fix some, and mark which others are truly
 # missing vs. just a load of gibbereish.
 noun_adjustments = {}
-
-
-# Helper function to load fasttext vectors
-def load_fasttext_vectors(fname):
-        try:
-            fin = open(fname, encoding="utf-8", newline="\n", errors="ignore")
-        except ValueError:
-            raise Exception(
-                f"{fname} not found. Localize the .vec containing the embeddings, or download "
-                '"wget https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip"'
-            )
-        n, d = map(int, fin.readline().split())
-        data = {}
-        for line in fin:
-            tokens = line.rstrip().split(" ")
-            data[tokens[0]] = map(float, tokens[1:])
-        return data

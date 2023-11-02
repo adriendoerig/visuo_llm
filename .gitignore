@@ -1,14 +1,13 @@
 # Custom
 src/nsd_visuo_semantics/get_embeddings/crawl-300d-2M.vec
+src/nsd_visuo_semantics/get_embeddings/glove.840B.300d.txt
 src/nsd_visuo_semantics/get_embeddings/_check_imgs
 src/nsd_visuo_semantics/get_embeddings/_tmp_playground
 src/nsd_visuo_semantics/get_dnn_activities/safety_check_plots_dir
 src/nsd_visuo_semantics/results_dir
+examples/_check_imgs
 results_dir
-get_embeddings/crawl-300d-2M.vec
-get_embeddings/_check_imgs
-get_embeddings/_tmp_playground
-get_dnn_activities/safety_check_plots_dir
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

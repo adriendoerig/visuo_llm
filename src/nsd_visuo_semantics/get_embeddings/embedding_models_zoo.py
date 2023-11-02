@@ -71,3 +71,41 @@ def get_embeddings(sentences, embedding_model, embedding_model_type):
         return embeddings
     else:
         return embedding_model(sentences).numpy()
+
+
+# Helper function to load fasttext vectors
+def load_word_vectors(fname, embedding_type):
+    
+    data = {}
+    if embedding_type == 'fasttext':
+        try:
+            fin = open(fname, encoding="utf-8", newline="\n", errors="ignore")
+        except ValueError:
+            raise Exception(f"{fname} not found. Localize the .vec containing the embeddings, or download wget https://dl.fbaipublicfiles.com/fasttext/vectors-english/crawl-300d-2M.vec.zip")
+        for line in fin:
+            values = line.rstrip().split(" ")
+            word = values[0]
+            vector = map(float, values[1:])
+            vector = np.array([i for i in vector])
+            data[word] = vector
+
+    elif embedding_type == 'glove':
+        import pandas as pd
+        import csv
+        try:
+            data = pd.read_table(fname, sep=" ", index_col=0, header=None, quoting=csv.QUOTE_NONE)
+        except ValueError:
+            raise Exception(f"{fname} not found. Localize the .txt containing the embeddings, or download https://nlp.stanford.edu/projects/glove/")
+    else:
+        raise Exception(f"embedding_type {embedding_type} not understood")
+
+    return data
+
+
+def get_word_embedding(word, embeddings, embedding_type):
+    
+    if embedding_type == 'fasttext':
+        return embeddings[word]
+
+    elif embedding_type == 'glove':
+        return embeddings.loc[word].to_numpy()
