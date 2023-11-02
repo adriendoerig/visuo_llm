@@ -7,15 +7,15 @@ from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embeddin
 
 
 def get_nsd_sentence_embeddings(embedding_model_type, captions_to_embed_path, RANDOMIZE_BY_WORD_TYPE, RANDOMIZE_WORD_ORDER,
-                                h5_dataset_path, OVERWRITE):
-
-    if not type(RANDOMIZE_BY_WORD_TYPE) == list:
-        RANDOMIZE_BY_WORD_TYPE = [RANDOMIZE_BY_WORD_TYPE]
+                                h5_dataset_path, OVERWRITE=False):
 
     print(f"GATHERING EMBEDDINGS FOR: {embedding_model}\n "
           f"ON: {captions_to_embed_path} \n "
-          f"WITH RANDOMIZE_BY_WORD_TYPE: {RANDOMIZE_BY_WORD_TYPE}"
+          f"WITH RANDOMIZE_BY_WORD_TYPE: {RANDOMIZE_BY_WORD_TYPE}\n "
           f"AND RANDOMIZE_WORD_ORDER: {RANDOMIZE_WORD_ORDER}") 
+    
+    if not type(RANDOMIZE_BY_WORD_TYPE) == list:
+        RANDOMIZE_BY_WORD_TYPE = [RANDOMIZE_BY_WORD_TYPE]
 
     SANITY_CHECK = 1
     GET_EMBEDDINGS = 1
