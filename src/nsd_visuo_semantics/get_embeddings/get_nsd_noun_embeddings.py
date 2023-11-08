@@ -1,48 +1,58 @@
 import os
-import pdb
 import pickle
 import h5py
 import matplotlib.pyplot as plt
-import nltk
 import numpy as np
 from scipy.spatial.distance import cdist, correlation
 from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91, noun_adjustments
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import load_word_vectors, get_word_embedding
+from nsd_visuo_semantics.get_embeddings.nsd_embeddings_utils import get_word_type_from_string
 
 
 def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COCO_CATEGORY_NOUNS,
                             h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE):
-
+    '''
+    Retrieves the embeddings for nouns in the nsd dataset.
+    EMBEDDING_TYPE: 'glove' or 'fasttext'
+    CONCATENATE_EMBEDDINGS: if True, we concatenate the embeddings. If false, we mean them.
+    MATCH_TO_COCO_CATEGORY_NOUNS: if 'positive', we only use nouns that have an embedding CLOSE to COCO category nouns. 
+                                  ff 'negative', we only use nouns that have an embedding FAR to COCO category nouns.
+                                  if None, we use all nouns.
+    h5_dataset_path: path to the h5 dataset with the images
+    fasttext_embeddings_path: path to the fasttext embeddings
+    glove_embeddings_path: path to the glove embeddings
+    nasd_captions_path: path to the nsd captions
+    OVERWRITE: if True, we overwrite the existing embeddings'''
     
     print(f"GATHERING NOUN EMBEDDINGS \n "
         f"EMBEDDING_TYPE: {EMBEDDING_TYPE} \n "
         f"ON: {nsd_captions_path} \n "
-        f"WITH CONCATENATE_EMBEDDINGS: {CONCATENATE_EMBEDDINGS}"
+        f"WITH CONCATENATE_EMBEDDINGS: {CONCATENATE_EMBEDDINGS} \n "
         f"AND MATCH_TO_COCO_CATEGORY_NOUNS: {MATCH_TO_COCO_CATEGORY_NOUNS}") 
     
     CHECK_EMBEDDINGS = 1
     GET_NOUN_EMBEDDINGS = 1
     DO_SANITY_CHECK = 1
 
-    save_test_imgs_to = "./_check_imgs"
-    os.makedirs(save_test_imgs_to, exist_ok=1)
+    save_test_imgs_to = "../results_dir/_check_imgs"
     save_embeddings_to = "../results_dir/saved_embeddings"
     os.makedirs("../results_dir", exist_ok=1)
+    os.makedirs(save_test_imgs_to, exist_ok=1)
     os.makedirs(save_embeddings_to, exist_ok=1)
 
 
-    if MATCH_TO_COCO_CATEGORY_NOUNS:
+    if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
         METRIC = "correlation"  # use this distance to get nearest coco cat neighbour
         CUTOFF = 0.33  # if the closest coco categ is at a larger distanc than this, it is ignored (1->no cutoff)
-        SAVE_SUFFIX = f"_closest_cocoCats_cut{CUTOFF}"
+        SAVE_SUFFIX = f"_cocoCatsMatch_{MATCH_TO_COCO_CATEGORY_NOUNS}_cut{CUTOFF}"
     else:
         SAVE_SUFFIX = ""
 
 
-    save_name = f"{save_embeddings_to}/nsd_{EMBEDDING_TYPE}_NOUNS_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings{SAVE_SUFFIX}"
+    save_name = f"nsd_{EMBEDDING_TYPE}_NOUNS_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings{SAVE_SUFFIX}"
 
-    if OVERWRITE and os.path.exists(f"{save_name}.pkl"):
-        print(f"Embeddings already exist at {save_name}.pkl. Set OVERWRITE=True to overwrite.")
+    if not OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
+        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
     
     else:
 
@@ -67,22 +77,30 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
 
         if GET_NOUN_EMBEDDINGS:
 
-            def get_nouns_from_string(s):
-                tokens = nltk.word_tokenize(s)
-                tagged = nltk.pos_tag(tokens)
-                return [x[0] for x in tagged if x[1] in ["NN", "NNS"]]  # NN and NNS the tags for nouns
-
             with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
             n_nsd_elements = len(loaded_captions)
 
-            if MATCH_TO_COCO_CATEGORY_NOUNS:
+            if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
                 # get the embeddings for coco object categories
                 img_nouns_coco_cats = [[] for _ in range(n_nsd_elements)]  # we will also save cat names corresponding to all nouns for each image
                 coco_cat_embeds = np.empty((len(coco_categories_91), 300))
 
                 for c, cat in enumerate(coco_categories_91):
-                    coco_cat_embeds[c, :] = get_word_embedding(cat, embeddings, EMBEDDING_TYPE)
+                    if cat == "baseball-bat":
+                        baseball_vector = get_word_embedding('baseball', embeddings, EMBEDDING_TYPE)
+                        bat_vector = get_word_embedding('bat', embeddings, EMBEDDING_TYPE)
+                        coco_cat_embeds[c, :] = (baseball_vector + bat_vector) / 2
+                    elif cat == "baseball-glove":
+                        baseball_vector = get_word_embedding('baseball', embeddings, EMBEDDING_TYPE)
+                        glove_vector = get_word_embedding('glove', embeddings, EMBEDDING_TYPE)
+                        coco_cat_embeds[c, :] = (baseball_vector + glove_vector) / 2
+                    elif cat == "tennis-racket":
+                        tennis_vector = get_word_embedding('tennis', embeddings, EMBEDDING_TYPE)
+                        racket_vector = get_word_embedding('racket', embeddings, EMBEDDING_TYPE)
+                        coco_cat_embeds[c, :] = (tennis_vector + racket_vector) / 2
+                    else:
+                        coco_cat_embeds[c, :] = get_word_embedding(cat, embeddings, EMBEDDING_TYPE)
 
             img_nouns = [[] for _ in range(n_nsd_elements)]  # we will also save all nouns for each image
             final_noun_embeddings = np.empty((n_nsd_elements, 300))  # fastext embeddings have 300 dimensions
@@ -93,10 +111,14 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
             final_skipped_nouns = []  # finally, we will catch any left over "mistakes" after screening as explained above
 
             for i in range(n_nsd_elements):
+
+                if i % 1000 == 0:
+                    print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
+
                 # get all caption nouns
                 for j in range(len(loaded_captions[i])):
                     this_sentence = loaded_captions[i][j]
-                    sentence_nouns = get_nouns_from_string(this_sentence)
+                    sentence_nouns = get_word_type_from_string(this_sentence, 'noun')
                     for n, s in enumerate(sentence_nouns):
                         if s in noun_adjustments.keys():
                             # some spelling mistakes are made in the captions. Here, we fix them. In addition, some crap is
@@ -117,7 +139,7 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                 # for each caption noun, get the embedding
                 img_noun_embeddings = []
                 for v in img_nouns[i]:
-                    if MATCH_TO_COCO_CATEGORY_NOUNS:
+                    if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
                         # woman, etc, have a quite big distance to "person", which is the closest coco cat.
                         # but this is important, so we hard code it
                         if (
@@ -143,7 +165,7 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                     final_noun_embeddings[i] = get_word_embedding("something", embeddings, EMBEDDING_TYPE)
                     no_nouns_counter += 1
                 else:
-                    if MATCH_TO_COCO_CATEGORY_NOUNS:
+                    if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
                         cococat_matched_img_noun_embeddings = []
                         for e, this_e in enumerate(img_noun_embeddings):
                             lookup_distances = cdist(this_e[None, :], coco_cat_embeds, metric=METRIC)
@@ -152,14 +174,18 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                             closest_categ = coco_categories_91[winner]
                             distances_to_closest_cat[i].append(this_dist)
 
-                            if this_dist > CUTOFF:
-                                img_nouns_coco_cats[i].append(f"{closest_categ}: skipped, dist={this_dist:.2f}")
+                            if this_dist > CUTOFF and MATCH_TO_COCO_CATEGORY_NOUNS == "positive":
+                                pass
+                                # img_nouns_coco_cats[i].append(f"{closest_categ}: skipped, dist={this_dist:.2f}")
+                            elif this_dist < CUTOFF and MATCH_TO_COCO_CATEGORY_NOUNS == "negative":
+                                pass
+                                # img_nouns_coco_cats[i].append(f"{closest_categ}: skipped, dist={this_dist:.2f}")
                             else:
                                 img_nouns_coco_cats[i].append(closest_categ)
                                 cococat_matched_img_noun_embeddings.append(coco_cat_embeds[winner])
 
                         if cococat_matched_img_noun_embeddings == []:
-                            cococat_matched_img_noun_embeddings = get_word_embedding("something", embeddings, EMBEDDING_TYPE)
+                            cococat_matched_img_noun_embeddings = [get_word_embedding("something", embeddings, EMBEDDING_TYPE)]
                             no_nouns_counter += 1
 
                         if CONCATENATE_EMBEDDINGS:
@@ -173,11 +199,11 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                         else:
                             final_noun_embeddings[i] = np.mean(np.asarray(img_noun_embeddings), axis=0)
 
-            with open(f"{save_name}.pkl", "wb",) as fp:  # Pickling
+            with open(f"{save_embeddings_to}/{save_name}.pkl", "wb",) as fp:  # Pickling
                 pickle.dump(final_noun_embeddings, fp)
             with open(f"{save_embeddings_to}/nsd_nouns_per_image.pkl", "wb") as fp:  # Pickling
                 pickle.dump(img_nouns, fp)
-            if MATCH_TO_COCO_CATEGORY_NOUNS:
+            if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
                 with open(f"{save_embeddings_to}/nsd_nouns_per_image{SAVE_SUFFIX}.pkl", "wb") as fp:  # Pickling
                     pickle.dump(img_nouns_coco_cats, fp)
 
@@ -199,11 +225,11 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
             plot_n_imgs = 10
             step_size = total_n_stims // plot_n_imgs
 
-            with open("./ms_coco_nsd_captions_test.pkl", "rb") as fp:
+            with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
             with open(f"{save_embeddings_to}/nsd_nouns_per_image{SAVE_SUFFIX}.pkl", "rb") as fp:  # Pickling
                 loaded_nouns = pickle.load(fp)
-            with open(f"{save_name}.pkl", "rb") as fp:  # Pickling
+            with open(f"{save_embeddings_to}/{save_name}.pkl", "rb") as fp:  # Pickling
                 loaded_noun_embeddings = pickle.load(fp)
 
             for i in range(0, total_n_stims, step_size):
@@ -213,5 +239,5 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                     f"{loaded_nouns[i]}\n"
                     f"Emb shape, min, max, mean: {loaded_noun_embeddings[i].shape, loaded_noun_embeddings[i].min(), loaded_noun_embeddings[i].max(), loaded_noun_embeddings[i].mean()}"
                 )
-                plt.savefig(f"{save_test_imgs_to}/NSD_noun_embeddings_check_{i}{SAVE_SUFFIX}.png")
+                plt.savefig(f"{save_test_imgs_to}/{save_name}_check_{i}.png")
                 plt.close()

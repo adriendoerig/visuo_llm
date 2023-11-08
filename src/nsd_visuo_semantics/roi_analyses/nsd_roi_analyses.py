@@ -9,7 +9,7 @@ from nsd_visuo_semantics.utils.utils import corr_rdms
 
 def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                      nsd_dir, betas_dir, rois_dir, base_save_dir,
-                     remove_shared_515, OVERWRITE):
+                     remove_shared_515, OVERWRITE_NEURO_RDMs, OVERWRITE_RDM_CORRs):
     
     COMPUTE = True  # if False, load rdm correlations and skip directly to noise ceiling computation and postprocessing
 
@@ -26,6 +26,12 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
     subj_roi_rdms_path = os.path.join(results_dir, "subj_roi_rdms")
     os.makedirs(subj_roi_rdms_path, exist_ok=True)
 
+    if os.path.exists(f"{results_dir}/all_{rdm_distance}_rdm_corrs.pkl"):
+        with open(f"{results_dir}/all_{rdm_distance}_rdm_corrs.pkl", "rb") as fp:
+            all_corrs = pickle.load(fp)
+    else:
+        all_corrs = {}
+
     # we use the fsaverage space.
     targetspace = "fsaverage"
 
@@ -38,7 +44,6 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
         conditions_515 = np.asarray(conditions_515).ravel()
 
         # here we go
-        all_corrs = {}
         for subj in subs:
 
             # extract conditions data.
@@ -81,7 +86,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                 rdm_full_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_fullrdm_{rdm_distance}.npy")
                 rdm_515_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_515rdm_{rdm_distance}.npy")
 
-                if OVERWRITE or not os.path.exists(rdm_full_file) or not os.path.exists(rdm_515_file):
+                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_full_file) or not os.path.exists(rdm_515_file):
                     print(f"Gathering betas for ROI: {rdm_515_file}")
                     # maskdata is an array of shape [n_voxels,], with a number corresponding to the
                     # ROI of each voxel (e.g. 0 means no ROI is associated with this voxel, 1 means voxel
@@ -99,8 +104,8 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                         print(f"found some NaN for ROI: {mask_name} - {subj}")
                     masked_betas = masked_betas[good_vox, :]
 
-                if OVERWRITE or not os.path.exists(rdm_full_file):
-                    # prepare for cosine distance
+                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_full_file):
+                    
                     X = masked_betas.T  # [n_conditions, n_roi_betas], i.e., we make an [n_conditionsxn_conditions] rdm
 
                     print(f"computing RDM for roi: {mask_name}")
@@ -111,8 +116,13 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     print(f"saving full rdm for {mask_name} : {subj}")
                     np.save(rdm_full_file, rdm)
                     roi_rdms.append(rdm.astype(np.float32))
+                    
+                else:
+                    print(f"loading full rdm for {mask_name} : {subj}")
+                    rdm = np.load(rdm_full_file, allow_pickle=True)
+                    roi_rdms.append(rdm.astype(np.float32))
 
-                if OVERWRITE or not os.path.exists(rdm_515_file):
+                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_515_file):
                     # rdm on the 515 conditions seen by all subjects (used later to compute the noise ceiling)
                     print(f"computing {subj} 515_RDM for roi: {mask_name}")
 
@@ -124,17 +134,17 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     if np.any(np.isnan(rdm_515)):
                         raise ValueError(f"nan found in RDM for ROI {mask_name}")
 
+                    # rdm_515 will be loaded later when we compute the noise ceiling, for now we're just correlating subj&model
                     print(f"saving 515 shared images rdm for {mask_name} : {subj}")
                     np.save(rdm_515_file, rdm_515)
 
-                else:
-                    print(f"loading full rdm for {mask_name} : {subj}")
-                    # rdm_515 will be loaded later when we compute the noise ceiling, for now we're just correlating subj&model
-                    rdm = np.load(rdm_full_file, allow_pickle=True)
-                    roi_rdms.append(rdm.astype(np.float32))
-
             # This concludes the brain data rdm computations. Now, we move to model rdms
-            all_corrs[subj] = {}
+            if subj in all_corrs.keys():
+                # if we are completing an existing file, no need to create the subj dict
+                pass
+            else:
+                all_corrs[subj] = {}
+
             for MODEL_NAME in MODEL_NAMES:
                 # fetch the model RDMs
                 # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
@@ -151,13 +161,20 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                 # initialise batch generator
                 batchg_model = BatchGen(model_rdm, all_conditions)
 
-                all_corrs[subj][MODEL_NAME] = {}
+                # This concludes the brain data rdm computations. Now, we move to model rdms
+                if MODEL_NAME in all_corrs[subj].keys():
+                    # if we are completing an existing file, no need to create the subj dict
+                    pass
+                else:
+                    all_corrs[subj][MODEL_NAME] = {}
                 # Compute correlations between model and all ROI rdms
                 for roi in range(1, len(ROIS)):
                     # compute & save, or find and load, the data for that subject
                     save_rdmcorrs = os.path.join(subj_roi_rdms_path, f"{subj}_{MODEL_NAME}_{ROIS[roi]}ROI_corrs.npy")
 
-                    if OVERWRITE or not os.path.exists(save_rdmcorrs):
+                    if OVERWRITE_RDM_CORRs or not os.path.exists(save_rdmcorrs):
+
+                        print(f'Computing model corrs for {MODEL_NAME} {ROIS[roi]}ROI.')
 
                         batchg_roi = BatchGen(roi_rdms[roi - 1], all_conditions)  # -1 because roi indexing starts at 1
 
@@ -189,6 +206,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                         np.save(save_rdmcorrs, these_corrs)
 
                     else:
+                        print(f'Found model corrs for {MODEL_NAME} {ROIS[roi]}ROI. Loading.')
                         these_corrs = np.load(save_rdmcorrs, allow_pickle=True)
 
                     all_corrs[subj][MODEL_NAME][f"{ROIS[roi]}ROI"] = np.squeeze(these_corrs)
@@ -201,7 +219,6 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
     else:
         with open(f"{results_dir}/all_{rdm_distance}_rdm_corrs.pkl", "rb") as fp:
             all_corrs = pickle.load(fp)
-
     
 
     # get ceiling of explainable variance (i.e., Compute the average RDM for n-1 people and correlate with
@@ -242,9 +259,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
 
             per_left_out_corrs[s] = corr_rdms(left_out_subj_rdm[None, :], mean_of_others_rdm[None, :])  # [None,:] adds batch dim
 
-            roi_noise_ceilings_per_sub[f"{ROIS[roi]}ROI"][
-                subj
-            ] = per_left_out_corrs[s]
+            roi_noise_ceilings_per_sub[f"{ROIS[roi]}ROI"][subj] = per_left_out_corrs[s]
 
     with open(roi_noise_ceilings_per_sub_path, "wb") as f:
         pickle.dump(roi_noise_ceilings_per_sub, f)

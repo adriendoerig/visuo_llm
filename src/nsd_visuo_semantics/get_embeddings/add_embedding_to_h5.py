@@ -164,32 +164,15 @@ if CHECK_DATASET:
 
             print(f"Plotting pairs of images for {dataset} set...")
             for i in range(plot_n_image_pairs):
-                idx1, idx2 = np.random.randint(
-                    n_dataset_idx
-                ), np.random.randint(n_dataset_idx)
-                im1, im2 = (
-                    new_dataset[dataset]["data"][idx1],
+                idx1, idx2 = np.random.randint(n_dataset_idx), np.random.randint(n_dataset_idx)
+                im1, im2 = new_dataset[dataset]["data"][idx1], \
                     new_dataset[dataset]["data"][idx2],
-                )
-                hot1, hot2 = (
-                    new_dataset[dataset]["img_multi_hot"][idx1],
-                    new_dataset[dataset]["img_multi_hot"][idx2],
-                )
-                cat1, cat2 = [
-                    coco_categories_91[lin - 1]
-                    for lin in np.where(hot1 == 1)[0]
-                ], [
-                    coco_categories_91[lin - 1]
-                    for lin in np.where(hot2 == 1)[0]
-                ]
-                em1, em2 = (
-                    new_dataset[dataset][
-                        EMBEDDING_MODEL_NAME + "_mean_embeddings"
-                    ][idx1],
-                    new_dataset[dataset][
-                        EMBEDDING_MODEL_NAME + "_mean_embeddings"
-                    ][idx2],
-                )
+                hot1, hot2 = new_dataset[dataset]["img_multi_hot"][idx1], \
+                    new_dataset[dataset]["img_multi_hot"][idx2]
+                cat1, cat2 = [coco_categories_91[lin - 1] for lin in np.where(hot1 == 1)[0]], \
+                    [coco_categories_91[lin - 1] for lin in np.where(hot2 == 1)[0]]
+                em1, em2 = new_dataset[dataset][EMBEDDING_MODEL_NAME + "_mean_embeddings"][idx1], \
+                    new_dataset[dataset][EMBEDDING_MODEL_NAME + "_mean_embeddings"][idx2],
                 cap1, cap2 = loaded_captions[idx1], loaded_captions[idx2]
                 print(f"\ncategories 1: {cat1}")
                 print(f"\ncategories 2: {cat2}")

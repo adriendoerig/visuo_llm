@@ -19,16 +19,16 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
     GET_WORD_EMBEDDINGS = 1
     DO_SANITY_CHECK = 1
 
-    save_test_imgs_to = "./_check_imgs"
-    os.makedirs(save_test_imgs_to, exist_ok=1)
+    save_test_imgs_to = "../results_dir/_check_imgs"
     save_embeddings_to = "../results_dir/saved_embeddings"
     os.makedirs("../results_dir", exist_ok=1)
+    os.makedirs(save_test_imgs_to, exist_ok=1)
     os.makedirs(save_embeddings_to, exist_ok=1)
 
-    save_name = f"{save_embeddings_to}/nsd_{EMBEDDING_TYPE}_NOUN_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings"
+    save_name = f"nsd_{EMBEDDING_TYPE}_ALLWORDS_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings"
 
-    if OVERWRITE and os.path.exists(f"{save_name}.pkl"):
-        print(f"Embeddings already exist at {save_name}.pkl. Set OVERWRITE=True to overwrite.")
+    if OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
+        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
     
     else:
         
@@ -79,7 +79,7 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                 else:
                     final_allWord_embeddings[i] = np.mean(np.asarray(img_allWord_embeddings), axis=0)
 
-            with open(f"{save_name}.pkl", "wb") as fp:  # Pickling
+            with open(f"{save_embeddings_to}/{save_name}.pkl", "wb") as fp:  # Pickling
                 pickle.dump(final_allWord_embeddings, fp)
             with open(f"{save_embeddings_to}/nsd_allWords_per_image.pkl", "wb") as fp:  # Pickling
                 pickle.dump(img_words, fp)
@@ -101,7 +101,7 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                 loaded_captions = pickle.load(fp)
             with open(f"{save_embeddings_to}/nsd_allWords_per_image.pkl", "rb") as fp:  # Pickling
                 loaded_allWords = pickle.load(fp)
-            with open(f"{save_name}.pkl", "rb") as fp:  # Pickling
+            with open(f"{save_embeddings_to}/{save_name}.pkl", "rb") as fp:  # Pickling
                 loaded_allWord_mean_embeddings = pickle.load(fp)
 
             for i in range(0, total_n_stims, step_size):
@@ -111,4 +111,4 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                     f"{loaded_allWords[i]}\n"
                     f"Emb shape, min, max, mean: {loaded_allWord_mean_embeddings[i].shape, loaded_allWord_mean_embeddings[i].min(), loaded_allWord_mean_embeddings[i].max(), loaded_allWord_mean_embeddings[i].mean()}"
                 )
-                plt.savefig(f"{save_test_imgs_to}/NSD_allWord_embeddings_check_{i}.png")
+                plt.savefig(f"{save_test_imgs_to}/{save_name}_check_{i}.png")

@@ -1,11 +1,9 @@
 import os
-
 import numpy as np
 import openai
 import tensorflow as tf
 import tensorflow_hub as hub
-
-# import tensorflow_text  # needed to load the T5 model! but does not work with tf28_setup_env.sh, so update tf if you need this model
+# import tensorflow_text  # needed to load the T5 model
 from sentence_transformers import SentenceTransformer
 
 openai.api_key_path = os.path.join("./openai_key/key.conf")
@@ -13,20 +11,14 @@ openai.api_key_path = os.path.join("./openai_key/key.conf")
 
 def get_embedding_model(embedding_model_type):
     if embedding_model_type == "GUSE_transformer":
-        module_url = (
-            "https://tfhub.dev/google/universal-sentence-encoder-large/5"
-        )
+        module_url = "https://tfhub.dev/google/universal-sentence-encoder-large/5"
     elif embedding_model_type == "GUSE_DAN":
         module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
     elif embedding_model_type == "T5":
         module_url = "https://tfhub.dev/google/sentence-t5/st5-base/1"
     elif embedding_model_type == "USE_CMLM_Base":
-        preprocessor = hub.KerasLayer(
-            "https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3"
-        )
-        encoder = hub.KerasLayer(
-            "https://tfhub.dev/google/universal-sentence-encoder-cmlm/en-base/1"
-        )
+        preprocessor = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3")
+        encoder = hub.KerasLayer("https://tfhub.dev/google/universal-sentence-encoder-cmlm/en-base/1")
         return (preprocessor, encoder)
     elif embedding_model_type == "all_mpnet_base_v2":
         return SentenceTransformer("all-mpnet-base-v2")
@@ -37,9 +29,7 @@ def get_embedding_model(embedding_model_type):
 
     models_dir = "./embedding_models"
     os.makedirs(models_dir, exist_ok=True)
-    this_embedding_model_dir = os.path.join(
-        f"{models_dir}/{embedding_model_type}"
-    )
+    this_embedding_model_dir = os.path.join(f"{models_dir}/{embedding_model_type}")
 
     if not os.path.exists(f"{this_embedding_model_dir}/saved_model.pb"):
         model = hub.load(module_url)

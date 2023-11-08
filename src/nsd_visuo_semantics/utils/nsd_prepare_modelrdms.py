@@ -10,7 +10,7 @@ import h5py
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515
-
+from nsd_visuo_semantics.utils.model_name2file_list import get_name2file_list
 
 def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                           saved_embeddings_dir, rdms_dir, nsd_dir,
@@ -23,26 +23,9 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
     subs = [f"subj0{x+1}" for x in range(n_subjects)]
 
     # specify where each set of nsd embeddings is saved
-    modelname2file = {
-        "multihot": f"{saved_embeddings_dir}/nsd_multihot.pkl",
-        "fasttext_categories": f"{saved_embeddings_dir}/nsd_fasttext_CATEGORY_mean_embeddings.pkl",
-        "fasttext_nouns": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings.pkl",
-        "nsd_fasttext_nouns_closest_cocoCats_cut0.33": f"{saved_embeddings_dir}/nsd_fasttext_NOUNS_mean_embeddings_closest_cocoCats_cut0.33.pkl",
-        "fasttext_verbs": f"{saved_embeddings_dir}/nsd_fasttext_VERB_mean_embeddings.pkl",
-        "fasttext_all": f"{saved_embeddings_dir}/nsd_fasttext_ALLWORDS_mean_embeddings.pkl",
-        "guse": f"{saved_embeddings_dir}/nsd_guse_mean_embeddings.pkl",
-        "mpnet": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",
-        # DNN activities
-        "dnn_multihot_ff": f"{ms_coco_saved_dnn_activities_dir}/multihot_ff_nsd_activations_epoch200.h5",
-        "dnn_multihot_rec": f"{ms_coco_saved_dnn_activities_dir}/multihot_rec_nsd_activations_epoch200.h5",
-        "dnn_guse_ff": f"{ms_coco_saved_dnn_activities_dir}/guse_ff_nsd_activations_epoch200.h5",
-        "dnn_guse_rec": f"{ms_coco_saved_dnn_activities_dir}/guse_rec_nsd_activations_epoch200.h5",
-        "dnn_mpnet_ff": f"{ms_coco_saved_dnn_activities_dir}/mpnet_ff_nsd_activations_epoch200.h5",
-        "dnn_mpnet_rec": f"{ms_coco_saved_dnn_activities_dir}/mpnet_rec_nsd_activations_epoch200.h5",
-        # DNNs trained on ecoset activities
-        "dnn_ecoset_category": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_category_post_gn_epoch80.h5",
-        "dnn_ecoset_fasttext": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_fasttext_post_gn_epoch80.h5",
-    }
+    modelname2file = get_name2file_list(saved_embeddings_dir,
+                                        ms_coco_saved_dnn_activities_dir, 
+                                        ecoset_saved_dnn_activities_dir)
 
     for MODEL_NAME in MODEL_NAMES:
         
