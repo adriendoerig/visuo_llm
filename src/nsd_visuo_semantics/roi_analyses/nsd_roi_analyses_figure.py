@@ -79,9 +79,13 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         }
         fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
 
+    # model_specs = {
+    #     k: {"label": l, "alpha": a}
+    #     for k, l, a in zip(model_keys, model_labels, model_alphas)
+    # }
     model_specs = {
-        k: {"label": l, "alpha": a}
-        for k, l, a in zip(model_keys, model_labels, model_alphas)
+        k: {"label": l}
+        for k, l in zip(model_keys, model_labels)
     }
 
     roi_keys = [
@@ -184,7 +188,8 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
         for j, model_idx in enumerate(ordered_model_indices):
             model_key = model_keys[model_idx]
-            model_alpha = model_specs[model_key]["alpha"]
+            # model_alpha = model_specs[model_key]["alpha"]
+            model_alpha = model_alphas[j]
             facecolor = mcolors.to_rgb(roi_color) + (model_alpha,)
             perf = means[roi_key][model_key]
             std = stds[roi_key][model_key]

@@ -34,9 +34,10 @@ WORD_TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition']
 # get_nsd_sentence_embeddings_categories(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
 #                                        h5_dataset_path, OVERWRITE=OVERWRITE)
 
-get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
-                                      WORD_TYPES,
-                                      h5_dataset_path, OVERWRITE)
+for concat_five_captions in [True]:#, False]:
+        get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
+                                        WORD_TYPES, concat_five_captions,
+                                        h5_dataset_path, OVERWRITE)
 
 
 WORD_EMBEDDING_TYPES = ['glove', 'fasttext']  # or 'glove'

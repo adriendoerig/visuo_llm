@@ -6,7 +6,7 @@ from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embeddin
 
 
 def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embed_path,
-                                          word_types_to_use,
+                                          word_types_to_use, concat_five_captions,
                                           h5_dataset_path, OVERWRITE):
     '''
     Concatenates the coco categories into a string, and throws that into a sentence embedder.
@@ -14,11 +14,14 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
     embedding_model_type: str, the model to use. See embedding_models_zoo.py for options.
     captions_to_embed_path: str, path to the pickle file containing the captions of nsd.
     h5_dataset_path: str, path to the h5 dataset containing the images and categories of ms-coco/nsd.
+    concat_five_captions: bool, if True, get a single embedding for all words from the 5 captions. Otherwise, one embed per caption, and we then take the mean.
     OVERWRITE: bool, if True, overwrite existing embeddings.
     '''
 
     print(f"GATHERING CATEGORY EMBEDDINGS FOR: {embedding_model_type}\n "
-          f"ON: {captions_to_embed_path}") 
+          f"ON: {captions_to_embed_path}\n "
+          f" FOR WORD TYPES: {word_types_to_use}\n "
+          f" CONCATENATE CAPTIONS: {concat_five_captions}\n") 
 
     SANITY_CHECK = 1
     GET_EMBEDDINGS = 1
@@ -32,10 +35,10 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
 
     METRIC = 'correlation'
 
-    save_name = f"nsd_{embedding_model_type}_mean_WORDTYPE_embeddings"
+    save_name = f"nsd_{embedding_model_type}_{'concat5caps' if concat_five_captions else 'mean'}_WORDTYPE_embeddings"
 
-    if os.path.exists(f"{save_embeddings_to}/{save_name}_allCats.pkl") and not OVERWRITE:
-        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
+    if os.path.exists(f"{save_embeddings_to}/{save_name}_{word_types_to_use[0]}s.pkl") and not OVERWRITE:
+        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}_{word_types_to_use[0]}s.pkl. Set OVERWRITE=True to overwrite.")
     else:
         embedding_model = get_embedding_model(embedding_model_type)
 
@@ -59,17 +62,26 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
 
                 for wt in word_types_to_use:
                     these_embeddings = np.empty((len(these_captions), dummy_embeddings.shape[-1]))
-                    for c, cap in enumerate(these_captions):
-                        these_words = get_word_type_from_string(cap, wt)
+                    if concat_five_captions:
+                        these_words = []
+                        for c, cap in enumerate(these_captions):
+                            these_words += get_word_type_from_string(cap, wt)
                         these_words_string = " ".join(these_words)
-                        these_embeddings[c] = get_embeddings(these_words_string, embedding_model, embedding_model_type)
                         img_words_all[wt].append(these_words_string)
-                    mean_embeddings_all[wt][i] = these_embeddings.mean(axis=0)
+                        this_embedding = get_embeddings(these_words_string, embedding_model, embedding_model_type)
+                        mean_embeddings_all[wt][i] = this_embedding
+                    else:
+                        for c, cap in enumerate(these_captions):
+                            these_words = get_word_type_from_string(cap, wt)
+                            these_words_string = " ".join(these_words)
+                            these_embeddings[c] = get_embeddings(these_words_string, embedding_model, embedding_model_type)
+                            img_words_all[wt].append(these_words_string)
+                        mean_embeddings_all[wt][i] = these_embeddings.mean(axis=0)
 
             for wt in word_types_to_use:
-                with open(f"{save_embeddings_to}/{save_name}_{wt}.pkl", "wb") as fp:
+                with open(f"{save_embeddings_to}/{save_name}_{wt}s.pkl", "wb") as fp:
                     pickle.dump(mean_embeddings_all[wt], fp)
-                with open(f"{save_embeddings_to}/{save_name}_{wt}_per_image.pkl", "wb") as fp:
+                with open(f"{save_embeddings_to}/{save_name}_{wt}s_per_image.pkl", "wb") as fp:
                     pickle.dump(img_words_all[wt], fp)
             
 
@@ -95,5 +107,5 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
                         f"{loaded_words_per_image[i]}\n"
                         f"Emb shape, min, max, mean: {loaded_mean_embeddings[i].shape, loaded_mean_embeddings[i].min(), loaded_mean_embeddings[i].max(), loaded_mean_embeddings[i].mean()}"
                     )
-                    plt.savefig(f"{save_test_imgs_to}/{save_name}_check_{i}.png")
+                    plt.savefig(f"{save_test_imgs_to}/{save_name}_{wt}_check_{i}.png")
                     plt.close()
