@@ -3,7 +3,7 @@ import numpy as np
 import openai
 import tensorflow as tf
 import tensorflow_hub as hub
-# import tensorflow_text  # needed to load the T5 model
+import tensorflow_text  # needed to load the T5 model
 from sentence_transformers import SentenceTransformer
 
 openai.api_key_path = os.path.join("./openai_key/key.conf")
@@ -11,21 +11,23 @@ openai.api_key_path = os.path.join("./openai_key/key.conf")
 
 def get_embedding_model(embedding_model_type):
     if embedding_model_type == "GUSE_transformer":
-        module_url = "https://tfhub.dev/google/universal-sentence-encoder-large/5"
+        module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/large/versions/5"
     elif embedding_model_type == "GUSE_DAN":
-        module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
+        module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/universal-sentence-encoder/versions/2"
     elif embedding_model_type == "T5":
-        module_url = "https://tfhub.dev/google/sentence-t5/st5-base/1"
+        module_url = "https://www.kaggle.com/models/google/sentence-t5/frameworks/TensorFlow2/variations/st5-base/versions/1"
     elif embedding_model_type == "USE_CMLM_Base":
-        preprocessor = hub.KerasLayer("https://tfhub.dev/tensorflow/bert_en_uncased_preprocess/3")
+        preprocessor = hub.KerasLayer("https://www.kaggle.com/models/tensorflow/bert/frameworks/TensorFlow2/variations/en-uncased-preprocess/versions/3")
         encoder = hub.KerasLayer("https://tfhub.dev/google/universal-sentence-encoder-cmlm/en-base/1")
         return (preprocessor, encoder)
-    elif embedding_model_type == "all_mpnet_base_v2":
-        return SentenceTransformer("all-mpnet-base-v2")
     elif embedding_model_type == "openai_ada2":
         return None
     else:
-        raise Exception("embedding_model_type not understood")
+        try:
+            # default behaviour is to try and load from SentenceTransformer
+            return SentenceTransformer(embedding_model_type)
+        except Exception as e:
+            raise Exception("embedding_model_type not understood")
 
     models_dir = "./embedding_models"
     os.makedirs(models_dir, exist_ok=True)
@@ -49,18 +51,15 @@ def get_embeddings(sentences, embedding_model, embedding_model_type):
     elif embedding_model_type == "USE_CMLM_Base":
         preprocessor, encoder = embedding_model[0], embedding_model[1]
         return encoder(preprocessor(sentences))["default"]
-    elif embedding_model_type == "all_mpnet_base_v2":
-        return embedding_model.encode(sentences)
     elif embedding_model_type == "openai_ada2":
-        openai_out = openai.Embedding.create(
-            input=sentences, model="text-embedding-ada-002"
-        )[
-            "data"
-        ]  # [0]['embedding']
+        openai_out = openai.Embedding.create(input=sentences, model="text-embedding-ada-002")["data"]
         embeddings = np.asarray([out["embedding"] for out in openai_out])
         return embeddings
-    else:
+    elif embedding_model_type == ("GUSE_transformer" or "GUSE_DAN"):
         return embedding_model(sentences).numpy()
+    else:
+        # default behaviour is to use SentenceTransformer models (e.g. mpnet, etc.) 
+        return embedding_model.encode(sentences)
 
 
 # Helper function to load fasttext vectors

@@ -42,8 +42,47 @@ def sentence_embeddings_sanity_check(embedding_model_type, embedding_model, metr
     plt.close() 
 
 
+# SOME CARE IS NEEDED TO TRANSLATE BETWEEN COCO 1-INDEXING AND PYTHON'S 0-INDEXING
+def get_multihot_from_catIDs(catIDs, coco_categories_91):
+    multihot = np.zeros(len(coco_categories_91))
+    for c in catIDs:
+        multihot[c+1] = 1
+    return multihot
+
+
 def get_words_from_multihot(multihot_labels, coco_categories_91):
-    return [coco_categories_91[lin - 1] for lin in np.where(multihot_labels == 1)[0]]
+    return [get_cocoCat_from_hotID(lin, coco_categories_91) for lin in np.where(multihot_labels == 1)[0]]
+
+
+def get_hotID_from_cocoCat(word, coco_categories_91):
+    return np.where(np.array(coco_categories_91) == word)[0][0] + 1
+
+
+def get_cocoCat_from_hotID(hotID, coco_categories_91):
+    return coco_categories_91[hotID - 1]
+
+
+def get_multihot_from_cocoCatList(wordlist, coco_categories_91):
+    multihot = np.zeros(len(coco_categories_91))
+    for w in wordlist:
+        multihot[get_hotID_from_cocoCat(w, coco_categories_91)] = 1
+    return multihot
+
+
+def get_cocoCat_embed_from_hotID(hotID, multihot_categs_embeddings):
+    return multihot_categs_embeddings[hotID - 1]
+
+
+def get_cocoCat_embed_from_cocoCat(word, coco_categories_91, multihot_categs_embeddings):
+    return get_cocoCat_embed_from_hotID(get_hotID_from_cocoCat(word, coco_categories_91), multihot_categs_embeddings)
+
+
+def get_closest_cocoCatAndID(word_embedding, coco_categories_91, multihot_categs_embeddings, METRIC):
+    lookup_distances = cdist(multihot_categs_embeddings, word_embedding[None,:], metric=METRIC)
+    min_dist = np.min(lookup_distances)
+    cat_ID = np.argmin(lookup_distances)
+    cat_word = coco_categories_91[cat_ID]
+    return cat_word, cat_ID, min_dist
 
 
 def get_all_word_embeds_from_wordlist(wordlist, embedding_model, embedding_model_type):
@@ -82,28 +121,45 @@ def get_word_type_dict():
             'nouns': ['NN', 'NNS'], 'verbs': ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ'], 'adjectives': ['JJ', 'JJR', 'JJS'], 'adverbs': ['RB', 'RBR', 'RBS'], 'prepositions': ['IN']}
 
 
+def get_sentence_tags(sentence):
+    tokens = nltk.word_tokenize(sentence)
+    tagged = nltk.pos_tag(tokens)
+    return tagged
+
+
+def custom_join(words):
+    modified_sentence = ''
+    for i, word in enumerate(words):
+        # Add space unless the current word is a punctuation mark or starts with an apostrophe
+        if i > 0 and word not in ",.?!;:" and not word.startswith("'"):
+            modified_sentence += ' '
+        modified_sentence += word
+    return modified_sentence
+
+
 def get_word_type_from_string(s, word_type):
     word_type_dict = get_word_type_dict()
-    tokens = nltk.word_tokenize(s)
-    tagged = nltk.pos_tag(tokens)
+    tagged = get_sentence_tags(s)
     return [x[0] for x in tagged if x[1] in word_type_dict[word_type]]  # NN and NNS the tags for nouns
 
 
 def scramble_word_order(sentence):
     # helper function to randomize word order in sentences
-    split = sentence.split()  # Split the string into a list of words
+    split = nltk.word_tokenize(sentence)  # Split the string into a list of words
     shuffle(split)  # This shuffles the list in-place.
-    return " ".join(split)  # Turn the list back into a string
+    return custom_join(split)  # Turn the list back into a string
 
 
-def randomize_by_word_type(sentence, types_to_randomize, loaded_captions, max_n_changes=0):
+def randomize_by_word_type(sentence, types_to_randomize, loaded_captions, min_dist_cutoff, 
+                           embedding_model, embedding_model_type,
+                           max_n_changes=0, max_n_trials=50, metric='correlation'):
     # helper function to randomize by word type (e.g. randomize verbs)
     # can randomize several word types at once
     # max_n_changes: if >0, will only randomize up to this number of words
+    # max_n_trials: if >0, will only try this number of randomizations (to make sure we don't get stuck in an infinite while loop)
 
     word_type_dict = get_word_type_dict()
-    tokens = nltk.word_tokenize(sentence)
-    tagged = nltk.pos_tag(tokens)
+    tagged = get_sentence_tags(sentence)
 
     if max_n_changes > 0:
         change_ids = np.random.choice(len(tagged), max_n_changes, replace=False)
@@ -114,27 +170,43 @@ def randomize_by_word_type(sentence, types_to_randomize, loaded_captions, max_n_
             for tagged_word in tagged:
                 if tagged_word[1] == this_subtype:
                     # get a random word of the same type
-                    random_word = tagged_word[0]
-                    while random_word == tagged_word[0]:
-                        same_type = []
-                        while same_type == []:
-                            random_id = np.random.randint(len(loaded_captions))
-                            random_cap_id = np.random.randint(len(loaded_captions[random_id]))
-                            random_cap = loaded_captions[random_id][random_cap_id]  # gets a random caption
-                            random_tagged_word = nltk.pos_tag(nltk.word_tokenize(random_cap))
-                            same_type = [w[0] for w in random_tagged_word if w[1] == this_subtype]
-                        random_word = random.sample(same_type, 1)[0]
-                    change_dict[tagged_word[0]] = random_word
+                    max_dist_word = tagged_word[0]
+                    while max_dist_word == tagged_word[0]:
+                        # same_type = []
+                        this_dist, max_dist, n_trials = 0, 0, 0
+                        max_dist_word = ''
+                        while this_dist <= min_dist_cutoff and n_trials < max_n_trials:
+                            same_type = []
+                            while same_type == []:
+                                random_id = np.random.randint(len(loaded_captions))
+                                random_cap_id = np.random.randint(len(loaded_captions[random_id]))
+                                random_cap = loaded_captions[random_id][random_cap_id]  # gets a random caption
+                                random_tagged_word = get_sentence_tags(random_cap)
+                                same_type = [w[0] for w in random_tagged_word if w[1] == this_subtype]
+                            random_word = random.sample(same_type, 1)[0]
+                            this_dist = cdist(get_embeddings(random_word, embedding_model, embedding_model_type)[None,:], 
+                                              get_embeddings(tagged_word[0], embedding_model, embedding_model_type)[None,:], 
+                                              metric=metric)
+                            if this_dist > max_dist:
+                                max_dist = this_dist
+                                max_dist_word = random_word
+                            # if n_trials > 1:
+                            #     print(f"\nn_trials... {n_trials}, orig_word: {tagged_word[0]}, random_word: {random_word}, max_dist_word: {max_dist_word} max_dist: {max_dist}", end="")
+                            n_trials += 1
+                            
+                    if tagged_word[0] not in change_dict.keys():
+                        # if statement: e.g. avoids "unchanging" a word changed with NN tag, when looking at "NNS"
+                        change_dict[tagged_word[0]] = max_dist_word
 
     # replace the word in the sentence
     n_changes = 0
-    split = sentence.split() # Split the string into a list of words
+    split = nltk.word_tokenize(sentence) # Split the string into a list of words
     for n_s, s in enumerate(split):  # change words
         if max_n_changes == 0 or n_s in change_ids:
             if s in change_dict.keys():
                 n_changes += 1
                 split[n_s] = change_dict[s]
-    sentence = " ".join(split)   # put the sentence back together again
+    sentence = custom_join(split)   # put the sentence back together again
 
     return sentence, n_changes
 

@@ -2,13 +2,16 @@ import os, itertools
 from nsd_visuo_semantics.utils.nsd_prepare_modelrdms import nsd_prepare_modelrdms
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses import nsd_roi_analyses
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_figure import nsd_roi_analyses_figure
+from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import correlate_model_rdms_figure
 
 
 ### DECLARE PARAMS
 
+plt_suffix = "_mpnet_wordRndCutoff07"
+
 OVERWRITE = False
 
-WORD_TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition']
+WORD_TYPES = ['noun', 'verb']#, 'adjective', 'adverb']#, 'preposition']
 
 MODEL_NAMES = []
 
@@ -16,49 +19,82 @@ MODEL_NAMES = []
 MODEL_NAMES += []
 
 ### BELOW IS CODE TO GET ALL MODELS
-# # models from original paper
-# MODEL_NAMES += [
-#     "multihot",
-#     "mpnet",
-#     "fasttext_categories",
-#     "fasttext_verbs",
-#     "fasttext_all",
-#     "guse",
-#     "dnn_multihot_rec",
-#     "dnn_mpnet_rec"
-# ]
+# models from original paper
+MODEL_NAMES += [
+    "multihot",
+    "mpnet",
+    "fasttext_categories",
+    "fasttext_verbs",
+    "fasttext_all",
+    "guse",
+    "dnn_multihot_rec",
+    "dnn_mpnet_rec"
+]
 
-# # sentence embeddings with various randomized words
-# SENTENCE_EMBEDDING_MODEL_TYPES = ['all_mpnet_base_v2']  #'all_mpnet_base_v2', 'USE_CMLM_Base', 'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5'
-# RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
+### SENTENCE EMBEDDINGS
+SENTENCE_EMBEDDING_MODEL_TYPES = ['multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
+                                  'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
+                                  'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
+                                  'GUSE_transformer', 'GUSE_DAN', 'USE_CMLM_Base', 'T5']
+RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
+
+# sentence embeddings with various randomized words
 # RANDOMIZE_BY_WORD_TYPES = []  # randomize within word type (e.g. use a random other verb instead of the sentence verb). Ignored if empty list.
 # for i in range(1, len(WORD_TYPES) + 1):
+#     # randomize all combinations of word types
 #     RANDOMIZE_BY_WORD_TYPES.extend([list(elem) for elem in itertools.combinations(WORD_TYPES, i)])
-# RANDOMIZE_BY_WORD_TYPES = [None] + RANDOMIZE_BY_WORD_TYPES  # add no randomization to the list
+RANDOMIZE_BY_WORD_TYPES = [[w] for w in WORD_TYPES]  # Just randomize single word types
+RANDOMIZE_BY_WORD_TYPES = [None] + RANDOMIZE_BY_WORD_TYPES  # add no randomization to the list
 
-# for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
-#     for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
-#         this_save_name = f"nsd_{SENTENCE_EMBEDDING_MODEL_TYPE}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"
-#         MODEL_NAMES.append(this_save_name.replace("nsd_", "").replace("_mean_embeddings", "").replace("all_mpnet_base_v2", "mpnet"))
+for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
+    for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
+        
+        this_save_name = f"nsd_{SENTENCE_EMBEDDING_MODEL_TYPE}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"     
+        this_short_name = this_save_name.replace("nsd_", "").replace("_mean_embeddings", "").replace("all_mpnet_base_v2", "mpnet")
+        
+        # add model without cutoff distance in the randomization
+        # MODEL_NAMES.append(this_short_name)
+
+        # add model with cutoff dist = 0.7
+        if RANDOMIZE_BY_WORD_TYPE is None:
+            # there is no cutoff when there is no randomization
+            MODEL_NAMES.append(this_short_name)
+        else:
+            this_short_name_cutoff07 = this_short_name + "_cutoffDist0.7"
+            MODEL_NAMES.append(this_short_name_cutoff07)
+
+
 
 # sentence embeddings on (lists of) words of a single type (e.g. nouns)
 for wt in WORD_TYPES:
     MODEL_NAMES += [f"mpnet_{wt}s"]
     MODEL_NAMES += [f"mpnet_{wt}s_concat5caps"]
 
-# # other new models
-# MODEL_NAMES += [
-#     "mpnet_category_all",
-#     "mpnet_category_captionMatchPositive",
-#     "mpnet_category_captionMatchNegative",
-#     "glove_verbs",
-#     "glove_all",
-#     "glove_nouns_cocoCatsMatchPositive",
-#     "glove_nouns_cocoCatsMatchNegative",
-#     "glove_nouns",
-# ]
+# sentence embeddings with words matched to coco categories in various ways
+for cutoff in [0.5]:
+    MODEL_NAMES += [
+        f"mpnet_category_all",
+        f"mpnet_category_catNamesCaptionMatchPositive_cutoff{cutoff}",
+        f"mpnet_category_catNamesCaptionMatchNegative_cutoff{cutoff}",
+        f"mpnet_category_captionNounsCatMatchPositive_cutoff{cutoff}",
+        f"mpnet_category_captionNounsCatMatchNegative_cutoff{cutoff}",
+        f"mpnet_category_captionNounsCatNameMap_cutoff{cutoff}",
+        f"mpnet_category_captionNounsCatNameMapMultihot_cutoff{cutoff}"
+    ]
+    
+# other new models
+MODEL_NAMES += [
+    "glove_verbs",
+    "glove_all",
+    "glove_nouns_cocoCatsMatchPositive",
+    "glove_nouns_cocoCatsMatchNegative",
+    "glove_nouns",
+    # "fasttext_nouns_cocoCatsMatchPositive",
+    # "fasttext_nouns_cocoCatsMatchNegative",
+    # "fasttext_nouns",
+]
 
-# MODEL_NAMES = list(set(MODEL_NAMES))
+MODEL_NAMES = list(set(MODEL_NAMES))
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
@@ -101,5 +137,12 @@ rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 #                  nsd_dir, betas_dir, rois_dir, base_save_dir,
 #                  remove_shared_515, OVERWRITE_NEURO_RDMs=False, OVERWRITE_RDM_CORRs=OVERWRITE)
 
-nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
-                        fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix="_mpnet_wordTypes_scrambling")
+# nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
+#                         fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
+#                         custom_model_labels=None)
+
+
+# correlate_model_rdms_figure(MODEL_NAMES, nsd_dir, base_save_dir, models_rdm_distance, 
+#                             remove_shared_515, roi_analysis_dnn_layer_to_use, 
+#                             plt_suffix=plt_suffix, 
+#                             COMPUTE=True, OVERWRITE=OVERWRITE)

@@ -181,13 +181,8 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                         these_corrs = []
 
                         # path the sample_ids used in searchlight analysis for fair comparison
-                        saved_samples_file = os.path.join(
-                            base_save_dir,
-                            f"searchlight_respectedsampling_{rdm_distance}",
-                            f"{subj}",
-                            "saved_sampling",
-                            f"{subj}_nsd-allsubstim_sampling.npy",
-                        )
+                        saved_samples_file = os.path.join(base_save_dir, f"searchlight_respectedsampling_{rdm_distance}",
+                                                          f"{subj}", "saved_sampling", f"{subj}_nsd-allsubstim_sampling.npy")
                         sample_pool = np.load(saved_samples_file, allow_pickle=True)
 
                         for j in range(n_samples):

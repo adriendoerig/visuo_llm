@@ -9,7 +9,7 @@ from nsd_visuo_semantics.get_embeddings.get_nsd_allWord_embeddings import get_ns
 
 OVERWRITE = True
 
-
+# GENERAL PATHS, ETC
 h5_dataset_path = "/share/klab/datasets/ms_coco_nsd_datasets/ms_coco_embeddings_square256.h5"
 fasttext_embeddings_path = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/crawl-300d-2M.vec"
 glove_embeddings_path = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/glove.840B.300d.txt"
@@ -17,30 +17,39 @@ ms_coco_nsd_train_captions = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/sr
 ms_coco_nsd_val_captions = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/ms_coco_nsd_captions_val.pkl"
 nsd_captions_path = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/ms_coco_nsd_captions_test.pkl"
 
-SENTENCE_EMBEDDING_MODEL_TYPE = 'all_mpnet_base_v2'  #'all_mpnet_base_v2', 'USE_CMLM_Base', 'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5'
+# GENERAL SENTENCE EMBEDDING PARAMETERS
+SENTENCE_EMBEDDING_MODEL_TYPES = ['multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
+                                  'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
+                                  'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
+                                  'GUSE_transformer', 'GUSE_DAN', 'USE_CMLM_Base', 'T5']  #'all_mpnet_base_v2', 'USE_CMLM_Base', 'openai_ada2', 'GUSE_transformer',  'GUSE_DAN', 'T5'
 WORD_TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition']
 
-# RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
-# RANDOMIZE_BY_WORD_TYPES = []  # randomize within word type (e.g. use a random other verb instead of the sentence verb). Ignored if empty list.
+# RANDOMIZATION VERSIONS OF NSD SENTENCE EMBEDDINGS
+RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
+RANDOMIZE_BY_WORD_TYPES = [None, 'noun', 'verb']  # randomize within word type (e.g. use a random other verb instead of the sentence verb). Ignored if empty list.
 # for i in range(1, len(WORD_TYPES) + 1):
 #     RANDOMIZE_BY_WORD_TYPES.extend([list(elem) for elem in itertools.combinations(WORD_TYPES, i)])
-# RANDOMIZE_BY_WORD_TYPES = [None] + RANDOMIZE_BY_WORD_TYPES  # add no randomization to the list
 
-# for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
-#     get_nsd_sentence_embeddings(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path, RANDOMIZE_BY_WORD_TYPE, RANDOMIZE_WORD_ORDER,
-#                                 h5_dataset_path, OVERWRITE=OVERWRITE)
+for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
+    for MIN_DIST_CUTOFF in [0.7]:
+        for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
+            get_nsd_sentence_embeddings(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path, 
+                                        RANDOMIZE_BY_WORD_TYPE, RANDOMIZE_WORD_ORDER, MIN_DIST_CUTOFF, 
+                                        h5_dataset_path, 
+                                        use_saved_randomized_sentences_from_other_model='all_mpnet_base_v2',
+                                        OVERWRITE=OVERWRITE)
     
+# for CUTOFF in [0.5, 0.3]:
+#     get_nsd_sentence_embeddings_categories(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
+#                                            h5_dataset_path, CUTOFF, OVERWRITE=OVERWRITE)
 
-# get_nsd_sentence_embeddings_categories(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
-#                                        h5_dataset_path, OVERWRITE=OVERWRITE)
-
-for concat_five_captions in [True]:#, False]:
-        get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
-                                        WORD_TYPES, concat_five_captions,
-                                        h5_dataset_path, OVERWRITE)
+# for concat_five_captions in [True]:#, False]:
+#         get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, nsd_captions_path,
+#                                                 WORD_TYPES, concat_five_captions,
+#                                                 h5_dataset_path, OVERWRITE)
 
 
-WORD_EMBEDDING_TYPES = ['glove', 'fasttext']  # or 'glove'
+WORD_EMBEDDING_TYPES = ['fasttext']  # or 'fasttext', 'glove'
 WORD_CONCATENATE_EMBEDDINGS = [False]  # if True, we concatenate the embeddings. If false, we mean them.
 
 WORD_NOUNS_MATCH_TO_COCO_CATEGORY_NOUNS = ['positive', 'negative', None]  # if 'positive', we only use nouns that have an embedding CLOSE to COCO category nouns. 

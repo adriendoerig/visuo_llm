@@ -10,12 +10,15 @@ import h5py
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515
-from nsd_visuo_semantics.utils.model_name2file_list import get_name2file_list
+from nsd_visuo_semantics.utils.get_name2file_dict import get_name2file_dict
 
 def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                           saved_embeddings_dir, rdms_dir, nsd_dir,
                           ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir, 
                           remove_shared_515, OVERWRITE):
+    
+    if not isinstance(MODEL_NAMES, list):
+        MODEL_NAMES = [MODEL_NAMES]
 
     # initialise parameters
     n_sessions = 40
@@ -23,7 +26,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
     subs = [f"subj0{x+1}" for x in range(n_subjects)]
 
     # specify where each set of nsd embeddings is saved
-    modelname2file = get_name2file_list(saved_embeddings_dir,
+    modelname2file = get_name2file_dict(saved_embeddings_dir,
                                         ms_coco_saved_dnn_activities_dir, 
                                         ecoset_saved_dnn_activities_dir)
 

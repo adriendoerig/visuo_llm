@@ -8,7 +8,8 @@ from scipy import stats
 
 
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
-                            alphabetical_order=False, best_to_worst_order=True):
+                            alphabetical_order=False, best_to_worst_order=True,
+                            custom_model_labels=None):
     '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
     Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
 
@@ -78,6 +79,9 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             "zorder": 10,
         }
         fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
+
+    if custom_model_labels is not None:
+        model_labels = custom_model_labels
 
     # model_specs = {
     #     k: {"label": l, "alpha": a}
