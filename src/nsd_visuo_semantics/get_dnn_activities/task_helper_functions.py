@@ -1,9 +1,7 @@
-import importlib
-import os
-import pickle
-
-import h5py
+import importlib, os, pickle, h5py, torch
 import tensorflow as tf
+import numpy as np
+from PIL import Image
 
 
 def localdir_modulespec(module_name, dir_path):
@@ -34,136 +32,58 @@ def get_model(hparams, n_classes, saved_model_path=None):
     return net
 
 
-def load_and_override_hparams(saved_model_path, additional_units=0, **kwargs):
-    if additional_units:
-        with open(
-            f"{saved_model_path}/hparams_addReadoutUnits.pickle", "rb"
-        ) as f:
+def load_and_override_hparams(saved_model_path, **kwargs):
+    
+    with open(f"{saved_model_path}/hparams.pickle", "rb") as f:
             hparams = pickle.load(f)
-    else:
-        with open(f"{saved_model_path}/hparams.pickle", "rb") as f:
-            hparams = pickle.load(f)
+
     hparams["saved_model_path"] = saved_model_path
-    if hparams["rsync_dataset_to"] != "no_rsync":
-        len_to_remove = len(hparams["rsync_dataset_to"])
-        hparams["dataset"] = (
-            "/rds/project/rds-uqfOSPIEJ54" + hparams["dataset"][len_to_remove:]
-        )
-        print(
-            f"Training used rsync_dataset_to and therefore overwrote the dataset path in loaded hparams. "
-            f'Looking for dataset in {hparams["dataset"]}. If it is not there, change manually in analysis.py'
-        )
+    
     for k, v in kwargs.items():
         hparams[k] = v
+
     return hparams
 
 
-def load_model_from_path(
-    saved_model_path,
-    epoch_to_load,
-    n_classes=None,
-    test_mode=False,
-    print_summary=False,
-    hparams=None,
-    static_to_seq_input=False,
-):
-    if hparams is None:
-        print(f"Loading model from {saved_model_path}.")
+def load_model_from_path(saved_model_path, epoch_to_load, print_summary=True, hparams=None):
 
-        with open(f"{saved_model_path}/hparams.pickle", "rb") as f:
+    if hparams is None:
+        with open(f'{saved_model_path}/hparams.pickle', 'rb') as f:
             hparams = pickle.load(f)
 
-    if static_to_seq_input:
-        print(
-            f"Loading a network trained on static inputs, transforming it into a network taking sequential input"
-            f'as many timesteps as the network has recurrent timesteps ({hparams["n_recurrent_steps"]}).'
-        )
-        hparams["sequence_input"] = True
-        hparams["n_identical_frames"] = 1
+    n_classes = get_n_classes(hparams)
 
-    print(f"Setting test_mode={test_mode}.")
-    hparams["test_mode"] = test_mode
-
-    # find n_output_neurons (depends on the kind of network, e.g. semantic_loss always has 300 outputs)
-    if n_classes is None:
-        # get n_classes from dataset if not passed as argument
-        n_classes = get_n_classes(hparams=hparams)
-
-    # original_nclasses = hparams['finetune_original_nclasses'] if hparams['finetune'] else n_classes
-
-    print("\ncreating model...")
+    print('\ncreating model...')
     net = get_model(hparams, n_classes, saved_model_path=saved_model_path)
 
-    if hparams["test_mode"]:
-        for layer in net.layers:
-            layer.trainable = False
-
-    print("\nloading weights...")
-    if epoch_to_load == 0:
-        weights_filename = "model_weights_init.h5"
+    print('\nloading weights...')
+    if 'simclr' in hparams['model_name'] and 'finetune' not in hparams['model_name']:
+        # Load encoder weights
+        encoder_ckpt_path = os.path.join(saved_model_path, 'training_checkpoints', f'ckpt_ep{epoch_to_load:03d}.h5')
+        net = net.encoder
+        net.load_weights(encoder_ckpt_path)
     else:
-        weights_filename = f"ckpt_ep{epoch_to_load:03d}.h5"
-    net.load_weights(
-        os.path.join(
-            os.path.join(
-                saved_model_path, "training_checkpoints", weights_filename
-            )
-        )
-    )
+        if epoch_to_load == 0:
+            weights_filename = 'model_weights_init.h5'
+        else:
+            weights_filename = f'ckpt_ep{epoch_to_load:03d}.h5'
+        net.load_weights(os.path.join(saved_model_path, 'training_checkpoints', weights_filename))
+
+    hparams['test_mode'] = True
+    print(f"test_mode={hparams['test_mode']}, setting trainable=False for all layers")
+    for layer in net.layers:
+        layer.trainable = False
 
     if print_summary:
         net.summary()
-
-    metric_dict = {}
-    for layer in net.output_names:
-        metric_dict[layer] = [
-            tf.keras.metrics.categorical_accuracy,
-            tf.keras.metrics.top_k_categorical_accuracy,
-        ]
-    net.compile(metrics=metric_dict)
+    
+    net.compile()
 
     return net, hparams
 
 
-def convert_customsavedmodel_to_tfsavedmodel(saved_model_path, epoch_to_load):
-    net, hparams = load_model_from_path(saved_model_path, epoch_to_load)
-    net.save(
-        os.path.join(
-            saved_model_path, f"{hparams['model_name']}_ep{epoch_to_load:03d}"
-        )
-    )
-
-
-def get_activities_model_single_layer(net, readout_layer_name):
-    # make keras model to collect layer activities
-    found = False
-    for this_layer in net.layers:
-        if readout_layer_name.lower() in this_layer.name.lower():
-            if (
-                "10" in this_layer.name.lower()
-                and "10" not in readout_layer_name
-            ):
-                # to cope with the fact that 1 is in 10
-                continue
-            else:
-                readout_layer = this_layer.output
-                found = True
-    if not found:
-        raise Exception(
-            f"Requested layer not found.\nNetwork layers: {[lin.name for lin in net.layers]}\nRequested layer: {readout_layer_name}"
-        )
-
-    activities_model = tf.keras.Model(
-        inputs=net.input, outputs=readout_layer, name="activities_model"
-    )
-
-    return activities_model
-
-
-def get_activities_model(net, n_layers, hparams, pre_post_norm="post"):
-    timesteps = max(
-        hparams["n_recurrent_steps"], 1
-    )  # because hparams['n_recurrent_steps'] = 0 for ff nets
+def get_activities_model(net, n_layers, hparams, pre_post_norm="post", include_readout=False):
+    timesteps = max(hparams["n_recurrent_steps"], 1)  # because hparams['n_recurrent_steps'] = 0 for ff nets
 
     if hparams["norm_type"] == "IN":
         norm_layer_name = "instancenorm"
@@ -178,83 +98,110 @@ def get_activities_model(net, n_layers, hparams, pre_post_norm="post"):
     elif hparams["norm_type"] == "no_norm":
         norm_layer_name = ""
     else:
-        raise Exception(
-            f'hparams["norm_type"] = {hparams["norm_type"]} is not understood in get_activities_model'
-        )
+        raise Exception(f'hparams["norm_type"]={hparams["norm_type"]} is not understood in get_activities_model')
 
     # make keras model to collect layer activities
-    readout_layer_names = [
-        [None] * timesteps for _ in range(n_layers + 1)
-    ]  # list of lists [n_layers+output][hparams['timesteps']]
-    readout_layer_shapes = [[None] * timesteps for _ in range(n_layers + 1)]
-    readout_layers = [[None] * timesteps for _ in range(n_layers + 1)]
+    if include_readout:
+        n_layers += 1
+    readout_layer_names = [[None] * timesteps for _ in range(n_layers)]  # list of lists [n_layers+output][hparams['timesteps']]
+    readout_layer_shapes = [[None] * timesteps for _ in range(n_layers)]
+    readout_layers = [[None] * timesteps for _ in range(n_layers)]
     for layer_id in range(n_layers):
         for this_layer in net.layers:
             for t in range(timesteps):
-                n_digits = (
-                    2 if t >= 10 else 1
-                )  # to deal with '11' vs. '1' in the layer name
+                n_digits = (2 if t >= 10 else 1)  # to deal with '11' vs. '1' in the layer name
                 if pre_post_norm == "pre" or hparams["norm_type"] == "no_norm":
                     if (
-                        f'{hparams["activation"]}_layer_{layer_id}_time_{t}'
-                        in this_layer.name.lower()
+                        f'{hparams["activation"]}_layer_{layer_id}_time_{t}' in this_layer.name.lower()
                         and (this_layer.name.lower()[-(n_digits + 1)]) == "_"
                     ):
                         readout_layers[layer_id][t] = this_layer.output
-                        readout_layer_names[layer_id][
-                            t
-                        ] = this_layer.name.lower()
-                        readout_layer_shapes[layer_id][
-                            t
-                        ] = this_layer.output.shape
+                        readout_layer_names[layer_id][t] = this_layer.name.lower()
+                        readout_layer_shapes[layer_id][t] = this_layer.output.shape
                 elif pre_post_norm == "post":
                     if (
-                        f"{norm_layer_name}_layer_{layer_id}_time_{t}"
-                        in this_layer.name.lower()
+                        f"{norm_layer_name}_layer_{layer_id}_time_{t}" in this_layer.name.lower()
                         and (this_layer.name.lower()[-(n_digits + 1)]) == "_"
                     ):
                         readout_layers[layer_id][t] = this_layer.output
-                        readout_layer_names[layer_id][
-                            t
-                        ] = this_layer.name.lower()
-                        readout_layer_shapes[layer_id][
-                            t
-                        ] = this_layer.output.shape
+                        readout_layer_names[layer_id][t] = this_layer.name.lower()
+                        readout_layer_shapes[layer_id][t] = this_layer.output.shape
                 else:
-                    raise Exception(
-                        'pre_post_norm not understood. use "pre" or "post"'
-                    )
+                    raise Exception('pre_post_norm not understood. use "pre" or "post"')
 
-                if this_layer.name.lower() == f"output_time_{t}":
+                if this_layer.name.lower() == f"output_time_{t}" and include_readout:
                     readout_layers[n_layers][t] = this_layer.output
                     readout_layer_names[n_layers][t] = this_layer.name.lower()
                     readout_layer_shapes[n_layers][t] = this_layer.output.shape
 
-    activities_model = tf.keras.Model(
-        inputs=net.input, outputs=readout_layers, name="activities_model"
-    )
+    activities_model = tf.keras.Model(inputs=net.input, outputs=readout_layers, name="activities_model")
 
     return activities_model, readout_layer_names, readout_layer_shapes
 
 
-def get_n_classes(hparams=None, dataset_path=None, n_classes_manual=None):
-    if n_classes_manual is not None:
-        print("returned manually specified n_classes")
-        return n_classes_manual
+def get_n_classes(hparams=None, dataset_path=None, dataset_subset=None):
 
-    if dataset_path is None:
-        print("n_classes using hparams dataset")
-        dataset = hparams["dataset"]
-    else:
-        print(f"n_classes using specified dataset path: {dataset_path}")
-        dataset = dataset_path
+    if 'simclr' in hparams['model_name'].lower():
+        return 0
 
-    with h5py.File(dataset, "r") as f:
-        if dataset_path is None:
-            if hparams["embeddings_path"]:
-                print("n_classes using hparams embeddings path")
-                return 300  # you may need to change this depending on your embedding dimensionality
-            elif hparams["embedding_target"]:
-                print("n_classes using hparams embeddings target")
-                return f["train"][hparams["target_dataset_name"]][0].shape[-1]
-        return f["categories"][:].shape[0]
+    if [hparams, dataset_path] == [None, None]:
+        raise Exception('hparams or dataset_path must be passed as arguments in get n_classes')
+
+    dataset_path = hparams['dataset'] if dataset_path is None else dataset_path
+    with h5py.File(dataset_path, "r") as f:
+        print(f'getting n_classes from {dataset_path}')
+        if hparams['embedding_target']:
+            print(f'\tusing embeddings dimension from {hparams["target_dataset_name"]}')
+            return f['train'][hparams['target_dataset_name']][0].shape[-1]
+        else:
+            print(f'\tusing len(categories)')
+            return f['categories'][:].shape[0]
+        
+
+# this function receives a vector of floats, and returns a multihot vector with a 1 in the position of the N max values
+def float2multihot(x, N):
+    # x is a vector of floats
+    # N is an integer
+    # returns a multihot vector with a 1 in the position of the N max values
+    x = np.array(x)
+    x[x.argsort()[:-N]] = 0
+    x[x.argsort()[-N:]] = 1
+    return x
+
+
+def get_closest_caption(predicted_embedding, embeddings, captions, n_closest=1):
+    """get closest caption to predicted embedding"""
+    # predicted_embedding is a vector of floats
+    # embeddings is a matrix of shape (n_embeddings, embedding_dim)
+    # captions is a list of strings
+    # n_closest is an integer
+    # returns a list of n_closest captions
+
+    # get distances
+    distances = np.linalg.norm(embeddings - predicted_embedding, axis=1)
+    # get indices of closest captions
+    closest_caption_indices = distances.argsort()[:n_closest]
+    # get closest captions
+    closest_captions = [captions[i] for i in closest_caption_indices]
+
+    return [x[0] for x in closest_captions]  # return only the first of the 5 coco captions
+
+
+def np_to_pillow_img(img):
+
+    img = (img + 1) / 2  # rescale to [0, 1]
+    img = (img * 255).astype(np.uint8)  # rescale to [0, 255]
+    img = Image.fromarray(img, mode="RGB")
+    return img
+
+
+def tf_to_torch_batch(tf_batch, preprocess):
+    """clip batch of images, return features"""
+
+    tf_batch = tf_batch.numpy()
+    torch_batch = torch.zeros(tf_batch.shape[0], tf_batch.shape[3], 224, 224)  # clip wants 3x224x224 images
+    for i in range(tf_batch.shape[0]):
+        img = np_to_pillow_img(tf_batch[i])
+        torch_batch[i] = preprocess(img).unsqueeze(0)
+    
+    return torch_batch

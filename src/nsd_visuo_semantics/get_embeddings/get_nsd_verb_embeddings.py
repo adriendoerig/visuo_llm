@@ -35,13 +35,15 @@ def get_nsd_verb_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
     
     else:
 
-        if CHECK_EMBEDDINGS or GET_VERB_EMBEDDINGS:
-            # get all word embeddings
-            if EMBEDDING_TYPE == 'fasttext':
+        if EMBEDDING_TYPE == 'fasttext':
                 embeddings = load_word_vectors(fasttext_embeddings_path, 'fasttext')
-            elif EMBEDDING_TYPE == 'glove':
-                embeddings = load_word_vectors(glove_embeddings_path, 'glove')
-            else:
+        elif EMBEDDING_TYPE == 'glove':
+            embeddings = load_word_vectors(glove_embeddings_path, 'glove')
+        else:
+            try:
+                from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
+                embeddings = get_embedding_model(EMBEDDING_TYPE)
+            except Exception as e:
                 raise Exception('EMBEDDING_TYPE not understood')
 
 
@@ -66,13 +68,17 @@ def get_nsd_verb_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
 
             n_nsd_elements = len(loaded_captions)
             img_verbs = [[] for _ in range(n_nsd_elements)]  # we will also save all verbs for each image
-            final_verb_embeddings = np.empty((n_nsd_elements, 300))  # fastext embeddings have 300 dimensions
+            final_verb_embeddings = np.empty((n_nsd_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
             no_verbs_counter = 0  # we will count the images for which NO verbs were found in ANY of the captions
             skipped_candidates_not_verbs = 0  # we will count the number of candidates classified as verbs, but that are not verbs, or whose meaning is unknown
             skipped_candidates_no_embedding = 0  # we will count the number of verbs do not have a fasttext embedding
             final_skipped_verbs = []  # finally, we will catch any left over "mistakes" after screening as explained above
 
             for i in range(n_nsd_elements):
+
+                if i % 100 == 0:
+                    print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
+
                 for j in range(len(loaded_captions[i])):
                     this_sentence = loaded_captions[i][j]
                     sentence_verbs = get_verbs_from_string(this_sentence)

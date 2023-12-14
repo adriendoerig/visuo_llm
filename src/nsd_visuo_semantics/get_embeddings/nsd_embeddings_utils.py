@@ -1,4 +1,4 @@
-import nltk, random
+import nltk, random, pickle
 from random import shuffle
 import matplotlib.pyplot as plt
 import numpy as np
@@ -140,7 +140,7 @@ def custom_join(words):
 def get_word_type_from_string(s, word_type):
     word_type_dict = get_word_type_dict()
     tagged = get_sentence_tags(s)
-    return [x[0] for x in tagged if x[1] in word_type_dict[word_type]]  # NN and NNS the tags for nouns
+    return [x[0] for x in tagged if x[1] in word_type_dict[word_type]]
 
 
 def scramble_word_order(sentence):
@@ -179,8 +179,14 @@ def randomize_by_word_type(sentence, types_to_randomize, loaded_captions, min_di
                             same_type = []
                             while same_type == []:
                                 random_id = np.random.randint(len(loaded_captions))
-                                random_cap_id = np.random.randint(len(loaded_captions[random_id]))
-                                random_cap = loaded_captions[random_id][random_cap_id]  # gets a random caption
+                                if not isinstance(loaded_captions[random_id], list):
+                                    # needed if we are using a single caption per image
+                                    # in that case, we have a string and convert it to a list
+                                    # with a single element
+                                    random_cap = loaded_captions[random_id]  # gets a random caption
+                                else:
+                                    random_cap_id = np.random.randint(len(loaded_captions[random_id]))
+                                    random_cap = loaded_captions[random_id][random_cap_id]  # gets a random caption
                                 random_tagged_word = get_sentence_tags(random_cap)
                                 same_type = [w[0] for w in random_tagged_word if w[1] == this_subtype]
                             random_word = random.sample(same_type, 1)[0]
@@ -209,4 +215,3 @@ def randomize_by_word_type(sentence, types_to_randomize, loaded_captions, min_di
     sentence = custom_join(split)   # put the sentence back together again
 
     return sentence, n_changes
-

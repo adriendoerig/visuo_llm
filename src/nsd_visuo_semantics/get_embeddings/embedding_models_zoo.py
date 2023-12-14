@@ -1,6 +1,5 @@
-import os
+import os, openai, torch, clip
 import numpy as np
-import openai
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_text  # needed to load the T5 model
@@ -11,7 +10,7 @@ openai.api_key_path = os.path.join("./openai_key/key.conf")
 
 def get_embedding_model(embedding_model_type):
     if embedding_model_type == "GUSE_transformer":
-        module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/large/versions/5"
+        module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/large/versions/2"
     elif embedding_model_type == "GUSE_DAN":
         module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/universal-sentence-encoder/versions/2"
     elif embedding_model_type == "T5":
@@ -22,6 +21,15 @@ def get_embedding_model(embedding_model_type):
         return (preprocessor, encoder)
     elif embedding_model_type == "openai_ada2":
         return None
+    elif 'clip' in embedding_model_type.lower():
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if 'vit' in embedding_model_type.lower():
+            model, preprocess = clip.load('ViT-B/32', device)
+        elif 'rn50' in embedding_model_type.lower():
+            model, preprocess = clip.load('RN50', device)
+        else:
+            raise ValueError(f"model_name {embedding_model_type} not recognized")
+        return model
     else:
         try:
             # default behaviour is to try and load from SentenceTransformer
@@ -55,8 +63,12 @@ def get_embeddings(sentences, embedding_model, embedding_model_type):
         openai_out = openai.Embedding.create(input=sentences, model="text-embedding-ada-002")["data"]
         embeddings = np.asarray([out["embedding"] for out in openai_out])
         return embeddings
-    elif embedding_model_type == ("GUSE_transformer" or "GUSE_DAN"):
+    elif embedding_model_type in ["GUSE_transformer", "GUSE_DAN"]:
         return embedding_model(sentences).numpy()
+    elif 'clip' in embedding_model_type.lower():
+        with torch.no_grad():
+            sentences = torch.cat([clip.tokenize(s) for s in sentences])
+            return embedding_model.encode_text(sentences).numpy()
     else:
         # default behaviour is to use SentenceTransformer models (e.g. mpnet, etc.) 
         return embedding_model.encode(sentences)
@@ -98,3 +110,6 @@ def get_word_embedding(word, embeddings, embedding_type):
 
     elif embedding_type == 'glove':
         return embeddings.loc[word].to_numpy()
+    
+    else:
+        return get_embeddings([word], embeddings, embedding_type)[0]

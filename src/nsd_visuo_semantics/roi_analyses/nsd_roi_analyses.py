@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_model_rdms, get_rois, load_or_compute_betas_average
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_conditions_100, get_model_rdms, get_rois, load_or_compute_betas_average
 from nsd_visuo_semantics.utils.utils import corr_rdms
 
 
@@ -42,6 +42,9 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
         # we'll also compute correlations between subjects on the 515 images that all subjects saw 3 times (for noise ceiling).
         conditions_515 = get_conditions_515(nsd_dir)
         conditions_515 = np.asarray(conditions_515).ravel()
+        # we'll also compute correlations between subjects on the special 100 (certain models are applied to this).
+        conditions_100 = get_conditions_100(nsd_dir)
+        conditions_100 = np.asarray(conditions_100).ravel()
 
         # here we go
         for subj in subs:
@@ -72,6 +75,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
             all_conditions = range(sample.shape[0])
             n_samples = int(np.round(sample.shape[0] / 100))
             subj_indices_515 = [x for x, j in enumerate(sample) if j in conditions_515]
+            subj_indices_100 = [x for x, j in enumerate(sample) if j in conditions_100]
 
             # Betas per subject
             betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
@@ -81,13 +85,15 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
 
             # save the subject's full ROI RDMs
             roi_rdms = []
+            roi_rdms_special100 = []
             for roi in range(1, len(ROIS)):
                 mask_name = ROIS[roi]
                 rdm_full_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_fullrdm_{rdm_distance}.npy")
                 rdm_515_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_515rdm_{rdm_distance}.npy")
+                rdm_100_file = os.path.join(subj_roi_rdms_path, f"{subj}_{mask_name}_100rdm_{rdm_distance}.npy")
 
-                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_full_file) or not os.path.exists(rdm_515_file):
-                    print(f"Gathering betas for ROI: {rdm_515_file}")
+                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_full_file) or not os.path.exists(rdm_515_file)  or not os.path.exists(rdm_100_file):
+                    print(f"Gathering betas for ROI: {ROIS[roi]}")
                     # maskdata is an array of shape [n_voxels,], with a number corresponding to the
                     # ROI of each voxel (e.g. 0 means no ROI is associated with this voxel, 1 means voxel
                     # is in ROIS[1] (EVC for example), etcetc).
@@ -116,7 +122,6 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     print(f"saving full rdm for {mask_name} : {subj}")
                     np.save(rdm_full_file, rdm)
                     roi_rdms.append(rdm.astype(np.float32))
-                    
                 else:
                     print(f"loading full rdm for {mask_name} : {subj}")
                     rdm = np.load(rdm_full_file, allow_pickle=True)
@@ -138,6 +143,27 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     print(f"saving 515 shared images rdm for {mask_name} : {subj}")
                     np.save(rdm_515_file, rdm_515)
 
+                if OVERWRITE_NEURO_RDMs or not os.path.exists(rdm_100_file):
+                    # rdm on the special 100 (used if we are using a model with "special100" in the name)
+                    print(f"computing {subj} special100_RDM for roi: {mask_name}")
+
+                    masked_betas_100 = masked_betas[:, subj_indices_100]  # [n_roi_betas, 100]
+
+                    # prepare for cosine distance
+                    X = masked_betas_100.T  # [100, n_roi_betas]
+                    rdm_100 = pdist(X, metric=rdm_distance)  # [100, 100]
+                    if np.any(np.isnan(rdm_100)):
+                        raise ValueError(f"nan found in RDM for ROI {mask_name}")
+
+                    print(f"saving special 100 rdm for {mask_name} : {subj}")
+                    np.save(rdm_100_file, rdm_100)
+                    roi_rdms_special100.append(rdm_100.astype(np.float32))
+                else:
+                    print(f"loading special 100 rdm for {mask_name} : {subj}")
+                    rdm_100 = np.load(rdm_100_file, allow_pickle=True)
+                    roi_rdms_special100.append(rdm_100.astype(np.float32))
+
+
             # This concludes the brain data rdm computations. Now, we move to model rdms
             if subj in all_corrs.keys():
                 # if we are completing an existing file, no need to create the subj dict
@@ -148,7 +174,9 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
             for MODEL_NAME in MODEL_NAMES:
                 # fetch the model RDMs
                 # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
-                model_rdms, model_names = get_model_rdms(f"{models_dir}/{MODEL_NAME}", subj, filt=MODEL_NAME)
+                if '_layer' in MODEL_NAME:
+                    MODEL_NAME_NO_LAYER = MODEL_NAME.split('_layer')[0]
+                model_rdms, model_names = get_model_rdms(f"{models_dir}/{MODEL_NAME_NO_LAYER}", subj, filt=MODEL_NAME_NO_LAYER)
 
                 if "dnn_" in MODEL_NAME.lower():
                     model_rdm_idx = dnn_layer_to_use
@@ -156,7 +184,10 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     # otherwise, there is just one rdm anyway, so we use it
                     model_rdm_idx = 0
 
-                model_rdm = model_rdms[model_rdm_idx]  # always shape [1, model_rdm_size] (as expected by batchg, etc)
+                try:
+                    model_rdm = model_rdms[model_rdm_idx]  # always shape [1, model_rdm_size] (as expected by batchg, etc)
+                except Exception as e:
+                    import pdb; pdb.set_trace()
 
                 # initialise batch generator
                 batchg_model = BatchGen(model_rdm, all_conditions)
@@ -172,37 +203,42 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                     # compute & save, or find and load, the data for that subject
                     save_rdmcorrs = os.path.join(subj_roi_rdms_path, f"{subj}_{MODEL_NAME}_{ROIS[roi]}ROI_corrs.npy")
 
-                    if OVERWRITE_RDM_CORRs or not os.path.exists(save_rdmcorrs):
-
-                        print(f'Computing model corrs for {MODEL_NAME} {ROIS[roi]}ROI.')
-
-                        batchg_roi = BatchGen(roi_rdms[roi - 1], all_conditions)  # -1 because roi indexing starts at 1
-
-                        these_corrs = []
-
-                        # path the sample_ids used in searchlight analysis for fair comparison
-                        saved_samples_file = os.path.join(base_save_dir, f"searchlight_respectedsampling_{rdm_distance}",
-                                                          f"{subj}", "saved_sampling", f"{subj}_nsd-allsubstim_sampling.npy")
-                        sample_pool = np.load(saved_samples_file, allow_pickle=True)
-
-                        for j in range(n_samples):
-                            print(f"\rworking on usual case: boot {j}", end="")
-
-                            # sample 100 stimuli from the subject's sample.
-                            choices = sample_pool[j]
-
-                            # now get the sampled 100x100 rdms for model and roi and correlate
-                            # this returns 1_modelx(upper_tri_sampled_model_rdm)
-                            model_rdm_sample = np.asarray(batchg_model.index_rdms(choices), dtype=np.float32)
-                            roi_rdm_sample = np.asarray(batchg_roi.index_rdms(choices), dtype=np.float32)
-
-                            these_corrs.append(corr_rdms(model_rdm_sample, roi_rdm_sample))
-
-                        np.save(save_rdmcorrs, these_corrs)
+                    if 'special100' in MODEL_NAME.lower():
+                        # In this case we don't save/load stuff as it is fast anyway.
+                        these_corrs = [corr_rdms(roi_rdms_special100[roi - 1][None,:], model_rdm[None,:])]
 
                     else:
-                        print(f'Found model corrs for {MODEL_NAME} {ROIS[roi]}ROI. Loading.')
-                        these_corrs = np.load(save_rdmcorrs, allow_pickle=True)
+                        if OVERWRITE_RDM_CORRs or not os.path.exists(save_rdmcorrs):
+
+                            print(f'Computing model corrs for {MODEL_NAME} {ROIS[roi]}ROI.')
+
+                            batchg_roi = BatchGen(roi_rdms[roi - 1], all_conditions)  # -1 because roi indexing starts at 1
+
+                            these_corrs = []
+
+                            # path the sample_ids used in searchlight analysis for fair comparison
+                            saved_samples_file = os.path.join(base_save_dir, f"searchlight_respectedsampling_{rdm_distance}",
+                                                            f"{subj}", "saved_sampling", f"{subj}_nsd-allsubstim_sampling.npy")
+                            sample_pool = np.load(saved_samples_file, allow_pickle=True)
+
+                            for j in range(n_samples):
+                                print(f"\rworking on usual case: boot {j}", end="")
+
+                                # sample 100 stimuli from the subject's sample.
+                                choices = sample_pool[j]
+
+                                # now get the sampled 100x100 rdms for model and roi and correlate
+                                # this returns 1_modelx(upper_tri_sampled_model_rdm)
+                                model_rdm_sample = np.asarray(batchg_model.index_rdms(choices), dtype=np.float32)
+                                roi_rdm_sample = np.asarray(batchg_roi.index_rdms(choices), dtype=np.float32)
+
+                                these_corrs.append(corr_rdms(model_rdm_sample, roi_rdm_sample))
+
+                            np.save(save_rdmcorrs, these_corrs)
+
+                        else:
+                            print(f'Found model corrs for {MODEL_NAME} {ROIS[roi]}ROI. Loading.')
+                            these_corrs = np.load(save_rdmcorrs, allow_pickle=True)
 
                     all_corrs[subj][MODEL_NAME][f"{ROIS[roi]}ROI"] = np.squeeze(these_corrs)
 

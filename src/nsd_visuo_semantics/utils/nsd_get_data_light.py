@@ -258,7 +258,7 @@ def get_1000(nsd_dir):
     return stim_ids
 
 
-def get_100(nsd_dir):
+def get_conditions_100(nsd_dir):
     """[get condition indices for the special chosen 100 images.]
 
     Arguments:
@@ -409,9 +409,7 @@ def get_conditions_515(nsd_dir, n_sessions=40):
         if sub == 0:
             sub_conditions = conditions_1000
         else:
-            sub_conditions = [
-                x for x in conditions_1000 if x in sub_conditions
-            ]
+            sub_conditions = [x for x in conditions_1000 if x in sub_conditions]
 
     return sub_conditions
 
@@ -419,6 +417,8 @@ def get_conditions_515(nsd_dir, n_sessions=40):
 def get_sentence_lists(nsda, image_indices):
     """gets a list of captions from nsd given indices
     nsda must be an instance of NSDAccess: nsda = NSDAccess(nsd_dir)"""
+
+    print('Careful with the indices! You may need to subtract 1 from them.')
 
     # Read in captions
     # print('reading coco captions for the requested images')

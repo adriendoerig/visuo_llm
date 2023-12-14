@@ -6,6 +6,9 @@ src/nsd_visuo_semantics/get_embeddings/_tmp_playground
 src/nsd_visuo_semantics/get_dnn_activities/safety_check_plots_dir
 src/nsd_visuo_semantics/results_dir
 examples/_check_imgs
+examples/dnn_activities_safety_check_plots
+examples/dnn_extracted_activities
+examples/embedding_models
 results_dir
 
 

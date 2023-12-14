@@ -29,15 +29,21 @@ def get_nsd_sentence_embeddings(embedding_model_type, captions_to_embed_path,
     os.makedirs(save_test_imgs_to, exist_ok=1)
     os.makedirs(save_embeddings_to, exist_ok=1)
 
+    if 'ms_coco_nsd_captions_test.pkl' in captions_to_embed_path:
+        prefix = 'nsd'
+    else:
+        FINAL_CHECK = 0  # not implemented yet
+        prefix = captions_to_embed_path.split('/')[-1].split('.')[0]
+
     if RANDOMIZE_BY_WORD_TYPE is None:
-        save_name = f"nsd_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}"
+        save_name = f"{prefix}_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}"
     else:
         if not type(RANDOMIZE_BY_WORD_TYPE) == list:
             RANDOMIZE_BY_WORD_TYPE = [RANDOMIZE_BY_WORD_TYPE]
         if MIN_DIST_CUTOFF == 0:
-            save_name = f"nsd_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"
+            save_name = f"{prefix}_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"
         else:
-            save_name = f"nsd_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}_cutoffDist{MIN_DIST_CUTOFF}"
+            save_name = f"{prefix}_{embedding_model_type}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}_cutoffDist{MIN_DIST_CUTOFF}"
 
         if use_saved_randomized_sentences_from_other_model is not None:
             try:
@@ -79,22 +85,29 @@ def get_nsd_sentence_embeddings(embedding_model_type, captions_to_embed_path,
                 if RANDOMIZE_WORD_ORDER:
                     these_captions = [scramble_word_order(cap) for cap in loaded_captions[i]]
                 else:
-                    these_captions_not_rand = loaded_captions[i]
+                    these_captions = loaded_captions[i]
+
+                if not isinstance(these_captions, list):
+                    # needed if we are using a single caption per image
+                    # in that case, we have a string and convert it to a list
+                    # with a single element
+                    these_captions = [these_captions]
 
                 if RANDOMIZE_BY_WORD_TYPE is not None:
                     if use_saved_randomized_sentences_from_other_model is not None:
+                        # overwrites these_captions
                         these_captions = loaded_randomized_captions[i]
                     else:
-                        these_n_changes = np.zeros(len(these_captions_not_rand))
-                        these_captions = []
-                        for c, cap in enumerate(these_captions_not_rand):
+                        # randomizes these_captions according to the requested word type(s)
+                        these_n_changes = np.zeros(len(these_captions))
+                        these_captions_rand = []
+                        for c, cap in enumerate(these_captions):
                             rand_cap, these_n_changes[c] = randomize_by_word_type(cap, RANDOMIZE_BY_WORD_TYPE, loaded_captions, MIN_DIST_CUTOFF, 
                                                                                 embedding_model, embedding_model_type, metric=METRIC)
-                            these_captions.append(rand_cap)
-                        randomized_captions.append(these_captions)
+                            these_captions_rand.append(rand_cap)
+                        randomized_captions.append(these_captions_rand)
                         mean_n_changes += these_n_changes.mean()/n_nsd_elements
-                else:
-                    these_captions = these_captions_not_rand
+                        these_captions = these_captions_rand
 
                 img_embeddings = get_embeddings(these_captions, embedding_model, embedding_model_type)
                 mean_embeddings[i] = np.mean(img_embeddings, axis=0)

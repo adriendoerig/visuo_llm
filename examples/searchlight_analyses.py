@@ -12,12 +12,12 @@ OVERWRITE = False
 MODEL_NAMES = [
     "mpnet",
     "multihot",
-    "fasttext_categories",
-    "fasttext_verbs",
-    "fasttext_all",
-    "guse",
-    "dnn_multihot_rec",
-    "dnn_mpnet_rec"
+    # "fasttext_categories",
+    # "fasttext_verbs",
+    # "fasttext_all",
+    # "guse",
+    "dnn_multihot_rec_ep200",
+    "dnn_mpnet_rec_ep200"
 ]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
@@ -59,9 +59,9 @@ rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 
 
 ### RUN SEARCHLIGHT
-# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-#                         remove_shared_515, OVERWRITE)
+nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                        remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE

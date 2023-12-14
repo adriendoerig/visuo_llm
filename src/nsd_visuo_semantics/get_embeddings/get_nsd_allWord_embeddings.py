@@ -39,16 +39,24 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
             elif EMBEDDING_TYPE == 'glove':
                 embeddings = load_word_vectors(glove_embeddings_path, 'glove')
             else:
-                raise Exception('EMBEDDING_TYPE not understood')
+                try:
+                    from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
+                    embeddings = get_embedding_model(EMBEDDING_TYPE)
+                except Exception as e:
+                    raise Exception('EMBEDDING_TYPE not understood')
 
             with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
 
             n_nsd_elements = len(loaded_captions)
             img_words = [[] for _ in range(n_nsd_elements)]  # we will also save all verbs for each image
-            final_allWord_embeddings = np.empty((n_nsd_elements, 300))  # fastext embeddings have 300 dimensions
+            final_allWord_embeddings = np.empty((n_nsd_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
 
             for i in range(n_nsd_elements):
+
+                if i % 100 == 0:
+                    print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
+
                 for j in range(len(loaded_captions[i])):
                     this_sentence = loaded_captions[i][j]
                     sentence_words = nltk.word_tokenize(this_sentence)
@@ -97,7 +105,7 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
             plot_n_imgs = 10
             step_size = total_n_stims // plot_n_imgs
 
-            with open("./ms_coco_nsd_captions_test.pkl", "rb") as fp:
+            with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
             with open(f"{save_embeddings_to}/nsd_allWords_per_image.pkl", "rb") as fp:  # Pickling
                 loaded_allWords = pickle.load(fp)

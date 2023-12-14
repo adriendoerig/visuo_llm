@@ -1,4 +1,4 @@
-import os, pickle, h5py
+import os, pickle, h5py, random
 import matplotlib.pyplot as plt
 import numpy as np
 from nsd_visuo_semantics.get_embeddings.nsd_embeddings_utils import sentence_embeddings_sanity_check, get_word_type_from_string
@@ -6,7 +6,7 @@ from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embeddin
 
 
 def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embed_path,
-                                          word_types_to_use, concat_five_captions,
+                                          word_types_to_use, concat_five_captions, max_n_words_per_caption,
                                           h5_dataset_path, OVERWRITE):
     '''
     Concatenates the coco categories into a string, and throws that into a sentence embedder.
@@ -21,11 +21,14 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
     print(f"GATHERING CATEGORY EMBEDDINGS FOR: {embedding_model_type}\n "
           f"ON: {captions_to_embed_path}\n "
           f" FOR WORD TYPES: {word_types_to_use}\n "
+          f" WITH MAX_N_WORDS_PER_CAPTION: {max_n_words_per_caption}\n "
           f" CONCATENATE CAPTIONS: {concat_five_captions}\n") 
 
     SANITY_CHECK = 1
     GET_EMBEDDINGS = 1
-    FINAL_CHECK = 1
+    FINAL_CHECK = 0
+
+    METRIC = 'correlation'
 
     save_test_imgs_to = "../results_dir/_check_imgs"
     save_embeddings_to = "../results_dir/saved_embeddings"
@@ -33,12 +36,16 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
     os.makedirs(save_test_imgs_to, exist_ok=1)
     os.makedirs(save_embeddings_to, exist_ok=1)
 
-    METRIC = 'correlation'
+    if 'ms_coco_nsd_captions_test.pkl' in captions_to_embed_path:
+        prefix = 'nsd'
+    else:
+        FINAL_CHECK = 0  # not implemented yet
+        prefix = captions_to_embed_path.split('/')[-1].split('.')[0]
 
-    save_name = f"nsd_{embedding_model_type}_{'concat5caps' if concat_five_captions else 'mean'}_WORDTYPE_embeddings"
+    save_name = f"{prefix}_{embedding_model_type}_{f'max{max_n_words_per_caption}words_' if max_n_words_per_caption else ''}{'concat5caps_' if concat_five_captions else 'mean_'}WORDTYPE_embeddings"
 
-    if os.path.exists(f"{save_embeddings_to}/{save_name}_{word_types_to_use[0]}s.pkl") and not OVERWRITE:
-        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}_{word_types_to_use[0]}s.pkl. Set OVERWRITE=True to overwrite.")
+    if os.path.exists(f"{save_embeddings_to}/{save_name}_{word_types_to_use[-1]}s.pkl") and not OVERWRITE:
+        print(f"Embeddings already exist at {save_embeddings_to}/{save_name}_{word_types_to_use[-1]}s.pkl. Set OVERWRITE=True to overwrite.")
     else:
         embedding_model = get_embedding_model(embedding_model_type)
 
@@ -55,10 +62,16 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
             img_words_all = {wt: [] for wt in word_types_to_use}
             
             for i in range(n_nsd_elements):
-                if i % 1000 == 0:
+                if i % 100 == 0:
                     print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
 
                 these_captions = loaded_captions[i]
+
+                if not isinstance(these_captions, list):
+                    # needed if we are using a single caption per image
+                    # in that case, we have a string and convert it to a list
+                    # with a single element
+                    these_captions = [these_captions]
 
                 for wt in word_types_to_use:
                     these_embeddings = np.empty((len(these_captions), dummy_embeddings.shape[-1]))
@@ -66,6 +79,9 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
                         these_words = []
                         for c, cap in enumerate(these_captions):
                             these_words += get_word_type_from_string(cap, wt)
+                        if max_n_words_per_caption:
+                            if len(these_words) > max_n_words_per_caption:
+                                these_words = random.sample(these_words, max_n_words_per_caption)
                         these_words_string = " ".join(these_words)
                         img_words_all[wt].append(these_words_string)
                         this_embedding = get_embeddings(these_words_string, embedding_model, embedding_model_type)
@@ -73,6 +89,9 @@ def get_nsd_sentence_embeddings_wordtypes(embedding_model_type, captions_to_embe
                     else:
                         for c, cap in enumerate(these_captions):
                             these_words = get_word_type_from_string(cap, wt)
+                            if max_n_words_per_caption:
+                                if len(these_words) > max_n_words_per_caption:
+                                    these_words = random.sample(these_words, max_n_words_per_caption)
                             these_words_string = " ".join(these_words)
                             these_embeddings[c] = get_embeddings(these_words_string, embedding_model, embedding_model_type)
                             img_words_all[wt].append(these_words_string)

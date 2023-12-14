@@ -77,6 +77,14 @@ def get_nsd_sentence_embeddings_categories(embedding_model_type, captions_to_emb
                 if i % 1000 == 0:
                     print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
 
+                these_captions = loaded_captions[i]
+
+                if not isinstance(these_captions, list):
+                    # needed if we are using a single caption per image
+                    # in that case, we have a string and convert it to a list
+                    # with a single element
+                    these_captions = [these_captions]
+
                 img_category_words = get_words_from_multihot(loaded_multihot_labels[i], coco_categories_91)
 
                 # first, we keep all categories
@@ -90,7 +98,7 @@ def get_nsd_sentence_embeddings_categories(embedding_model_type, captions_to_emb
 
                 # then, we only keep the categories that are also present in the caption
                 img_category_word_embeds = get_all_word_embeds_from_wordlist(img_category_words, embedding_model, embedding_model_type)
-                img_caption_word_embeds = get_all_word_embeds_from_caption(loaded_captions[i], embedding_model, embedding_model_type)
+                img_caption_word_embeds = get_all_word_embeds_from_caption(these_captions, embedding_model, embedding_model_type)
                 words_to_keep_positive = filter_categs_to_keep(img_category_words, img_category_word_embeds, img_caption_word_embeds, 'positive', CUTOFF, METRIC)
                 if len(words_to_keep_positive) == 0:
                     word_string_positive = "something"
@@ -112,7 +120,7 @@ def get_nsd_sentence_embeddings_categories(embedding_model_type, captions_to_emb
 
                 # then, we keep all nouns in the caption that are close to a category word
                 these_cap_nouns = []
-                for cap in loaded_captions[i]:
+                for cap in these_captions:
                     these_cap_nouns += get_word_type_from_string(cap, 'noun')
                 these_capNouns_closeTo_categ_words = []
                 these_capNouns_farFrom_categ_words = []

@@ -63,7 +63,11 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
             elif EMBEDDING_TYPE == 'glove':
                 embeddings = load_word_vectors(glove_embeddings_path, 'glove')
             else:
-                raise Exception('EMBEDDING_TYPE not understood')
+                try:
+                    from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
+                    embeddings = get_embedding_model(EMBEDDING_TYPE)
+                except Exception as e:
+                    raise Exception('EMBEDDING_TYPE not understood')
 
 
         if CHECK_EMBEDDINGS:
@@ -84,7 +88,7 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
             if MATCH_TO_COCO_CATEGORY_NOUNS is not None:
                 # get the embeddings for coco object categories
                 img_nouns_coco_cats = [[] for _ in range(n_nsd_elements)]  # we will also save cat names corresponding to all nouns for each image
-                coco_cat_embeds = np.empty((len(coco_categories_91), 300))
+                coco_cat_embeds = np.empty((len(coco_categories_91), get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))
 
                 for c, cat in enumerate(coco_categories_91):
                     if cat == "baseball-bat":
@@ -103,7 +107,7 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
                         coco_cat_embeds[c, :] = get_word_embedding(cat, embeddings, EMBEDDING_TYPE)
 
             img_nouns = [[] for _ in range(n_nsd_elements)]  # we will also save all nouns for each image
-            final_noun_embeddings = np.empty((n_nsd_elements, 300))  # fastext embeddings have 300 dimensions
+            final_noun_embeddings = np.empty((n_nsd_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
             no_nouns_counter = 0  # we will count the images for which NO nouns were found in ANY of the captions
             skipped_candidates_not_nouns = 0  # we will count the number of candidates classified as nouns, but that are not nouns, or whose meaning is unknown
             skipped_candidates_no_embedding = 0  # we will count the number of nouns do not have a fasttext embedding
@@ -112,7 +116,7 @@ def get_nsd_noun_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS, MATCH_TO_COC
 
             for i in range(n_nsd_elements):
 
-                if i % 1000 == 0:
+                if i % 100 == 0:
                     print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
 
                 # get all caption nouns

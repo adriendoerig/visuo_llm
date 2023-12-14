@@ -83,15 +83,6 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     if custom_model_labels is not None:
         model_labels = custom_model_labels
 
-    # model_specs = {
-    #     k: {"label": l, "alpha": a}
-    #     for k, l, a in zip(model_keys, model_labels, model_alphas)
-    # }
-    model_specs = {
-        k: {"label": l}
-        for k, l in zip(model_keys, model_labels)
-    }
-
     roi_keys = [
         "earlyROI",
         "midventralROI",
@@ -192,7 +183,6 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
         for j, model_idx in enumerate(ordered_model_indices):
             model_key = model_keys[model_idx]
-            # model_alpha = model_specs[model_key]["alpha"]
             model_alpha = model_alphas[j]
             facecolor = mcolors.to_rgb(roi_color) + (model_alpha,)
             perf = means[roi_key][model_key]
@@ -209,6 +199,10 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             x_positions.append(bar_pos)
 
     #         # statistics
+            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
+            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
+            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
+            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
     #         s = stats.ttest_1samp(corr_samples[roi_key][model_key], 0, alternative="two-sided")
     #         my_stats["uncorrected"]["single_model_ttest_1samp_ttest_2sided"][roi_labels[i]][model_key] = s.pvalue
 
@@ -267,5 +261,6 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
+    # plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
     plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+
