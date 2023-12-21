@@ -9,6 +9,7 @@ examples/_check_imgs
 examples/dnn_activities_safety_check_plots
 examples/dnn_extracted_activities
 examples/embedding_models
+examples/_debug*
 results_dir
 
 

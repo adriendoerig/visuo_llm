@@ -176,6 +176,8 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
                 # (filt should be a wildcard to catch correct model rdms, careful not to catch other models)
                 if '_layer' in MODEL_NAME:
                     MODEL_NAME_NO_LAYER = MODEL_NAME.split('_layer')[0]
+                else:
+                    MODEL_NAME_NO_LAYER = MODEL_NAME
                 model_rdms, model_names = get_model_rdms(f"{models_dir}/{MODEL_NAME_NO_LAYER}", subj, filt=MODEL_NAME_NO_LAYER)
 
                 if "dnn_" in MODEL_NAME.lower():
@@ -254,9 +256,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
 
     # get ceiling of explainable variance (i.e., Compute the average RDM for n-1 people and correlate with
     # the left out one. Do this N times for all participants, average the correlation values).
-    roi_noise_ceilings_per_sub_path = os.path.join(
-        subj_roi_rdms_path, f"noise_ceilings_rois_515_{rdm_distance}_per_sub.pkl"
-    )
+    roi_noise_ceilings_per_sub_path = os.path.join(subj_roi_rdms_path, f"noise_ceilings_rois_515_{rdm_distance}_per_sub.pkl")
 
     roi_noise_ceilings_per_sub = {
         f"{roi_name}ROI": {}

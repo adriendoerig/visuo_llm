@@ -52,7 +52,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
         else:
             raise Exception(f"Embeddings file type not understood. "
                             f"Found: {modelname2file[MODEL_NAME]}. Please sue .pkl or.npy.")
-
+        
         # loop over subjects
         for sub in subs:
 
@@ -72,11 +72,11 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                 sample = np.unique(conditions[conditions_bool])
 
             if "dnn" in MODEL_NAME:
-                with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
-                    layer_names = [x for x in activations_file.keys()]
-                    import pdb; pdb.set_trace()
-                    for layer_name in layer_names:
-                        if 'layer_9' in layer_name:  # if you only want the last layer to save time
+                try:
+                    with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
+                        layer_names = [x for x in activations_file.keys()]
+                        for layer_name in layer_names:
+                            # if 'layer_9' in layer_name:  # if you only want the last layer to save time
                             save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_{layer_name}_fullrdm.npy")
                             if os.path.exists(save_name) and not OVERWRITE:
                                 print(f"Found file at {save_name}. Skipping...")
@@ -89,6 +89,8 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                                 this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                                 print(f"Saving in {save_name}")
                                 np.save(save_name, this_rdm)
+                except:
+                    import pdb; pdb.set_trace()
 
             else:
                 save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_fullrdm.npy")

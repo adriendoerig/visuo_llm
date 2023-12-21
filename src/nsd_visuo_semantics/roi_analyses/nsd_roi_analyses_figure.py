@@ -9,7 +9,7 @@ from scipy import stats
 
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
                             alphabetical_order=False, best_to_worst_order=True,
-                            custom_model_labels=None):
+                            custom_model_labels=None, average_seeds=False):
     '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
     Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
 
@@ -46,42 +46,12 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         fig, ax = plt.subplots(figsize=(10, 3))
 
     elif fig_id == 5:
-        # model_keys = ['multihot', 'dnn_multihot_ff', 'dnn_multihot_rec', 'mpnet', 'dnn_mpnet_ff', 'dnn_mpnet_rec']
-        # model_labels = ['multihot', 'multihot_trained_cnn', 'multihot_trained_rcnn', 'MPNet', 'MPNet_trained_cnn', 'MPNet_trained_rcnn']
-        # model_alphas = [0.25, 0.40, 0.55, 0.70, 0.85, 1.0]
         model_keys = ["multihot", "dnn_multihot_rec", "mpnet", "dnn_mpnet_rec"]
-        model_labels = [
-            "multihot",
-            "multihot-trained RCNN",
-            "MPNet",
-            "MPNet-trained RCNN",
-        ]
-        model_alphas = [0.25, 0.50, 0.75, 1.0]
-        bar_specs = {
-            "width": 0.13,
-            "edgecolor": "black",
-            "linewidth": 0.7,
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=(10, 3))
 
     else:
         if alphabetical_order:
             custom_model_keys = sorted(custom_model_keys)
         model_keys = custom_model_keys
-        n_models = len(model_keys)
-        model_labels = model_keys
-        model_alphas = np.linspace(0.1, 1, len(model_keys))
-        bar_specs = {
-            "width": 0.021*(44/n_models),  # rough estimate of what will look good
-            "edgecolor": "black",
-            "linewidth": 0.7,
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
-
-    if custom_model_labels is not None:
-        model_labels = custom_model_labels
 
     roi_keys = [
         "earlyROI",
@@ -134,14 +104,82 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     means = {roi_key: {model_key: group_mean_corrs[model_key][roi_key] 
                     for model_key in model_keys} 
                     for roi_key in roi_keys}
-    stds = { roi_key: {model_key: group_std_corrs[model_key][roi_key]/np.sqrt(8) 
+    stds = {roi_key: {model_key: group_std_corrs[model_key][roi_key]/np.sqrt(8) 
                     for model_key in model_keys }
                     for roi_key in roi_keys }
     corr_samples = {
-        roi_key: {model_key: group_corrs[model_key][roi_key]/np.sqrt(8)
+        roi_key: {model_key: group_corrs[model_key][roi_key]
                 for model_key in model_keys}
                 for roi_key in roi_keys}
     
+    if average_seeds:
+
+        # in this case, expects '_seedN_epM' in model names, and averages across seeds
+        seed_models = list(set([m for m in model_keys if '_seed' in m]))
+        non_seed_models = list(set(model_keys) - set(seed_models))
+
+        seed_avg_corrs = {roi_key: {} for roi_key in roi_keys}
+        if len(seed_models) > 0:
+            seed_base_model_names = list(set([m.split('_seed')[0] for m in seed_models]))
+            seed_base_model_suffix = list(set([m.split('_ep')[1] for m in seed_models]))[0]
+            for seed_base_model_name in seed_base_model_names:
+                seed_base_model_keys = [m for m in model_keys if seed_base_model_name in m]
+                for roi_key in roi_keys:
+                    seed_avg_corrs[roi_key][seed_base_model_name+'_seedAVG_ep'+seed_base_model_suffix] = np.mean(np.asarray([corr_samples[roi_key][m] for m in seed_base_model_keys]), axis=0)
+        
+        model_keys = list(seed_avg_corrs[roi_keys[0]].keys()) + non_seed_models
+        means = {roi_key: {model_key: means[roi_key][model_key] if model_key in non_seed_models else np.mean(seed_avg_corrs[roi_key][model_key]) for model_key in model_keys} for roi_key in roi_keys}
+        stds = {roi_key: {model_key: stds[roi_key][model_key] if model_key in non_seed_models else np.std(seed_avg_corrs[roi_key][model_key])/np.sqrt(8) for model_key in model_keys} for roi_key in roi_keys}
+
+    if fig_id == 2:
+        model_labels = [
+            "categ multihot",
+            "categ word embeds",
+            "verb word embeds",
+            "all word embeds",
+            "GUSE",
+            "MPNet",
+        ]
+        model_alphas = [0.25, 0.40, 0.55, 0.70, 0.85, 1.0]
+        bar_specs = {
+            "width": 0.13,
+            "edgecolor": "black",
+            "linewidth": 0.7,
+            "zorder": 10,
+        }
+        fig, ax = plt.subplots(figsize=(10, 3))
+
+    elif fig_id == 5:
+        model_labels = [
+            "multihot",
+            "multihot-trained RCNN",
+            "MPNet",
+            "MPNet-trained RCNN",
+        ]
+        model_alphas = [0.25, 0.50, 0.75, 1.0]
+        bar_specs = {
+            "width": 0.13,
+            "edgecolor": "black",
+            "linewidth": 0.7,
+            "zorder": 10,
+        }
+        fig, ax = plt.subplots(figsize=(10, 3))
+
+    else:
+        n_models = len(model_keys)
+        model_labels = model_keys
+        model_alphas = np.linspace(0.1, 1, len(model_keys))
+        bar_specs = {
+            "width": 0.021*(44/n_models),  # rough estimate of what will look good
+            "edgecolor": "black",
+            "linewidth": 0.7,
+            "zorder": 10,
+        }
+        fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
+
+    if custom_model_labels is not None:
+        model_labels = custom_model_labels
+        
     # order models from best to worst perforamnce if desired
     if best_to_worst_order:
         model_sums_across_rois = np.zeros(len(model_keys))

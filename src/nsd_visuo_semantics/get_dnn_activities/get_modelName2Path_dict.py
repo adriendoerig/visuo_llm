@@ -17,6 +17,10 @@ def get_modelName2Path_dict(networks_basedir):
         for modelname in ["multihot_rec", "mpnet_rec", 'simclr_rec']:
             modelname2path[f"{modelname}_seed{seed}"] = f"{modelname2path[modelname]}_seed{seed}"
 
+    # custom controls, etc
+    modelname2path[f"multihot_rec_seed1_softmax"] = f"{networks_basedir}/{shared_model_prefix}_multihot_Dec23_seed1_softmax"
+    modelname2path[f"multihot_rec_seed1_noHalfPrecBs96normAxes-1"] = f"{networks_basedir}/{shared_model_prefix}_mpnet_Dec23_seed1_noHalfPrecBs96normAxes-1"
+
     modelname2path["default"] = modelname2path["mpnet_rec"]
 
     return modelname2path

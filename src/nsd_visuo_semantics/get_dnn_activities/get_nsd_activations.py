@@ -16,7 +16,7 @@ We average across space to keep size reasonable
 def get_nsd_activations(MODEL_NAMES, dataset_path,
                         networks_basedir, results_dir, safety_check_plots_dir,
                         nsd_captions_path=None, nsd_embeddings_path=None,
-                        n_layers=10, epoch=400):
+                        n_layers=10, epoch=400, OVERWRITE=False):
 
 
     os.makedirs(results_dir, exist_ok=True)
@@ -48,11 +48,19 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                 model, preprocess = clip.load('RN50', device)
             else:
                 raise ValueError(f"model_name {model_name} not recognized")
+            activations_file_name = f"{results_dir}/{model_name}_nsd_image_features.pkl"
         else:
             print(f"Creating {model_name} model and loading weights from {model_savedir}")
             net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True)
             activities_model, readout_layer_names, readout_layer_shapes = get_activities_model(net, n_layers, hparams)
             print(f"Reading from layers: {readout_layer_names}")
+            activations_file_name = f"{results_dir}/{model_name}_nsd_activations_epoch{epoch}.h5"
+        
+        if os.path.exists(activations_file_name) and not OVERWRITE:
+            print(f"Activations file {activations_file_name} already exists. Skipping.")
+            continue
+        else:
+            print(f"Saving activations in {activations_file_name}")
         
         nsd_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset="test")
         for x in nsd_dataset:
@@ -64,14 +72,16 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
 
         print_every_N_batches = n_nsd_imgs // (btch_sz * print_N_samples)
         if 'clip' in model_name.lower():
-            activations_file_name = f"{results_dir}/{model_name}_nsd_image_features.pkl"
-            dummy_batch = tf_to_torch_batch(x[0], preprocess)
-            with torch.no_grad():
-                dummy_out = model.encode_image(dummy_batch)
-            clip_features = np.zeros((n_nsd_imgs, dummy_out.shape[-1]))
-            
+            if os.path.exists(activations_file_name) and not OVERWRITE:
+                print(f"Activations file {activations_file_name} already exists. Skipping.")
+                continue
+            else:
+                dummy_batch = tf_to_torch_batch(x[0], preprocess)
+                with torch.no_grad():
+                    dummy_out = model.encode_image(dummy_batch)
+                clip_features = np.zeros((n_nsd_imgs, dummy_out.shape[-1]))
+                
         else:
-            activations_file_name = f"{results_dir}/{model_name}_nsd_activations_epoch{epoch}.h5"
             activations_file = h5py.File(activations_file_name, "w")
             # prepare h5 file structure
             print(f"Preparing to save in {activations_file_name}")
@@ -144,3 +154,5 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
             with open(activations_file_name, "wb") as fp:
                 pickle.dump(clip_features, fp)
             print(f"Saved {model_name} features in {activations_file_name}")
+
+    del activations_file, net, activities_model  # free memory space

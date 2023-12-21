@@ -47,6 +47,10 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
                 for seed in range(1,11):
                     modelname2file[f"dnn_{modelname}_seed{seed}_ep{epoch}"] = f"{saved_dnn_activities_dir}/{modelname}_seed{seed}_nsd_activations_epoch{epoch}.h5"
 
+                    # weirder non-standard ones
+                    modelname2file[f'dnn_multihot_rec_seed{seed}_softmax_ep{epoch}'] = f"{saved_dnn_activities_dir}/multihot_rec_seed{seed}_softmax_nsd_activations_epoch{epoch}.h5"
+
+    # word types embeddings
     WORD_TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition']
 
     # sentence embeddings on (lists of) words

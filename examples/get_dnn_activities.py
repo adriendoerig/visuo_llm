@@ -5,6 +5,7 @@ physical_devices = tf.config.list_physical_devices("GPU")
 [tf.config.experimental.set_memory_growth(dev, True) for dev in physical_devices]
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+OVERWRITE = False
 
 # GENERAL PATHS, ETC
 base_path = '/share/klab/adoerig/adoerig/'
@@ -15,9 +16,12 @@ safety_check_plots_dir = "./dnn_activities_safety_check_plots"
 nsd_captions_path = f"{base_path}/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/ms_coco_nsd_captions_test.pkl"
 nsd_embeddings_path = f"{base_path}/nsd_visuo_semantics/results_dir/saved_embeddings/nsd_mpnet_mean_embeddings.pkl"
 
-MODEL_NAMES = ['mpnet_rec_seed1']  # ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50']
+# ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50']
+MODEL_NAMES = ['mpnet_rec_seed9']
+# for seed in range(1,11):
+#     MODEL_NAMES += [f'mpnet_rec_seed{seed}', f'multihot_rec_seed{seed}']
 
 get_nsd_activations(MODEL_NAMES, dataset_path,
                     networks_basedir, results_dir, safety_check_plots_dir,
                     nsd_captions_path=nsd_captions_path, nsd_embeddings_path=nsd_embeddings_path,
-                    n_layers=10, epoch=100)
+                    n_layers=10, epoch=200, OVERWRITE=OVERWRITE)

@@ -10,14 +10,14 @@ OVERWRITE = False
 
 # models to test
 MODEL_NAMES = [
-    "mpnet",
-    "multihot",
+    # "mpnet",
+    # "multihot",
     # "fasttext_categories",
     # "fasttext_verbs",
     # "fasttext_all",
     # "guse",
-    "dnn_multihot_rec_ep200",
-    "dnn_mpnet_rec_ep200"
+    "dnn_multihot_rec_seed1_softmax_ep200",
+    "dnn_mpnet_rec_seed1_ep200"
 ]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
