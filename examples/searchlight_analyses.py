@@ -6,7 +6,7 @@ from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage import nsd_p
 
 ### DECLARE PARAMS
 
-OVERWRITE = False
+OVERWRITE = True
 
 # models to test
 MODEL_NAMES = [
@@ -15,10 +15,13 @@ MODEL_NAMES = [
     # "fasttext_categories",
     # "fasttext_verbs",
     # "fasttext_all",
-    # "guse",
-    "dnn_multihot_rec_seed1_softmax_ep200",
-    "dnn_mpnet_rec_seed1_ep200"
+    # "guse",    
+    "dnn_mpnet_rec_seed1_ep200",
+    "dnn_multihot_rec_seed1_ep200",
 ]
+
+MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_softmax_ep200" for s in range(2, 11)]
+MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_softmax_ep200" for s in range(2, 11)]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)

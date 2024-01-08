@@ -29,7 +29,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
     modelname2file = get_name2file_dict(saved_embeddings_dir,
                                         ms_coco_saved_dnn_activities_dir, 
                                         ecoset_saved_dnn_activities_dir)
-
+    
     for MODEL_NAME in MODEL_NAMES:
 
         if "special100" in MODEL_NAME:
@@ -102,6 +102,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                         this_embedding = embeddings  # 100xfeatures
                     else: 
                         this_embedding = embeddings[sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                                        
                     this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                     print(f"Saving in {save_name}")
                     np.save(save_name, this_rdm)

@@ -21,15 +21,15 @@ nsd_captions_path = f"{base_path}/ms_coco_nsd_captions_test.pkl"
 nsd_special100_gpt4Captions_path = f"{base_path}/nsd_special100_gpt4Captions.pkl"
 nsd_special100_cocoCaptions_path = f"{base_path}/nsd_special100_cocoCaptions.pkl"
 
-captions_to_embed_path = nsd_captions_path
+captions_to_embed_path = nsd_special100_cocoCaptions_path
 
 # GENERAL SENTENCE EMBEDDING PARAMETERS
 # SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
 #                                   'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
 #                                   'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
 #                                   'GUSE_transformer', 'GUSE_DAN', 'USE_CMLM_Base', 'T5']  
-SENTENCE_EMBEDDING_MODEL_TYPES = ['CLIP-vit', 'CLIP-rn50']
-WORD_TYPES = ['noun', 'verb', 'adjective', 'adverb', 'preposition']
+SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2']
+WORD_TYPES = ['noun', 'verb']  # , 'adjective', 'adverb', 'preposition']
 
 # RANDOMIZATION VERSIONS OF NSD SENTENCE EMBEDDINGS
 RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
@@ -38,23 +38,23 @@ RANDOMIZE_BY_WORD_TYPES = [None] #+ WORD_TYPES  # randomize within word type (e.
 #     RANDOMIZE_BY_WORD_TYPES.extend([list(elem) for elem in itertools.combinations(WORD_TYPES, i)])
 
 for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
-    for MIN_DIST_CUTOFF in [0.7]:
-        for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
-            get_nsd_sentence_embeddings(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path, 
-                                        RANDOMIZE_BY_WORD_TYPE, RANDOMIZE_WORD_ORDER, MIN_DIST_CUTOFF, 
-                                        h5_dataset_path, 
-                                        use_saved_randomized_sentences_from_other_model='all_mpnet_base_v2',
-                                        OVERWRITE=OVERWRITE)
+    # for MIN_DIST_CUTOFF in [0.7]:
+    #     for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
+    #         get_nsd_sentence_embeddings(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path, 
+    #                                     RANDOMIZE_BY_WORD_TYPE, RANDOMIZE_WORD_ORDER, MIN_DIST_CUTOFF, 
+    #                                     h5_dataset_path, 
+    #                                     use_saved_randomized_sentences_from_other_model='all_mpnet_base_v2',
+    #                                     OVERWRITE=OVERWRITE)
     
     # for CUTOFF in [0.5, 0.3]:
     #     get_nsd_sentence_embeddings_categories(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path,
     #                                            h5_dataset_path, CUTOFF, OVERWRITE=OVERWRITE)
 
-    # for concat_five_captions in [False, True]:
-    #     for max_n_words_per_caption in range(1,6):
-    #         get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path,
-    #                                             WORD_TYPES, concat_five_captions, max_n_words_per_caption,
-    #                                             h5_dataset_path, OVERWRITE)
+    for concat_five_captions in [False, True]:
+        for max_n_words_per_caption in [0]:  # range(1,6):
+            get_nsd_sentence_embeddings_wordtypes(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path,
+                                                WORD_TYPES, concat_five_captions, max_n_words_per_caption,
+                                                h5_dataset_path, OVERWRITE)
 
 
 WORD_EMBEDDING_TYPES = ['all-mpnet-base-v2']  # or 'fasttext', 'glove'

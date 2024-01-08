@@ -55,20 +55,21 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
 
     # sentence embeddings on (lists of) words
     for mpnet_moniker in ["mpnet", "all-mpnet-base-v2"]:
+        mpnet_full_name = "all-mpnet-base-v2" if mpnet_moniker == "all-mpnet-base-v2" else "all_mpnet_base_v2"
         for cutoff in [0.3, 0.5, 0.7]:
-            modelname2file[f"{mpnet_moniker}_category_all"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF0.5_allCats.pkl"
-            modelname2file[f"{mpnet_moniker}_category_catNamesCaptionMatchPositive_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_catNamesCaptionMatchPositive.pkl"
-            modelname2file[f"{mpnet_moniker}_category_catNamesCaptionMatchNegative_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_catNamesCaptionMatchNegative.pkl"
-            modelname2file[f"{mpnet_moniker}_category_captionNounsCatMatchPositive_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatMatchPositive.pkl"
-            modelname2file[f"{mpnet_moniker}_category_captionNounsCatMatchNegative_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatMatchNegative.pkl"
-            modelname2file[f"{mpnet_moniker}_category_captionNounsCatNameMap_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatNameMap.pkl"
-            modelname2file[f"{mpnet_moniker}_category_captionNounsCatNameMapMultihot_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatNameMapMultihot.pkl"
+            modelname2file[f"{mpnet_moniker}_category_all"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF0.5_allCats.pkl"
+            modelname2file[f"{mpnet_moniker}_category_catNamesCaptionMatchPositive_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_catNamesCaptionMatchPositive.pkl"
+            modelname2file[f"{mpnet_moniker}_category_catNamesCaptionMatchNegative_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_catNamesCaptionMatchNegative.pkl"
+            modelname2file[f"{mpnet_moniker}_category_captionNounsCatMatchPositive_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatMatchPositive.pkl"
+            modelname2file[f"{mpnet_moniker}_category_captionNounsCatMatchNegative_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatMatchNegative.pkl"
+            modelname2file[f"{mpnet_moniker}_category_captionNounsCatNameMap_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatNameMap.pkl"
+            modelname2file[f"{mpnet_moniker}_category_captionNounsCatNameMapMultihot_cutoff{cutoff}"] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_CATEGORY_embeddings_CUTOFF{cutoff}_captionNounsCatNameMapMultihot.pkl"
         
         for wt in WORD_TYPES:
-            modelname2file[f'{mpnet_moniker}_{wt}'] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_WORDTYPE_embeddings_{wt}s.pkl"  # same as below, but want to catch both singular or plural in the short name
-            modelname2file[f'{mpnet_moniker}_{wt}s'] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_WORDTYPE_embeddings_{wt}s.pkl"
-            modelname2file[f'{mpnet_moniker}_{wt}_concat5caps'] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_concat5caps_WORDTYPE_embeddings_{wt}s.pkl"  # same as below, but want to catch both singular or plural in the short name
-            modelname2file[f'{mpnet_moniker}_{wt}s_concat5caps'] = f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_concat5caps_WORDTYPE_embeddings_{wt}s.pkl"
+            modelname2file[f'{mpnet_moniker}_{wt}'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_WORDTYPE_embeddings_{wt}s.pkl"  # same as below, but want to catch both singular or plural in the short name
+            modelname2file[f'{mpnet_moniker}_{wt}s'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_mean_WORDTYPE_embeddings_{wt}s.pkl"
+            modelname2file[f'{mpnet_moniker}_{wt}_concat5caps'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_concat5caps_WORDTYPE_embeddings_{wt}s.pkl"  # same as below, but want to catch both singular or plural in the short name
+            modelname2file[f'{mpnet_moniker}_{wt}s_concat5caps'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_concat5caps_WORDTYPE_embeddings_{wt}s.pkl"
 
             for max_n_words in range(10):
                 modelname2file[f'{mpnet_moniker}_{wt}_max{max_n_words}words'] = f"{saved_embeddings_dir}/nsd_all-mpnet-base-v2_max{max_n_words}words_mean_WORDTYPE_embeddings_{wt}s.pkl"  # same as below, but want to catch both singular or plural in the short name

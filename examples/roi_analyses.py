@@ -2,20 +2,21 @@ import os, itertools
 from nsd_visuo_semantics.utils.nsd_prepare_modelrdms import nsd_prepare_modelrdms
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses import nsd_roi_analyses
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_figure import nsd_roi_analyses_figure
+from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_dnnAllLayers_figure import nsd_roi_analyses_dnnAllLayers_figure
 from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import correlate_model_rdms_figure
 
 
 ### DECLARE PARAMS
 
-for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
+for roi_analysis_dnn_layer_to_use in [-1]:
 
-    plt_suffix = f"_dnns"
+    plt_suffix = f"_DNNsAllLayers"
 
     OVERWRITE = False
 
-    MODEL_INPUT_DATA = ['full_nsd']  # ['nsd_special100_gpt4Captions', 'nsd_special100_cocoCaptions']  # 'full_nsd', 'nsd_special100_gpt4Captions' or 'nsd_special100_cocoCaptions'
+    MODEL_INPUT_DATA = ['full_nsd']  # 'full_nsd', 'nsd_special100_gpt4Captions' or 'nsd_special100_cocoCaptions'
 
-    WORD_TYPES = ['noun']  #, 'verb']#, 'adjective', 'adverb', 'preposition']
+    WORD_TYPES = ['noun', 'verb']#, 'adjective', 'adverb', 'preposition']
 
     MODEL_NAMES = []
 
@@ -26,7 +27,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     # models from original paper
     MODEL_NAMES += [
         # "multihot",
-        "mpnet",
+        # "mpnet",
         # "fasttext_categories",
         # "fasttext_verbs",
         # "fasttext_all",
@@ -36,10 +37,10 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     ]
 
     # dnn 10 seeds
-    # for epoch in [200]:
-    #     for target in ['multihot', 'mpnet']:
-    #         for seed in range(1, 11):
-    #             MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
+    for epoch in [200]:
+        for target in ['multihot', 'mpnet']:
+            for seed in range(1, 11):
+                MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
 
     # dnn extensive check
     MODEL_NAMES += [
@@ -70,7 +71,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     #                                   'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
     #                                   'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
     #                                   'GUSE_transformer', 'GUSE_DAN']#, 'USE_CMLM_Base', 'T5']
-    # SENTENCE_EMBEDDING_MODEL_TYPES = ['all_mpnet_base_v2']
+    # SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2']
     # RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
 
     # sentence embeddings with various randomized words
@@ -102,12 +103,13 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
 
 
     # sentence embeddings on (lists of) words of a single type (e.g. nouns)
+    # MODEL_NAMES += ['all-mpnet-base-v2']
     # for wt in WORD_TYPES:
-    #     MODEL_NAMES += [f"mpnet_{wt}s"]
+        # MODEL_NAMES += [f"all-mpnet-base-v2_{wt}s"]
         # MODEL_NAMES += [f"mpnet_{wt}s_concat5caps"]
         # for max_n_words in range(1,6):
         #     MODEL_NAMES += [f'mpnet_{wt}_max{max_n_words}words']
-            # MODEL_NAMES += [f'mpnet_{wt}_max{max_n_words}words_concat5caps']
+        #     MODEL_NAMES += [f'mpnet_{wt}_max{max_n_words}words_concat5caps']
 
     # sentence embeddings with words matched to coco categories in various ways
     # for cutoff in [0.3, 0.5]:
@@ -124,7 +126,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     # other new models
     MODEL_NAMES += [
         # "glove_verbs",
-        "glove_all",
+        # "glove_all",
         # "glove_nouns_cocoCatsMatchPositive",
         # "glove_nouns_cocoCatsMatchNegative",
         # "glove_nouns",
@@ -187,7 +189,6 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     #                       ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
     #                       remove_shared_515, OVERWRITE)
 
-
     # ### RUN ROI ANALYSES
 
     for i, m in enumerate(MODEL_NAMES):
@@ -199,12 +200,14 @@ for roi_analysis_dnn_layer_to_use in [-1]:#, -5]:#, -2, -3, -4, -5]:
     #                 remove_shared_515, OVERWRITE_NEURO_RDMs=False, OVERWRITE_RDM_CORRs=OVERWRITE)
 
 
-    nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
-                            fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
-                            custom_model_labels=None, average_seeds=True)
+    # nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
+    #                         fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
+    #                         custom_model_labels=None, average_seeds=True)
 
 
     # correlate_model_rdms_figure(MODEL_NAMES, nsd_dir, base_save_dir, models_rdm_distance, 
     #                             remove_shared_515, roi_analysis_dnn_layer_to_use, 
     #                             plt_suffix=plt_suffix, 
     #                             COMPUTE=True, OVERWRITE=OVERWRITE)
+
+    nsd_roi_analyses_dnnAllLayers_figure(base_save_dir, which_rois, models_rdm_distance)

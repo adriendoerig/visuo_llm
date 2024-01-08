@@ -27,6 +27,8 @@ def get_model_rdms(models_dir, subj, filt=None, only_names=False):
 
     if not only_names:
         all_rdms = [np.load(model_file).astype(np.float32) for model_file in model_files]
+        if len(all_rdms) == 0:
+            raise Exception(f"No rdm files found in {models_dir}.")
         return all_rdms, model_names
     else:
         return model_names
