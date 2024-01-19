@@ -5,7 +5,7 @@ physical_devices = tf.config.list_physical_devices("GPU")
 [tf.config.experimental.set_memory_growth(dev, True) for dev in physical_devices]
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
-OVERWRITE = False
+OVERWRITE = True
 
 # GENERAL PATHS, ETC
 base_path = '/share/klab/adoerig/adoerig/'
@@ -17,7 +17,7 @@ nsd_captions_path = f"{base_path}/nsd_visuo_semantics/src/nsd_visuo_semantics/ge
 nsd_embeddings_path = f"{base_path}/nsd_visuo_semantics/results_dir/saved_embeddings/nsd_mpnet_mean_embeddings.pkl"
 
 # ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50']
-MODEL_NAMES = ['mpnet_rec_seed9']
+MODEL_NAMES = ['brainscore_alexnet']
 # for seed in range(1,11):
 #     MODEL_NAMES += [f'mpnet_rec_seed{seed}', f'multihot_rec_seed{seed}']
 

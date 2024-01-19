@@ -58,9 +58,23 @@ def compute_rdm_batch(x):
     np.testing.assert_array_almost_equal(rdm, rdms[0,:,:])
 
     """
+
+    ### ORIGINAL VERSION
     ma = x - tf.reduce_mean(x, axis=2, keepdims=True)
     ma = ma / tf.sqrt(tf.einsum("...ij,...ij->...i", ma, ma))[:, :, None]
     rdms = 1 - tf.einsum("bik,bjk->bij", ma, ma)
+
+    ### NEW VERSION TO DEAL WITH NANS (BUT SLOWER)
+    # go over each sample, only keep non-nans, and then compute the rdm
+    # rdms = []
+    # for i in range(x.shape[0]):
+    #     this_x = x[i, :, :]
+    #     this_x = tf.reshape(this_x[~tf.math.is_nan(this_x)], [this_x.shape[0], -1])
+    #     ma = this_x - tf.reduce_mean(this_x, axis=1, keepdims=True)
+    #     ma = ma / tf.sqrt(tf.einsum("ij,ij->i", ma, ma))[:, None]
+    #     rdm = 1 - tf.einsum("ik,jk", ma, ma)
+    #     rdms.append(rdm)
+    # rdms = tf.stack(rdms)
 
     return upper_tri_indexing_tf(rdms)
 

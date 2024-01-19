@@ -26,8 +26,8 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     ### BELOW IS CODE TO GET ALL MODELS
     # models from original paper
     MODEL_NAMES += [
-        # "multihot",
-        # "mpnet",
+        "multihot",
+        "mpnet",
         # "fasttext_categories",
         # "fasttext_verbs",
         # "fasttext_all",
@@ -136,10 +136,11 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "mpnetWordAvg_all",
         # "mpnetWordAvg_nouns",
         # "mpnetWordAvg_verbs",
-        # "CLIP_RN50_text",
-        # "CLIP_RN50_images",
-        # "CLIP_ViT_text",
-        # "CLIP_ViT_images",
+        "CLIP_RN50_text",
+        "CLIP_RN50_images",
+        "CLIP_ViT_text",
+        "CLIP_ViT_images",
+        "brainscore_alexnet",
     ]
 
     MODEL_NAMES = list(set(MODEL_NAMES))
@@ -200,9 +201,9 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     #                 remove_shared_515, OVERWRITE_NEURO_RDMs=False, OVERWRITE_RDM_CORRs=OVERWRITE)
 
 
-    # nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
-    #                         fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
-    #                         custom_model_labels=None, average_seeds=True)
+    nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
+                            fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
+                            custom_model_labels=None, average_seeds=True)
 
 
     # correlate_model_rdms_figure(MODEL_NAMES, nsd_dir, base_save_dir, models_rdm_distance, 
@@ -210,4 +211,4 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     #                             plt_suffix=plt_suffix, 
     #                             COMPUTE=True, OVERWRITE=OVERWRITE)
 
-    nsd_roi_analyses_dnnAllLayers_figure(base_save_dir, which_rois, models_rdm_distance)
+    # nsd_roi_analyses_dnnAllLayers_figure(base_save_dir, which_rois, models_rdm_distance)

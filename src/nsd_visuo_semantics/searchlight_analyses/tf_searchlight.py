@@ -23,9 +23,7 @@ def tf_searchlight(betas_sampled, indices, sorted_indices, batch_size=50):
     x, y, z, n_conditions = betas_sampled.shape
 
     # unroll the betas
-    betas_unrolled = tf.convert_to_tensor(
-        betas_sampled.reshape((-1, n_conditions))
-    )
+    betas_unrolled = tf.convert_to_tensor(betas_sampled.reshape((-1, n_conditions)))
 
     # now chunk the betas given the sphere sizes and batch_size
     # and for each chunk, compute a batch of rdm computations.
@@ -34,7 +32,13 @@ def tf_searchlight(betas_sampled, indices, sorted_indices, batch_size=50):
     for i, ind in enumerate(sorted_indices):
         chunks = ch(ind, batch_size)
         for c, chunk in enumerate(chunks):
-            sl = tf.gather(betas_unrolled, np.stack(indices[chunk.astype(np.int32)]))
+            # line below is from a previous version where we were not using sorted indices
+            # here, we DO use them. i.e., we get a list of sorted_indices, where all
+            # indices have the same n_voxels (this occurs because we remove NaN voxels).
+            # we go over these lsits one by one, and compute their RDMs
+            # sl = tf.gather(betas_unrolled, np.stack(indices[chunk.astype(np.int32)]))
+            these_indices = [indices[i] for i in chunk]
+            sl = tf.gather(betas_unrolled, np.stack(these_indices))
             t = tf.transpose(sl, perm=[0, 2, 1])
             rdm = np.asarray(compute_rdm_batch(t))
             rdms.append(rdm)

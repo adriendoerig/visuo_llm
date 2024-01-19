@@ -1,11 +1,8 @@
-import os, openai, torch, clip
+import os
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
-import tensorflow_text  # needed to load the T5 model
 from sentence_transformers import SentenceTransformer
-
-openai.api_key_path = os.path.join("./openai_key/key.conf")
 
 
 def get_embedding_model(embedding_model_type):
@@ -14,14 +11,19 @@ def get_embedding_model(embedding_model_type):
     elif embedding_model_type == "GUSE_DAN":
         module_url = "https://www.kaggle.com/models/google/universal-sentence-encoder/frameworks/TensorFlow2/variations/universal-sentence-encoder/versions/2"
     elif embedding_model_type == "T5":
+        import tensorflow_text
         module_url = "https://www.kaggle.com/models/google/sentence-t5/frameworks/TensorFlow2/variations/st5-base/versions/1"
     elif embedding_model_type == "USE_CMLM_Base":
         preprocessor = hub.KerasLayer("https://www.kaggle.com/models/tensorflow/bert/frameworks/TensorFlow2/variations/en-uncased-preprocess/versions/3")
         encoder = hub.KerasLayer("https://tfhub.dev/google/universal-sentence-encoder-cmlm/en-base/1")
         return (preprocessor, encoder)
     elif embedding_model_type == "openai_ada2":
+        import openai
+        openai.api_key_path = os.path.join("./openai_key/key.conf")
+        raise Exception("openai_ada2 not implemented yet")
         return None
     elif 'clip' in embedding_model_type.lower():
+        import torch, clip
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if 'vit' in embedding_model_type.lower():
             model, preprocess = clip.load('ViT-B/32', device)

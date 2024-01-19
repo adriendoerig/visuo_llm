@@ -2,6 +2,7 @@ import importlib, os, pickle, h5py, torch
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+from skimage.transform import resize
 
 
 def localdir_modulespec(module_name, dir_path):
@@ -195,13 +196,50 @@ def np_to_pillow_img(img):
     return img
 
 
-def tf_to_torch_batch(tf_batch, preprocess):
-    """clip batch of images, return features"""
+def clip_preprocess_batch(tf_batch, preprocess, image_size=224):
+    """Our pipeline outputs a tf batch of im_size=128. This needs to be changed
+    for clip"""
 
-    tf_batch = tf_batch.numpy()
-    torch_batch = torch.zeros(tf_batch.shape[0], tf_batch.shape[3], 224, 224)  # clip wants 3x224x224 images
-    for i in range(tf_batch.shape[0]):
-        img = np_to_pillow_img(tf_batch[i])
+    np_batch = tf_batch.numpy()
+
+    torch_batch = torch.zeros(np_batch.shape[0], np_batch.shape[3], image_size, image_size)
+    # clip needs this kind of preprocessing
+    for i in range(np_batch.shape[0]):
+        img = np_to_pillow_img(np_batch[i])
         torch_batch[i] = preprocess(img).unsqueeze(0)
     
     return torch_batch
+
+
+def brainscore_preprocess_batch(tf_batch, model, image_size):
+    """Our pipeline outputs a tf batch of im_size=128. This needs to be changed
+    for brainscore models"""
+
+    np_batch = tf_batch.numpy()
+
+    if 'pytorch' in str(type(model)).lower():
+        # torch wants channels first
+        out_batch = np.zeros((np_batch.shape[0], 3, image_size, image_size)) 
+        np_batch = np.transpose(np_batch, [0, 3, 1, 2])
+        for i in range(np_batch.shape[0]):
+            img = resize(np_batch[i], (3, image_size, image_size), anti_aliasing=True)
+            out_batch[i] = img
+    
+    else:
+        # tf wants channels last
+        out_batch = np.zeros((np_batch.shape[0], image_size, image_size, 3)) 
+        for i in range(np_batch.shape[0]):
+            img = resize(np_batch[i], (image_size, image_size, 3), anti_aliasing=True)
+            out_batch[i] = img
+    
+    return np_batch
+
+
+def get_brainscore_layer_activations(activations_model, readout_layer, batch):
+
+    assert len(readout_layer) == 1, "readout_layer must be a list with one element"
+
+    out_dict = activations_model.get_activations(batch, readout_layer)
+    activations = out_dict[list(out_dict.keys())[0]]
+
+    return activations

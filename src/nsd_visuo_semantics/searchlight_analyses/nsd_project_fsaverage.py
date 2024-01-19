@@ -37,7 +37,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
         # define where the searchlights are saved
         data_dir = os.path.join(
             base_save_dir,
-            f"searchlight_respectedsampling_{models_rdm_distance}",
+            f"searchlight_respectedsampling_{models_rdm_distance}_newTest",
             "{}",
             MODEL_NAME,
             f"corr_vols{MODEL_SUFFIX}_{models_rdm_distance}",
@@ -46,7 +46,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
         # define where the fsaverage maps will be saved
         data_dir_fsav = os.path.join(
             base_save_dir,
-            f"searchlight_respectedsampling_{models_rdm_distance}",
+            f"searchlight_respectedsampling_{models_rdm_distance}_newTest",
             "{}",
             MODEL_NAME,
             f"{MODEL_NAME}{MODEL_SUFFIX}_{models_rdm_distance}_fsaverage",
@@ -117,7 +117,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
                                 badval=0,
                             )
                         )
-                    data.append(np.stack(hemi_data).mean(axis=0))
+                    data.append(np.nanmean(np.stack(hemi_data), axis=0))
 
                 # port the model
                 for h, d in zip(hemis, data):
@@ -156,7 +156,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
                                 badval=0,
                             )
                         )
-                    data.append(np.stack(hemi_data).mean(axis=0))
+                    data.append(np.nanmean(np.stack(hemi_data), axis=0))
 
                 # port the model
                 for h, d in zip(hemis, data):

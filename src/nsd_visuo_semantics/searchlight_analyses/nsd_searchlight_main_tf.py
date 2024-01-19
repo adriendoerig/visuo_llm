@@ -1,4 +1,4 @@
-import os, time
+import os, time, pickle
 import numpy as np
 from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
 from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import tf_searchlight as tfs
@@ -7,7 +7,7 @@ from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_con
 from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance, 
-                            nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                            nsd_dir, precompsl_dir, betas_dir, base_save_dir, 
                             remove_shared_515, OVERWRITE):
 
     initial_time = time.time()
@@ -21,8 +21,6 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
     targetspace = "func1pt8mm"
 
     # set up directories
-    precompsl_dir = f"{nsd_derivatives_dir}/searchlights"
-    os.makedirs(nsd_derivatives_dir, exist_ok=True)
     os.makedirs(betas_dir, exist_ok=True)
     os.makedirs(precompsl_dir, exist_ok=True)
 
@@ -40,7 +38,7 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
             subj = f"subj0{sub}"
 
             # called like this because all models sample the same 100 images every time for fair comparison
-            results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}/{subj}"
+            results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}_newTest/{subj}"
             os.makedirs(results_dir, exist_ok=True)
 
             # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
@@ -78,14 +76,19 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
                 # save allIndices
                 all_indices = SL.allIndices
                 center_indices = SL.centerIndices
-                np.save(sl_indices, all_indices)
-                np.save(sl_centers, center_indices)
+                # save centers and indices in pickle files
+                with open(sl_indices, "wb") as fp:
+                    pickle.dump(all_indices, fp)
+                with open(sl_centers, "wb") as fp:
+                    pickle.dump(center_indices, fp)
             else:
                 print("\tloading pre-computed searchlight")
-                all_indices = np.load(sl_indices, allow_pickle=True)
-                center_indices = np.load(sl_centers, allow_pickle=True)
+                with open(sl_indices, "rb") as fp:
+                    all_indices = pickle.load(fp)
+                with open(sl_centers, "rb") as fp:
+                    center_indices = pickle.load(fp)
             
-            # ort sphere by n_features. We will make batches where all spheres have the same n_voxels (required to use tf). 
+            # sort sphere by n_features. We will make batches where all spheres have the same n_voxels (required to use tf). 
             sorted_indices = sort_spheres(all_indices)
 
             # pre-compute the final sorting order
