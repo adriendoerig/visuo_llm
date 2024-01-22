@@ -4,6 +4,7 @@ src/nsd_visuo_semantics/get_embeddings/glove.840B.300d.txt
 src/nsd_visuo_semantics/get_embeddings/_check_imgs
 src/nsd_visuo_semantics/get_embeddings/_tmp_playground
 src/nsd_visuo_semantics/get_dnn_activities/safety_check_plots_dir
+src/nsd_visuo_semantics/roi_analyses/variance_components_correlation*
 src/nsd_visuo_semantics/results_dir
 examples/_check_imgs
 examples/dnn_activities_safety_check_plots
@@ -11,6 +12,7 @@ examples/dnn_extracted_activities
 examples/embedding_models
 examples/_debug*
 results_dir
+*.png
 
 
 # Byte-compiled / optimized / DLL files

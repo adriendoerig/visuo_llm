@@ -1,6 +1,6 @@
 import os
 from nsd_visuo_semantics.utils.nsd_prepare_modelrdms import nsd_prepare_modelrdms
-from nsd_visuo_semantics.searchlight_analyses.nsd_searchlight_main_tf import nsd_searchlight_main_tf
+from nsd_visuo_semantics.searchlight_analyses.nsd_searchlight_main_tf_varPartitionning import nsd_searchlight_main_tf_varPartitionning
 from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage import nsd_project_fsaverage
 
 
@@ -21,21 +21,12 @@ OVERWRITE = False
 
 # models to test
 MODEL_NAMES = [
-    # "mpnet",
-    "multihot",
-    # "fasttext_categories",
-    # "fasttext_verbs",
-    # "fasttext_all",
-    # "guse",    
-    # "dnn_mpnet_rec_seed1_ep200",
-    # "dnn_multihot_rec_seed1_ep200",
-    # "dnn_multihot_rec_old_ep200",
-    # "dnn_mpnet_rec_old_ep200",
-    # "dnn_multihot_rec_seed1_ep200"
+    'all-mpnet-base-v2_nsd_special100_cocoCaptions',
+    'all-mpnet-base-v2_nouns_nsd_special100_cocoCaptions',
+    'all-mpnet-base-v2_verbs_nsd_special100_cocoCaptions',
 ]
 
-# MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [1,2,3,4,6,7,8,9]]
-MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [1,2]]
+use_special100 = True if 'special100' in MODEL_NAMES[0] else False
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
@@ -65,12 +56,13 @@ rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_5
 
 
 ### RUN SEARCHLIGHT
-# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-#                         remove_shared_515, OVERWRITE)
+nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, models_rdm_distance, 
+                                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                                         use_special100,
+                                         remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE
-nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, 
-                      nsd_dir, base_save_dir, 
-                      remove_shared_515)
+# nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, 
+#                       nsd_dir, base_save_dir, 
+#                       remove_shared_515)
