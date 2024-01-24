@@ -22,7 +22,7 @@ OVERWRITE = False
 # models to test
 MODEL_NAMES = [
     # "mpnet",
-    "multihot",
+    # "multihot",``
     # "fasttext_categories",
     # "fasttext_verbs",
     # "fasttext_all",
@@ -34,8 +34,8 @@ MODEL_NAMES = [
     # "dnn_multihot_rec_seed1_ep200"
 ]
 
-# MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [1,2,3,4,6,7,8,9]]
-MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [1,2]]
+# MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [10]]
+MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [9,10]]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
@@ -65,9 +65,9 @@ rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_5
 
 
 ### RUN SEARCHLIGHT
-# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-#                         remove_shared_515, OVERWRITE)
+nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                        remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE

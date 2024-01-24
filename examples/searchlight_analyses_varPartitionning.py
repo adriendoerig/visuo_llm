@@ -1,7 +1,7 @@
 import os
 from nsd_visuo_semantics.utils.nsd_prepare_modelrdms import nsd_prepare_modelrdms
 from nsd_visuo_semantics.searchlight_analyses.nsd_searchlight_main_tf_varPartitionning import nsd_searchlight_main_tf_varPartitionning
-from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage import nsd_project_fsaverage
+from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage_varPartitionning import nsd_project_fsaverage_varPartitionning
 
 
 '''run with gpu on osna hpc:
@@ -56,13 +56,13 @@ rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_5
 
 
 ### RUN SEARCHLIGHT
-nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, models_rdm_distance, 
-                                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-                                         use_special100,
-                                         remove_shared_515, OVERWRITE)
+# nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, models_rdm_distance, 
+#                                          nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+#                                          use_special100,
+#                                          remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE
-# nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, 
-#                       nsd_dir, base_save_dir, 
-#                       remove_shared_515)
+nsd_project_fsaverage_varPartitionning(MODEL_NAMES, models_rdm_distance, 
+                                       nsd_dir, base_save_dir, 
+                                       remove_shared_515)

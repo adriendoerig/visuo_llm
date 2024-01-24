@@ -42,18 +42,6 @@ def nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, rdm_distance,
         results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}_newTest/{subj}"
         os.makedirs(results_dir, exist_ok=True)
 
-        # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
-        # we compute them only once for guse, and then will reload them for others
-        samples_dir = f'{results_dir}/saved_sampling{"_noShared515" if remove_shared_515 else ""}'
-        os.makedirs(samples_dir, exist_ok=True)
-
-        # where to save searchlight correlations
-        searchlight_variance_partitionning_dir = f'{results_dir}/var_partition_{MODEL_NAMES}_{"_noShared515" if remove_shared_515 else ""}'
-        os.makedirs(searchlight_variance_partitionning_dir, exist_ok=True)
-
-        print(f"\tthe output files will be stored in {searchlight_variance_partitionning_dir}..")
-        print(f"\tlooking for saved samples in {samples_dir}..")
-
         # get model rdms for this subject
         all_model_rdms, all_model_names = [], []
         for MODEL_NAME in MODEL_NAMES:
@@ -61,8 +49,18 @@ def nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, rdm_distance,
             all_model_rdms.append(model_rdms[0])
             all_model_names.append(model_names[0].replace('_nsd_special100_cocoCaptions', '').replace('all-mpnet-base-v2', 'mpnet').replace('cutoffDist0.7_', ''))
 
-        # get subject brain mask (only used if searchlight indices are not computed yet).
-        # We always want the same indices, radius, etcetc. across models
+        # where to save searchlight correlations
+        searchlight_variance_partitionning_dir = f'{results_dir}/var_partition_{all_model_names}{"_noShared515" if remove_shared_515 else ""}'
+        os.makedirs(searchlight_variance_partitionning_dir, exist_ok=True)
+        
+        # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
+        # we compute them only once for guse, and then will reload them for others
+        samples_dir = f'{results_dir}/saved_sampling{"_noShared515" if remove_shared_515 else ""}'
+        os.makedirs(samples_dir, exist_ok=True)
+
+        print(f"\tthe output files will be stored in {searchlight_variance_partitionning_dir}..")
+        print(f"\tlooking for saved samples in {samples_dir}..")
+
         print("\tloading brain mask")
         mask = get_masks(nsd_dir, subj, targetspace)
         n_voxels = list(mask.shape)
@@ -225,21 +223,36 @@ def nsd_searchlight_main_tf_varPartitionning(MODEL_NAMES, rdm_distance,
                 if not use_special_100:
                     model_rdms_sample = [np.asarray(batchg[m].index_rdms(choices) for m in all_model_names)]
 
+                n_nans = np.sum(np.isnan(brain_sl_rdms_sample))
+                if n_nans > 0:
+                    print(f"Found {n_nans} nans in the brain rdm ({n_nans/np.size(brain_sl_rdms_sample)*100:.0f}%). Replacing with mean of subject's betas.")
+                    brain_sl_rdms_sample[np.isnan(brain_sl_rdms_sample)] = np.nanmean(brain_sl_rdms_sample)
+
                 variance_components = np.zeros((brain_sl_rdms_sample.shape[0], 7))  # 7 because we get 7 r-squared values per voxel
+                nan_voxels = 0
                 for voxel, brain_rdm in enumerate(brain_sl_rdms_sample):
                     variance_components[voxel,:], combination_names = variance_partitioning(brain_rdm, model_rdms_sample, all_model_names, zscore=True, return_np=True)
+                    if all(np.isnan(variance_components[voxel,:])):
+                        nan_voxels += 1
+                    if voxel % 1000 == 0:
+                        print(f"\t\t{voxel/brain_sl_rdms_sample.shape[0]*100:.0f}% ({nan_voxels/brain_sl_rdms_sample.shape[0]*100:.0f}% nans)", end="\r")
+                    
+                brain_vect = np.zeros((np.prod(n_voxels), 7))  # 7 because we get 7 r-squared values per voxel in the var partitionning
+                brain_vect[rdms_sort] = variance_components  # insert map in the right brain locations (each corr ends up in the right voxel)
+                brain_vol = np.reshape(brain_vect, n_voxels+[7])  # reshape to original xyz fmrivolume (with 7 rsquared values at each location)
 
                 # save correlation vol for that sample
-                np.save(file_save, variance_components)
-                np.save(file_save[:-4]+'model_combination_names.npy', combination_names)
+                np.save(file_save, brain_vol)
 
                 elapsed_time = time.time() - start_time
                 print(f"boot {j} : elapsedtime : ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
-
-                import pdb; pdb.set_trace()
 
         del betas
         
         print("NSD searchlight variance partitionning done.")
         elapsed_time = time.time() - initial_time
         print("elapsedtime: ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
+
+        # save as pickle
+        with open(f'{searchlight_variance_partitionning_dir}/model_combinations.pkl', 'wb') as f:
+            pickle.dump(combination_names, f)

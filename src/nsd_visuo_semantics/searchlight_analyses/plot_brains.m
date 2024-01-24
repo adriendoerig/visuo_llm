@@ -5,7 +5,7 @@ viewz_to_plot = {13};  % {5,6,11,13};  % determines which angle the brain is see
 n_subjects = 1;
 % cvn plot params
 Lookup = [];
-wantfig = 1;
+wantfig = 1; 
 extraopts = {'rgbnan', 1, 'hemibordercolor', [1 1 1], 'text',{'' ''}};
 
 n_vertices = 327684;

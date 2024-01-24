@@ -1,29 +1,22 @@
-% How to run:
-% ssh -X username@bluebear.bham.ac.uk
-% fisbatch_screen as usual
-% module load MATLAB/2020a
-% matlab
-% then, copy paste stuff from here in the matlab window (or simply type matlab, then plot_brains from matlab terminal)
-
 close all; clear all;
 
 base_dir = '/rds/projects/c/charesti-start/';
 MODEL_NAME = 'mpnet_encodingModel'
 USE_FDR = 1;
 OVERWRITE = 0;  % if 0, do not redo existing plots
+SAVE_TYPE = 'png';  % 'svg' or 'png'
 
-% add path to cvncode, utils, and heklper functions
-addpath(genpath(fullfile(base_dir,'software','cvncode')));
-addpath(genpath(fullfile(base_dir,'software','knkutils')));
-addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
-addpath(genpath(fullfile(base_dir,'software','npy-matlab')));
-%addpath(genpath(fullfile(base_dir,'software','MatlabTFCE')));
-
-% add path to freesurfer tools
-addpath(genpath(fullfile(base_dir,'software', 'freesurfer7', 'matlab')));
-
-% we need to point to the subjects in NSD data
-setenv('SUBJECTS_DIR', fullfile(base_dir,'data','NSD','nsddata','freesurfer'));
+% YOU NEED TO DOWNLOAD CVNCODE, FREESURFER, KNKUTILS, AND NPY-MATLAB (see README.md)
+% YOU NEED TO CHANGE THE PATHS BELOW TO YOUR OWN PATHS
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/cvncode')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/matlab')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/freesurfer/fsfast/toolbox')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/knkutils')));
+addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/npy-matlab/npy-matlab')));
+setenv('SUBJECTS_DIR', fullfile('/share/klab/datasets/NSD_for_visuo_semantics/nsddata/freesurfer'));
+% Paths within this repository
+addpath(genpath(fullfile('../src/nsd_visuo_semantics/utils')));
+addpath(genpath(fullfile('../src/nsd_visuo_semantics/searchlight_analyses')));
 
 % some parameters
 viewz_to_plot = {13};  % {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
@@ -39,8 +32,8 @@ n_vertices = 327684;
 % LOAD DATA
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-encoding_results_dir = './save_dir/decoding/all_mpnet_base_v2_results_ROIfullbrain_encodingModel';
-datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeCorrMap_fullbrain.pkl');
+encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel';
+datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain.npy');
 
 % where to save
 figpath  = fullfile(encoding_results_dir, 'Figures');
@@ -51,11 +44,11 @@ end
 main_data = single(zeros(n_subjects, n_vertices));
 % loop over subjects
 for sub = 1:n_subjects
-    subj = sprintf('subj%02d', sub);
-    fid = py.open(sprintf(datapath, subj), 'rb');
-    sub_data = py.pickle.load(fid).tolist();  % next three lines are to deal with matlab being incapable of simply loading pkl
-    sub_data = cell(sub_data);
-    sub_data = cell2mat(sub_data);
+    sub_data = [];
+    subj = sprintf('subj%02d', sub)
+    datapath
+    sprintf(datapath, subj)
+    sub_data = cat(1, sub_data, readNPY(sprintf(datapath, subj)));
     main_data(sub, :) = sub_data;
 end
 
@@ -69,10 +62,10 @@ for sub = 1:n_subjects
     this_subj_data = squeeze(main_data(sub,  :));
     for v = 1:length(viewz_to_plot)
         this_view = viewz_to_plot{v};
-        if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', MODEL_NAME, '.svg')))
+        if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', MODEL_NAME, '.', SAVE_TYPE)))
             [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-max(this_subj_data(:)), max(this_subj_data(:))], cmapsign4(256),[],Lookup,wantfig,extraopts);
             title(sprintf('%s \n max: %3.2f', subj, max(this_subj_data(:))))
-            saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', MODEL_NAME)), 'svg')
+            saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', MODEL_NAME)), SAVE_TYPE)
         end
         close all;
     end
@@ -101,14 +94,14 @@ end
 % plot
 for v = 1:length(viewz_to_plot)
     this_view = viewz_to_plot{v};
-    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', MODEL_NAME, '.svg')))
+    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', MODEL_NAME, '.', SAVE_TYPE)))
         % non-thresholded image
         [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-max(mean_corrs(:)), max(mean_corrs(:))], cmapsign4(256), [], Lookup, wantfig, extraopts);
         title(sprintf('group average max: %3.2f', max_corr))
-        saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', MODEL_NAME)), 'svg')
+        saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', MODEL_NAME)), SAVE_TYPE)
     end
     close all;
-    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME, '.svg')))
+    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME, '.', SAVE_TYPE)))
         % significant voxels only. Need hack to fix bug in cvnlookup
         cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME), MODEL_NAME)
     end

@@ -19,7 +19,7 @@ SEARCHLIGHT_SAVE_DIR = '../results_dir/searchlight_respectedsampling_correlation
 RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
 
 ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
-MODEL_NAMES = {"mpnet"};  % , "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"};
+MODEL_NAMES = {"var_partition_['mpnet', 'mpnet_nouns', 'mpnet_verbs']"};  % , "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"};
 MODEL_SUFFIX =  '';  % default is ''
 CONTRAST_MODEL_NAMES = {};  % ALL_MODEL_NAMES
 
@@ -31,4 +31,8 @@ CONTRAST_SAME_MODEL = 1;  % if 0, do not contrast model with itself. else, do it
 PLOT_INDIVIDUAL_SUBJECTS = 1;  % if 0, only do group level maps
 
 % this actually does the plotting
-plot_brains
+if contains(MODEL_NAMES{1}, 'var_partition')
+    plot_brains_varPartitionning
+else
+    plot_brains
+end

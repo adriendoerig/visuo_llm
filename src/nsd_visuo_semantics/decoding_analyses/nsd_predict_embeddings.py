@@ -10,15 +10,14 @@ import pandas as pd
 from fracridge import FracRidgeRegressorCV
 from nsd_access import NSDAccess
 from scipy.spatial.distance import cdist, correlation, cosine, pdist
-from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, restore_nan_dims
+from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, restore_nan_dims, pairwise_corr
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average
 
-
-EMBEDDING_MODEL_NAME = "all_mpnet_base_v2"
+EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
 USE_ROIS = None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage' or streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
 METRIC = "correlation"  # 'correlation', 'cosine'
-PREDICT_X_FROM_Y = "embeddings_from_voxels"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
+PREDICT_X_FROM_Y = "voxels_from_embeddings"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
 USE_GCC_LOOKUP = True
 if USE_GCC_LOOKUP:
     gcc_dir = '/share/klab/datasets/google_conceptual_captions'
@@ -327,34 +326,44 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
             elif PREDICT_X_FROM_Y == "voxels_from_embeddings":
             # In this case, we use embeddings as an encoding model to linearly predict voxels
 
-                corrs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeCorrMap_{ROI_NAME}.pkl"
+                corrs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingCorrMap_{ROI_NAME}.npy"
+                coefs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingCoefs_{ROI_NAME}.npy"
 
                 if not os.path.exists(corrs_save_path):
-                    print("Fitting fractional ridge regression...")
-                    frr = FracRidgeRegressorCV(jit=True, fit_intercept=True)#, n_jobs=n_jobs)
-                    fitted_fracridge = frr.fit(
-                        embeddings_train[:USE_N_STIMULI],
-                        betas_train[:USE_N_STIMULI],
-                        frac_grid=fracs,
-                    )
+
+                    model_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingModel_{ROI_NAME}.pkl"
+                    if not os.path.exists(model_save_path):
+                        print("Fitting fractional ridge regression...")
+                        frr = FracRidgeRegressorCV(jit=True, fit_intercept=True)#, n_jobs=n_jobs)
+                        fitted_fracridge = frr.fit(
+                            embeddings_train[:USE_N_STIMULI],
+                            betas_train[:USE_N_STIMULI],
+                            frac_grid=fracs,
+                        )
+                        with open(model_save_path, "wb") as f:
+                            pickle.dump(fitted_fracridge, f)
+                    else:
+                        print("Found saved fractional ridge regression, loading...")
+                        with open(model_save_path, "rb") as f:
+                            fitted_fracridge = pickle.load(f)
+
+                    np.save(coefs_save_path, fitted_fracridge.coef_)  # [n_embedding_dims, n_voxels]
+                    print(f"... Encoding model predictions saved for {subj}")
+
+                    test_preds = fitted_fracridge.predict(embeddings_test)  # [n_test_items, n_voxels]
+                    fitted_test_corrs = pairwise_corr(test_preds, betas_test)  # [n_voxels,]
 
                     # we removed NaNs in data before doing the fracridge. But we need all voxels to plot the brain maps,
                     # so we add them back at the right places here.
                     nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
-                    fitted_model_corrs = restore_nan_dims(fitted_model_corrs, nan_idx_to_restore)
+                    fitted_test_corrs = restore_nan_dims(fitted_test_corrs, nan_idx_to_restore)
 
-                    nan_idx_to_restore = [i for i, x in enumerate(good_vertex) if not x]
-                    with open(corrs_save_path, "wb") as f:
-                        pickle.dump(fitted_model_corrs, f)
-                        print(f"... Encoding model predictions saved for {subj}")
+                    np.save(corrs_save_path, fitted_test_corrs)
+                    print(f"... Encoding model predictions saved for {subj}")
+
                 else:
-                    print("Found saved encoding model predictions, loading...")
-                    with open(corrs_save_path, "rb") as f:
-                        fitted_model_corrs = pickle.load(f)
+                    print("Found saved encoding model predictions, skipping...")
 
-                    with open(corrs_save_path, "wb") as f:
-                        pickle.dump(fitted_model_corrs, f)
-                        print(f"... Encoding model predictions saved for {subj}")
             else:
                 raise Exception(
                     f"Please use PREDICT_X_FROM_Y = 'voxels_from_embeddings' or embeddings_from_voxels."

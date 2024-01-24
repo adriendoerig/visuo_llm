@@ -23,15 +23,33 @@ def variance_partitioning(y, predictors_features, predictors_names, zscore=True,
         if len(f.shape) == 1:
             f = f[:, np.newaxis]
 
-    if zscore:
-        from scipy.stats import zscore
-        y = zscore(y, axis=0)
-        predictors_features = [zscore(f, axis=0) for f in predictors_features]
-
     # Create all possible combinations of predictors
     all_combinations = []
     for r in range(1, len(predictors_names) + 1):
         all_combinations.extend(combinations(predictors_names, r))
+
+    if zscore:
+        from scipy.stats import zscore
+        y = zscore(y, axis=0)
+        predictors_features = [zscore(f, axis=0) for f in predictors_features]
+        if all(np.isnan(y)):
+            if verbose:
+                print("All values in y are NaNs after zscoring. This is likely because y is constant across samples. "\
+                    "We will skip model fitting and return all scores as NaNs.")
+            if return_np:
+                return np.array([np.nan for c in all_combinations]), all_combinations
+            else:
+                return {c: np.nan for c in all_combinations}
+        for f in predictors_features:
+            if all(np.isnan(f)):
+                if verbose:
+                    print("All values in one or more predictors are NaNs after zscoring. "\
+                        "This is likely because the predictor(s) is constant across samples. "\
+                        "We will skip model fitting and return all scores as NaNs.")
+                if return_np:
+                    return np.array([np.nan for c in all_combinations]), all_combinations
+                else:
+                    return {c: np.nan for c in all_combinations}
 
     # Fit models for each combination of predictors
     models = {}
@@ -52,6 +70,39 @@ def variance_partitioning(y, predictors_features, predictors_names, zscore=True,
         return np.array([var_components[c] for c in all_combinations]), all_combinations
     else:
         return var_components
+    
+
+def combination_scores_to_unique_var(scores, normalize_areas=True):
+
+    if len(scores) == 3:
+        A, B, A_B = scores
+        Ab = A_B - B
+        aB = A_B - A
+        AB = A + B - A_B
+        if normalize_areas:
+            Ab /= A_B
+            aB /= A_B
+            AB /= A_B
+        return Ab, aB, AB
+    
+    elif len(scores) == 7:
+        A, B, C, A_B, A_C, B_C, A_B_C = scores
+        Abc = A_B_C - B_C
+        aBc = A_B_C - A_C
+        abC = A_B_C - A_B
+        ABc = A_C + B_C - A_B_C - C
+        AbC = A_B + B_C - A_B_C - B
+        aBC = A_C + A_B - A_B_C - A
+        ABC = A + B + C - A_B - A_C - B_C + A_B_C
+        if normalize_areas:
+            Abc /= A_B_C
+            aBc /= A_B_C
+            ABc /= A_B_C
+            abC /= A_B_C
+            AbC /= A_B_C
+            aBC /= A_B_C
+            ABC /= A_B_C
+        return Abc, aBc, ABc, abC, AbC, aBC, ABC
 
 
 if __name__ == "__main__":
@@ -145,9 +196,7 @@ if __name__ == "__main__":
                 A = all_var_components[subj][mask_name][k[0]]  # score for 1st model
                 B = all_var_components[subj][mask_name][k[1]]  # score for 2nd model
                 A_B = all_var_components[subj][mask_name][k[2]]  # score of combined model
-                Ab = A_B - B
-                aB = A_B - A
-                AB = A + B - A_B
+                Ab, aB, AB = combination_scores_to_unique_var([A, B, A_B])
                 venn2(subsets=[Ab, aB, AB], set_labels=labels, subset_label_formatter=decimals, ax=ax[(m+1)//2][(m+1)%2])
                 ax[(m+1)//2][(m+1)%2].set_title(mask_name, fontsize=16, fontweight='bold')
 
@@ -160,22 +209,7 @@ if __name__ == "__main__":
                 A_C = all_var_components[subj][mask_name][k[4]]
                 B_C = all_var_components[subj][mask_name][k[5]] 
                 A_B_C = all_var_components[subj][mask_name][k[6]]
-                Abc = A_B_C - B_C
-                aBc = A_B_C - A_C
-                abC = A_B_C - A_B
-                ABc = A_C + B_C - A_B_C - C
-                AbC = A_B + B_C - A_B_C - B
-                aBC = A_C + A_B - A_B_C - A
-                ABC = A + B + C - A_B - A_C - B_C + A_B_C
-                if normalize_areas:
-                    Abc /= A_B_C
-                    aBc /= A_B_C
-                    ABc /= A_B_C
-                    abC /= A_B_C
-                    AbC /= A_B_C
-                    aBC /= A_B_C
-                    ABC /= A_B_C
-
+                Abc, aBc, ABc, abC, AbC, aBC, ABC = combination_scores_to_unique_var([A, B, C, A_B, A_C, B_C, A_B_C])
                 venn3(subsets=[Abc, aBc, ABc, abC, AbC, aBC, ABC], set_labels=labels, subset_label_formatter=decimals, ax=ax[(m+1)//2][(m+1)%2])
                 ax[(m+1)//2][(m+1)%2].set_title(mask_name, fontsize=16, fontweight='bold')
 
@@ -206,21 +240,7 @@ if __name__ == "__main__":
             std_B_C = np.std([all_var_components[s][mask_name][k[5]] for s in subs])/np.sqrt(len(subs))
             avg_A_B_C = np.mean([all_var_components[s][mask_name][k[6]] for s in subs])
             std_A_B_C = np.std([all_var_components[s][mask_name][k[6]] for s in subs])/np.sqrt(len(subs))
-            Abc = avg_A_B_C - avg_B_C
-            aBc = avg_A_B_C - avg_A_C
-            abC = avg_A_B_C - avg_A_B
-            ABc = avg_A_C + avg_B_C - avg_A_B_C - avg_C
-            AbC = avg_A_B + avg_B_C - avg_A_B_C - avg_B
-            aBC = avg_A_C + avg_A_B - avg_A_B_C - avg_A
-            ABC = avg_A + avg_B + avg_C - avg_A_B - avg_A_C - avg_B_C + avg_A_B_C
-            if normalize_areas:
-                Abc /= avg_A_B_C
-                aBc /= avg_A_B_C
-                ABc /= avg_A_B_C
-                abC /= avg_A_B_C
-                AbC /= avg_A_B_C
-                aBC /= avg_A_B_C
-                ABC /= avg_A_B_C
+            Abc, aBc, ABc, abC, AbC, aBC, ABC = combination_scores_to_unique_var([avg_A, avg_B, avg_C, avg_A_B, avg_A_C, avg_B_C, avg_A_B_C])
         venn3(subsets=[Abc, aBc, ABc, abC, AbC, aBC, ABC], set_labels=labels, subset_label_formatter=decimals, ax=ax[(m+1)//2][(m+1)%2])
         ax[(m+1)//2][(m+1)%2].set_title(mask_name, fontsize=16, fontweight='bold')
 
