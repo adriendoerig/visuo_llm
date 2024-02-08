@@ -1,10 +1,10 @@
 close all; clear all;
 
-base_dir = '/rds/projects/c/charesti-start/';
-MODEL_NAME = 'mpnet_encodingModel'
+MODEL_NAME = 'mpnet_encodingModel_split0'
 USE_FDR = 1;
 OVERWRITE = 0;  % if 0, do not redo existing plots
 SAVE_TYPE = 'png';  % 'svg' or 'png'
+MAX_CMAP_VAL = 0;
 
 % YOU NEED TO DOWNLOAD CVNCODE, FREESURFER, KNKUTILS, AND NPY-MATLAB (see README.md)
 % YOU NEED TO CHANGE THE PATHS BELOW TO YOUR OWN PATHS
@@ -15,7 +15,8 @@ addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/knkutils')));
 addpath(genpath(fullfile('/share/klab/adoerig/adoerig/software/npy-matlab/npy-matlab')));
 setenv('SUBJECTS_DIR', fullfile('/share/klab/datasets/NSD_for_visuo_semantics/nsddata/freesurfer'));
 % Paths within this repository
-addpath(genpath(fullfile('../src/nsd_visuo_semantics/utils')));
+addpath(genpath(fullfile('../utils')));
+addpath(genpath(fullfile('../src/nsd_visuo_semantics/searchlight_analyses')));
 addpath(genpath(fullfile('../src/nsd_visuo_semantics/searchlight_analyses')));
 
 % some parameters
@@ -32,8 +33,12 @@ n_vertices = 327684;
 % LOAD DATA
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/src/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel';
-datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain.npy');
+% encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel';
+% datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain.npy');
+encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel_split0';
+datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain_all-mpnet-base-v2.npy');
+% encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/mpnet_rec_seed1_nsd_activations_epoch200_layer0_results_ROIfullbrain_encodingModel';
+% datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain_mpnet_rec_seed1_nsd_activations_epoch200.npy');
 
 % where to save
 figpath  = fullfile(encoding_results_dir, 'Figures');
@@ -91,6 +96,12 @@ else
     mean_corrs_threshold(p>0.001) = nan;
 end
 
+sig_mask = ones(size(mean_corrs_threshold));
+sig_mask(isnan(mean_corrs_threshold)) = 0;
+% save the mask
+save(fullfile(encoding_results_dir, strcat('encoding_sig_mask_', MODEL_NAME, '.mat')), 'sig_mask')
+
+
 % plot
 for v = 1:length(viewz_to_plot)
     this_view = viewz_to_plot{v};
@@ -103,7 +114,8 @@ for v = 1:length(viewz_to_plot)
     close all;
     if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME, '.', SAVE_TYPE)))
         % significant voxels only. Need hack to fix bug in cvnlookup
-        cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME), MODEL_NAME)
+        cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', MODEL_NAME), MODEL_NAME, SAVE_TYPE, MAX_CMAP_VAL, extraopts)
+    
     end
     close all;
 end

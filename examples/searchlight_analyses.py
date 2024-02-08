@@ -7,11 +7,11 @@ from nsd_visuo_semantics.searchlight_analyses.nsd_project_fsaverage import nsd_p
 '''run with gpu on osna hpc:
 spack load cuda@11.8.0
 spack load cudnn@8.6.0.163-11.8
+export TMPDIR='/share/klab/adoerig'
 mkdir -p $CONDA_PREFIX/lib/nvvm/libdevice/
 cp -p $CONDA_PREFIX/lib/libdevice.10.bc $CONDA_PREFIX/lib/nvvm/libdevice/
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
 export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CONDA_PREFIX 
-export TMPDIR='/share/klab/adoerig'
 conda activate tensorflowGPU'''
 
 
@@ -34,8 +34,8 @@ MODEL_NAMES = [
     # "dnn_multihot_rec_seed1_ep200"
 ]
 
-# MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [10]]
-MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [9,10]]
+MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [4,5]]
+MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [4,5]]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
@@ -65,9 +65,9 @@ rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_5
 
 
 ### RUN SEARCHLIGHT
-nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-                        remove_shared_515, OVERWRITE)
+# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+#                         remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE

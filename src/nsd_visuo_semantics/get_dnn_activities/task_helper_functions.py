@@ -1,4 +1,5 @@
 import importlib, os, pickle, h5py, torch
+import torch.nn as nn
 import tensorflow as tf
 import numpy as np
 from PIL import Image
@@ -196,6 +197,21 @@ def np_to_pillow_img(img):
     return img
 
 
+def ipcl_preprocess_batch(tf_batch, transform, image_size=224):
+    """Formatting to translate between our data generation pipeline and the one
+    used for ipcl (https://github.com/harvard-visionlab/open_ipcl)"""
+
+    np_batch = tf_batch.numpy()
+
+    torch_batch = torch.zeros(np_batch.shape[0], np_batch.shape[3], image_size, image_size)
+    # clip needs this kind of preprocessing
+    for i in range(np_batch.shape[0]):
+        img = np_to_pillow_img(np_batch[i])
+        torch_batch[i] = transform(img).unsqueeze(0)
+
+    return torch_batch
+
+
 def clip_preprocess_batch(tf_batch, preprocess, image_size=224):
     """Our pipeline outputs a tf batch of im_size=128. This needs to be changed
     for clip"""
@@ -243,3 +259,50 @@ def get_brainscore_layer_activations(activations_model, readout_layer, batch):
     activations = out_dict[list(out_dict.keys())[0]]
 
     return activations
+
+
+class IpclFeatureExtractor(nn.Module):
+    def __init__(self, model, layers, detach=True, clone=True, retain=False, device='cpu'):
+        layers = [layers] if isinstance(layers, str) else layers
+        super().__init__()
+        self.model = model
+        self.layers = layers
+        self.detach = detach
+        self.clone = clone
+        self.device = device
+        self.retain = retain
+        self._features = {layer: torch.empty(0) for layer in layers}        
+        self.hooks = {}
+        
+    def hook_layers(self):        
+        self.remove_hooks()
+        for layer_id in self.layers:
+            layer = dict([*self.model.named_modules()])[layer_id]
+            self.hooks[layer_id] = layer.register_forward_hook(self.save_outputs_hook(layer_id))
+    
+    def remove_hooks(self):
+        for layer_id in self.layers:
+            if self.retain==False:
+                self._features[layer_id] = torch.empty(0)
+            if layer_id in self.hooks:
+                self.hooks[layer_id].remove()                
+                del self.hooks[layer_id]
+    
+    def __enter__(self, *args): 
+        self.hook_layers()
+        return self
+    
+    def __exit__(self, *args): 
+        self.remove_hooks()
+        
+    def save_outputs_hook(self, layer_id):
+        def fn(_, __, output):
+            if self.detach: output = output.detach()
+            if self.clone: output = output.clone()
+            if self.device: output = output.to(self.device)
+            self._features[layer_id] = output
+        return fn
+
+    def forward(self, x):
+        _ = self.model(x)
+        return self._features

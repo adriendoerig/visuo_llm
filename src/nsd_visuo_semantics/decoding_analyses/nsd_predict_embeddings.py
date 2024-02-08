@@ -347,22 +347,31 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
                         with open(model_save_path, "rb") as f:
                             fitted_fracridge = pickle.load(f)
 
-                    np.save(coefs_save_path, fitted_fracridge.coef_)  # [n_embedding_dims, n_voxels]
-                    print(f"... Encoding model predictions saved for {subj}")
-
                     test_preds = fitted_fracridge.predict(embeddings_test)  # [n_test_items, n_voxels]
                     fitted_test_corrs = pairwise_corr(test_preds, betas_test)  # [n_voxels,]
 
                     # we removed NaNs in data before doing the fracridge. But we need all voxels to plot the brain maps,
                     # so we add them back at the right places here.
                     nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
-                    fitted_test_corrs = restore_nan_dims(fitted_test_corrs, nan_idx_to_restore)
+                    fitted_test_corrs = restore_nan_dims(fitted_test_corrs, nan_idx_to_restore, axis=0)
 
                     np.save(corrs_save_path, fitted_test_corrs)
                     print(f"... Encoding model predictions saved for {subj}")
 
+                    restored_coefs = restore_nan_dims(fitted_fracridge.coef_, nan_idx_to_restore, axis=1)
+                    np.save(coefs_save_path, restored_coefs)  # [n_embedding_dims, n_voxels]
+                    print(f"... Encoding model coeffs saved for {subj}")
+
                 else:
                     print("Found saved encoding model predictions, skipping...")
+
+                    model_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingModel_{ROI_NAME}.pkl"
+                    with open(model_save_path, "rb") as f:
+                        fitted_fracridge = pickle.load(f)
+                    nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
+                    restored_coefs = restore_nan_dims(fitted_fracridge.coef_, nan_idx_to_restore, axis=1)
+                    np.save(coefs_save_path, restored_coefs)  # [n_embedding_dims, n_voxels]
+                    print(f"... Encoding model coeffs saved for {subj}")
 
             else:
                 raise Exception(

@@ -80,8 +80,7 @@ def nsd_roi_analyses(MODEL_NAMES, rdm_distance, dnn_layer_to_use, which_rois,
             # Betas per subject
             betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
             betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
-
-            betas /= 300
+            # betas /= 300
 
             # save the subject's full ROI RDMs
             roi_rdms = []

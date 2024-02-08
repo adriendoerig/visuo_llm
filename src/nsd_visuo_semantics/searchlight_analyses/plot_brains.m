@@ -1,8 +1,7 @@
 USE_FDR = 1;
 
 % some parameters
-viewz_to_plot = {13};  % {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
-n_subjects = 1;
+n_subjects = 8;
 % cvn plot params
 Lookup = [];
 wantfig = 1; 
@@ -64,7 +63,6 @@ for m1 = 1:length(MODEL_NAMES)
                 seedless_name = erase(MODEL_NAME, '_avgSeed')
                 split_name = strsplit(seedless_name, '_ep');
                 model_to_load_name = strcat(split_name{1}, '_seed%s_ep', split_name{2});
-                % remove the 6 first characters of the second split
                 datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', model_to_load_name, strcat(model_to_load_name, '_correlation_fsaverage'), '%s.%s-model-%s-surf.npy');
             else
                 datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
@@ -80,11 +78,14 @@ for m1 = 1:length(MODEL_NAMES)
                     if contains(MODEL_NAME, '_avgSeed')
                         seed_data = [];
                         for seed = 1:10
-                            seed_data = cat(1, seed_data, readNPY(sprintf(datapath, subj, string(seed), string(seed), this_hemi, subj, string(map_id))));
+                            try
+                                seed_data = cat(2, seed_data, readNPY(sprintf(datapath, subj, string(seed), string(seed), this_hemi, subj, string(map_id))));
+                            catch
+                                strcat('could not load seed ', string(seed), ' for subj ', subj, ' hemi ', this_hemi, ' map_id ', string(map_id))
+                            end
                         end
-                        avg_seed_data = nanmean(seed_data, 1);
+                        avg_seed_data = nanmean(seed_data, 2);
                         sub_data = cat(1, sub_data, avg_seed_data);
-                        dbstop
                     else
                         sub_data = cat(1, sub_data, readNPY(sprintf(datapath, subj, strcat(MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(map_id))));
                     end
@@ -154,7 +155,7 @@ for m1 = 1:length(MODEL_NAMES)
                 close all;
                 if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                     % significant voxels only. Need hack to fix bug in cvnlookup
-                    cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME), SAVE_MODEL_NAME, SAVE_TYPE, extraopts)
+                    cvn_plot_fix(mean_corrs_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME), SAVE_MODEL_NAME, SAVE_TYPE, MAX_CMAP_VAL, extraopts)
                 end
                 close all;
             end
@@ -192,16 +193,37 @@ for m1 = 1:length(MODEL_NAMES)
                     CONTRAST_SAVE_MODEL_NAME = strcat(CONTRAST_MODEL_NAME, '_l', string(contrast_layer), '_t', string(contrast_timestep), MODEL_SUFFIX)
                 end
 
-                contrast_datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
+                if contains(CONTRAST_MODEL_NAME, '_avgSeed')
+                    % name_formatting
+                    contrast_seedless_name = erase(CONTRAST_MODEL_NAME, '_avgSeed')
+                    contrast_split_name = strsplit(contrast_seedless_name, '_ep');
+                    contrast_model_to_load_name = strcat(contrast_split_name{1}, '_seed%s_ep', contrast_split_name{2});
+                    contrast_datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', contrast_model_to_load_name, strcat(contrast_model_to_load_name, '_correlation_fsaverage'), '%s.%s-model-%s-surf.npy');
+                else
+                    contrast_datapath = fullfile(SEARCHLIGHT_SAVE_DIR, '%s', CONTRAST_MODEL_NAME, '%s_correlation_fsaverage', '%s.%s-model-%s-surf.npy');
+                end
+                
                 contrast_data = single(zeros(n_subjects, n_vertices));
-
                 % loop over subjects
                 for sub = 1:n_subjects
                     subj = sprintf('subj%02d', sub);
                     sub_contrast_data = [];
                     for hemi = 1:2
                         this_hemi = hemis{hemi};
-                        sub_contrast_data = cat(1, sub_contrast_data, readNPY(sprintf(contrast_datapath, subj, strcat(CONTRAST_MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(contrast_map_id))));
+                        if contains(CONTRAST_MODEL_NAME, '_avgSeed')
+                            contrast_seed_data = [];
+                            for seed = 1:10
+                                try
+                                    contrast_seed_data = cat(2, contrast_seed_data, readNPY(sprintf(contrast_datapath, subj, string(seed), string(seed), this_hemi, subj, string(contrast_map_id))));
+                                catch
+                                    strcat('could not load seed ', string(seed), ' for subj ', subj, ' hemi ', this_hemi, ' map_id ', string(contrast_map_id))
+                                end
+                            end
+                            avg_seed_data = nanmean(contrast_seed_data, 2);
+                            sub_contrast_data = cat(1, sub_contrast_data, avg_seed_data);
+                        else
+                            sub_contrast_data = cat(1, sub_contrast_data, readNPY(sprintf(contrast_datapath, subj, strcat(CONTRAST_MODEL_NAME, MODEL_SUFFIX), this_hemi, subj, string(contrast_map_id))));
+                        end
                     end
                     contrast_data(sub, :) = sub_contrast_data;
                 end
@@ -261,7 +283,7 @@ for m1 = 1:length(MODEL_NAMES)
                     close all;
                     if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                         % significant voxels only. Need hack to fix bug in cvnlookup
-                        cvn_plot_fix(mean_diff_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix), sprintf('%s vs. %s', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME), SAVE_TYPE, extraopts)
+                        cvn_plot_fix(mean_diff_threshold, this_view, figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix), sprintf('%s vs. %s', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME), SAVE_TYPE, MAX_CMAP_VAL, extraopts)
                     end
                     close all;
                 end

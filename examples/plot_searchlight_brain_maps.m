@@ -19,16 +19,20 @@ SEARCHLIGHT_SAVE_DIR = '../results_dir/searchlight_respectedsampling_correlation
 RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
 
 ALL_MODEL_NAMES =  {'dnn_multihot_ff', 'dnn_multihot_rec', 'dnn_guse_ff', 'dnn_guse_rec', 'dnn_mpnet_ff', 'dnn_mpnet_rec', 'guse', 'multihot', 'mpnet', 'fasttext_categories', 'fasttext_all', 'fasttext_verbs', 'dnn_ecoset_category', 'dnn_ecoset_fasttext'};
-MODEL_NAMES = {"var_partition_['mpnet', 'mpnet_nouns', 'mpnet_verbs']"};  % , "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec"};
+MODEL_NAMES = {"mpnet"};  % , 'dnn_mpnet_rec_avgSeed_ep200',  "multihot", "fasttext_nouns", "nsd_fasttext_nouns_closest_cocoCats_cut0.33", "dnn_multihot_rec", "dnn_mpnet_rec", "var_partition_['mpnet', 'mpnet_nouns', 'mpnet_verbs']"};
 MODEL_SUFFIX =  '';  % default is ''
-CONTRAST_MODEL_NAMES = {};  % ALL_MODEL_NAMES
+CONTRAST_MODEL_NAMES = {'multihot'};  % ALL_MODEL_NAMES
 
 DNN_LAYER = 'all';  % 'all' to do all layers, else an int
 DNN_TIMESTEP = 6;  % 'all' % 6  % 'all' to do all timesteps, else an int
 DNN_CONTRAST_LAYER = 'first';  % same: compare net1 layer l time t with net2 same lt. 'first': compare with first timestep
 CONTRAST_SAME_MODEL = 1;  % if 0, do not contrast model with itself. else, do it. useful for e.g. contrasting t6 vs t0
 
-PLOT_INDIVIDUAL_SUBJECTS = 1;  % if 0, only do group level maps
+PLOT_INDIVIDUAL_SUBJECTS = 0;  % if 0, only do group level maps
+
+MAX_CMAP_VAL = 0  % CONSTANT CMAP MAX VAL FOR ALL GROUP SIG PLOTS. USE 0 TO AUTOMATICALLY SET THE MAX VALUE WITH EACH MAP
+
+viewz_to_plot = {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
 
 % this actually does the plotting
 if contains(MODEL_NAMES{1}, 'var_partition')

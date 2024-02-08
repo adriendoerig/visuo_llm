@@ -10,13 +10,13 @@ from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import corre
 
 for roi_analysis_dnn_layer_to_use in [-1]:
 
-    plt_suffix = f"_DNNsAllLayers"
+    plt_suffix = f"_allDNNs"
 
-    OVERWRITE = False
+    OVERWRITE = True
 
     MODEL_INPUT_DATA = ['full_nsd']  # 'full_nsd', 'nsd_special100_gpt4Captions' or 'nsd_special100_cocoCaptions'
 
-    WORD_TYPES = ['noun', 'verb']#, 'adjective', 'adverb', 'preposition']
+    WORD_TYPES = ['noun', 'verb']  #, 'verb']#, 'adjective', 'adverb', 'preposition']
 
     MODEL_NAMES = []
 
@@ -26,14 +26,14 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     ### BELOW IS CODE TO GET ALL MODELS
     # models from original paper
     MODEL_NAMES += [
-        "multihot",
-        "mpnet",
+        # "multihot",
+        # "mpnet",
         # "fasttext_categories",
         # "fasttext_verbs",
         # "fasttext_all",
         # "guse",
-        # "dnn_ecoset_category",
-        # "dnn_ecoset_fasttext",
+        "dnn_ecoset_category",
+        "dnn_ecoset_fasttext",
     ]
 
     # dnn 10 seeds
@@ -63,7 +63,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "dnn_multihot_rec_old_ep200",
         # "dnn_mpnet_rec_old_ep200",
 
-        # "dnn_simclr_rec_ep200",
+        "dnn_simclr_rec_ep200",
     ]
 
     ### SENTENCE EMBEDDINGS
@@ -105,7 +105,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     # sentence embeddings on (lists of) words of a single type (e.g. nouns)
     # MODEL_NAMES += ['all-mpnet-base-v2']
     # for wt in WORD_TYPES:
-        # MODEL_NAMES += [f"all-mpnet-base-v2_{wt}s"]
+    #     MODEL_NAMES += [f"mpnet_{wt}s"]
         # MODEL_NAMES += [f"mpnet_{wt}s_concat5caps"]
         # for max_n_words in range(1,6):
         #     MODEL_NAMES += [f'mpnet_{wt}_max{max_n_words}words']
@@ -141,6 +141,8 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         "CLIP_ViT_text",
         "CLIP_ViT_images",
         "brainscore_alexnet",
+        "konkle_alexnetgn_ipcl_ref01", 
+        "konkle_alexnetgn_supervised_ref12_augset1_5x"
     ]
 
     MODEL_NAMES = list(set(MODEL_NAMES))

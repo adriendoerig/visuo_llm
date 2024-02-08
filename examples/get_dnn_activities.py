@@ -16,8 +16,8 @@ safety_check_plots_dir = "./dnn_activities_safety_check_plots"
 nsd_captions_path = f"{base_path}/nsd_visuo_semantics/src/nsd_visuo_semantics/get_embeddings/ms_coco_nsd_captions_test.pkl"
 nsd_embeddings_path = f"{base_path}/nsd_visuo_semantics/results_dir/saved_embeddings/nsd_mpnet_mean_embeddings.pkl"
 
-# ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50']
-MODEL_NAMES = ['brainscore_alexnet']
+# ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50', 'konkle_alexnetgn_ipcl_ref01', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'brainscore_alexnet]
+MODEL_NAMES = ['konkle_alexnetgn_supervised_ref12_augset1_5x']
 # for seed in range(1,11):
 #     MODEL_NAMES += [f'mpnet_rec_seed{seed}', f'multihot_rec_seed{seed}']
 

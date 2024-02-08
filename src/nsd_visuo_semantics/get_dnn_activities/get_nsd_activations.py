@@ -4,7 +4,8 @@ import numpy as np
 from nsd_visuo_semantics.get_dnn_activities.dataset_loader.make_tf_dataset import get_dataset
 from nsd_visuo_semantics.get_dnn_activities.task_helper_functions import get_activities_model, load_and_override_hparams, load_model_from_path, \
                                                                          float2multihot, get_closest_caption, clip_preprocess_batch, brainscore_preprocess_batch, \
-                                                                         get_brainscore_layer_activations
+                                                                         get_brainscore_layer_activations, ipcl_preprocess_batch
+from nsd_visuo_semantics.get_dnn_activities.ipcl_feature_extractor import FeatureExtractor
 from nsd_visuo_semantics.get_dnn_activities.get_modelName2Path_dict import get_modelName2Path_dict
 from nsd_visuo_semantics.get_embeddings.nsd_embeddings_utils import get_words_from_multihot
 from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
@@ -30,7 +31,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
 
     for model_name in MODEL_NAMES:
 
-        model_savedir = modelname2path['default' if ('brainscore' in model_name.lower() or 'clip' in model_name.lower()) else model_name]
+        model_savedir = modelname2path['default' if ('brainscore' in model_name.lower() or 'clip' in model_name.lower() or 'konkle_' in model_name.lower()) else model_name]
         print(model_savedir)
         hparams = load_and_override_hparams(model_savedir, dataset=dataset_path, batch_size=50)  # CAREFUL: batch_size must divide 73000 to an int, otherwise there will be images missing at the end of the dataset
 
@@ -64,6 +65,15 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
             activations_model = model.activations_model  # works for most models
             model_img_size = activations_model.image_size  # we will resize our images to the size expected by the model
             readout_layer = model.layers[-1]
+
+            activations_file_name = f"{results_dir}/{model_name}_nsd_image_features.pkl"
+
+        elif 'konkle_' in model_name.lower():
+            # Self-supervised models from Konkle & Alvarez (2022)
+            # model_name should be one of those described in
+            # https://github.com/harvard-visionlab/open_ipcl
+            model, transform = torch.hub.load("harvard-visionlab/open_ipcl", model_name.replace('konkle_', ''))
+            model.eval()
 
             activations_file_name = f"{results_dir}/{model_name}_nsd_image_features.pkl"
 
@@ -115,6 +125,16 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                         brainscore_features = np.zeros((n_nsd_imgs, dummy_out.shape[-1]))
                 else:
                     brainscore_features = np.zeros((n_nsd_imgs, dummy_out.shape[-1]))
+
+        elif 'konkle_' in model_name.lower():
+            if os.path.exists(activations_file_name) and not OVERWRITE:
+                print(f"Activations file {activations_file_name} already exists. Skipping.")
+                continue
+            else:
+                dummy_batch = ipcl_preprocess_batch(x[0], transform, 224)
+                with FeatureExtractor(model, 'fc7') as extractor:
+                    dummy_out = extractor(dummy_batch)['fc7']
+                ipcl_features = np.zeros((n_nsd_imgs, dummy_out.shape[-1]))
                 
         else:
             activations_file = h5py.File(activations_file_name, "w")
@@ -176,6 +196,24 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                     plt.savefig(f"{safety_check_plots_dir}/{model_name}_check_batch_{i}.png")
                     plt.close()
 
+            elif 'konkle_' in model_name.lower():
+
+                ipcl_batch = ipcl_preprocess_batch(batch_imgs, transform, 224)
+                with FeatureExtractor(model, 'fc7') as extractor:
+                    ipcl_out = extractor(ipcl_batch)['fc7']
+                ipcl_features[i * btch_sz : (i + 1) * btch_sz] = ipcl_out.numpy()
+
+                if i % print_every_N_batches == 0:
+                    print(f'\nGetting NSD activities for {model_name} dnn: {i*hparams["batch_size"]/n_nsd_imgs*100}%')
+                    print("batch_imgs.shape, batch_labels['output_time_0'].shape: ", ipcl_batch.shape)
+                    img = ipcl_batch[0].numpy()
+                    print(f"Img min/max, and channel-wise-means/stds - should be using ipcl's's normalisation: " \
+                          f"{np.min(img)}, {np.max(img)}, {np.mean(img, axis=(1,2))}, {np.std(img, axis=(1,2))}")
+                    img_to_plot = np.moveaxis(img, 0, -1)
+                    plt.imshow(img_to_plot)
+                    plt.savefig(f"{safety_check_plots_dir}/{model_name}_check_batch_{i}.png")
+                    plt.close()
+
             else:
                 layer_activities = activities_model(batch_imgs)
                 for lin in range(n_layers):
@@ -220,5 +258,10 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                 pickle.dump(brainscore_features, fp)
             print(f"Saved {model_name} features in {activations_file_name}")
             del brainscore_features, model, activations_model
+        elif 'konkle_' in model_name.lower():
+            with open(activations_file_name, "wb") as fp:
+                pickle.dump(ipcl_features, fp)
+            print(f"Saved {model_name} features in {activations_file_name}")
+            del ipcl_features, model, transform
         else:
             del activations_file, net, activities_model  # free memory space

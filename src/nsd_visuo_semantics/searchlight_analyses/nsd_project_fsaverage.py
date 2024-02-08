@@ -100,33 +100,70 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
                 model_t = t_brain
 
                 print(f"\tprojecting model {model_i} out of {n_models} models")
-                data = []
-                # project the data to three
-                # cortical depths separately
-                # for each hemisphere.
-                for hemi in hemis:
-                    hemi_data = []
-                    for lay in range(3):  # part of NSD pipeline. Take average across 3 cortical depths.
-                        hemi_data.append(
-                            nsd.fit(  # goes from 'func1pt8' source space and projects to f'{hemi}.layerB{lay+1}' (subj native freesurfer space)
-                                subjix + 1,
-                                "func1pt8",
-                                f"{hemi}.layerB{lay+1}",
-                                model,
-                                "cubic",
-                                badval=0,
+                output_file = os.path.join(output_dir, "{}"+f".{this_sub}-model-{model_i+1}-surf.npy")
+                if not os.path.exists(output_file.format("lh")) or not os.path.exists(output_file.format("rh")):
+                    data = []
+                    # project the data to three
+                    # cortical depths separately
+                    # for each hemisphere.
+                    for hemi in hemis:
+                        hemi_data = []
+                        for lay in range(3):  # part of NSD pipeline. Take average across 3 cortical depths.
+                            hemi_data.append(
+                                nsd.fit(  # goes from 'func1pt8' source space and projects to f'{hemi}.layerB{lay+1}' (subj native freesurfer space)
+                                    subjix + 1,
+                                    "func1pt8",
+                                    f"{hemi}.layerB{lay+1}",
+                                    model,
+                                    "cubic",
+                                    badval=0,
+                                )
                             )
-                        )
-                    data.append(np.nanmean(np.stack(hemi_data), axis=0))
+                        data.append(np.nanmean(np.stack(hemi_data), axis=0))
 
-                # port the model
-                for h, d in zip(hemis, data):
-                    output_file = os.path.join(
-                        output_dir, f"{h}.{this_sub}-model-{model_i+1}-surf.npy"
-                    )
+                    # port the model
+                    for h, d in zip(hemis, data):
+                        print(f"\t\tsaving {output_file} to disk")
+                        transformed_data = nsd.fit(  # projects to fsaverage
+                                                    subjix + 1,
+                                                    f"{h}.white",
+                                                    "fsaverage",
+                                                    d,
+                                                    interptype=None,
+                                                    badval=0,
+                                                    fsdir=fs_dir,
+                                                )
+                        np.save(output_file.format(h), transformed_data, allow_pickle=True)
+                else:
+                    print(f"\t\t{output_file.format('lh')} already exists, skipping")
+                
+                # exactly the same idea as above but for tvals
+                print(f"\tprojecting t-values for model {model_i} out of {n_models} models")
+                output_file = os.path.join(output_dir, "{}"+f".{this_sub}-model-{model_i+1}-surf-tvals.npy")
+                if not os.path.exists(output_file.format("lh")) or not os.path.exists(output_file.format("rh")):
+                    data = []
+                    # project the data to three
+                    # cortical depths separately
+                    # for each hemisphere.
+                    for hemi in hemis:
+                        hemi_data = []
+                        for lay in range(3):
+                            hemi_data.append(
+                                nsd.fit(
+                                    subjix + 1,
+                                    "func1pt8",
+                                    f"{hemi}.layerB{lay+1}",
+                                    model_t,
+                                    "cubic",
+                                    badval=0,
+                                )
+                            )
+                        data.append(np.nanmean(np.stack(hemi_data), axis=0))
 
-                    print(f"\t\tsaving {output_file} to disk")
-                    transformed_data = nsd.fit(  # projects to fsaverage
+                    # port the model
+                    for h, d in zip(hemis, data):
+                        print(f"\t\tsaving {output_file} to disk")
+                        transformed_data = nsd.fit(
                                                 subjix + 1,
                                                 f"{h}.white",
                                                 "fsaverage",
@@ -134,44 +171,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
                                                 interptype=None,
                                                 badval=0,
                                                 fsdir=fs_dir,
-                                            )
-                    np.save(output_file, transformed_data, allow_pickle=True)
-
-                print(f"\tprojecting t-values for model {model_i} out of {n_models} models")
-                # exactly the same idea as above but for tvals
-                data = []
-                # project the data to three
-                # cortical depths separately
-                # for each hemisphere.
-                for hemi in hemis:
-                    hemi_data = []
-                    for lay in range(3):
-                        hemi_data.append(
-                            nsd.fit(
-                                subjix + 1,
-                                "func1pt8",
-                                f"{hemi}.layerB{lay+1}",
-                                model_t,
-                                "cubic",
-                                badval=0,
-                            )
-                        )
-                    data.append(np.nanmean(np.stack(hemi_data), axis=0))
-
-                # port the model
-                for h, d in zip(hemis, data):
-                    output_file = os.path.join(
-                        output_dir,
-                        f"{h}.{this_sub}-model-{model_i+1}-surf-tvals.npy",
-                    )
-                    print(f"\t\tsaving {output_file} to disk")
-                    transformed_data = nsd.fit(
-                                            subjix + 1,
-                                            f"{h}.white",
-                                            "fsaverage",
-                                            d,
-                                            interptype=None,
-                                            badval=0,
-                                            fsdir=fs_dir,
-                                            )
-                    np.save(output_file, transformed_data, allow_pickle=True)
+                                                )
+                        np.save(output_file.format(h), transformed_data, allow_pickle=True)
+                else:
+                    print(f"\t\t{output_file.format('lh')} already exists, skipping")
