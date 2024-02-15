@@ -1,9 +1,9 @@
 close all; clear all;
 
-MODEL_NAME = 'mpnet_encodingModel_split0'
+MODEL_NAME = 'mpnet_encodingModel'
 USE_FDR = 1;
 OVERWRITE = 0;  % if 0, do not redo existing plots
-SAVE_TYPE = 'png';  % 'svg' or 'png'
+SAVE_TYPE = 'svg';  % 'svg' or 'png'
 MAX_CMAP_VAL = 0;
 
 % YOU NEED TO DOWNLOAD CVNCODE, FREESURFER, KNKUTILS, AND NPY-MATLAB (see README.md)
@@ -33,10 +33,10 @@ n_vertices = 327684;
 % LOAD DATA
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel';
-% datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain.npy');
-encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel_split0';
-datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain_all-mpnet-base-v2.npy');
+encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel';
+datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain.npy');
+% encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel_split0';
+% datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain_all-mpnet-base-v2.npy');
 % encoding_results_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/mpnet_rec_seed1_nsd_activations_epoch200_layer0_results_ROIfullbrain_encodingModel';
 % datapath = fullfile(encoding_results_dir, 'fitted_models', '%s_fittedFracridgeEncodingCorrMap_fullbrain_mpnet_rec_seed1_nsd_activations_epoch200.npy');
 

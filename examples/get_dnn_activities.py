@@ -17,7 +17,7 @@ nsd_captions_path = f"{base_path}/nsd_visuo_semantics/src/nsd_visuo_semantics/ge
 nsd_embeddings_path = f"{base_path}/nsd_visuo_semantics/results_dir/saved_embeddings/nsd_mpnet_mean_embeddings.pkl"
 
 # ['mpnet_rec', 'multihot_rec', 'CLIP-vit', 'CLIP-rn50', 'konkle_alexnetgn_ipcl_ref01', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'brainscore_alexnet]
-MODEL_NAMES = ['konkle_alexnetgn_supervised_ref12_augset1_5x']
+MODEL_NAMES = ['google_simclrv1_rn50']
 # for seed in range(1,11):
 #     MODEL_NAMES += [f'mpnet_rec_seed{seed}', f'multihot_rec_seed{seed}']
 
@@ -25,3 +25,4 @@ get_nsd_activations(MODEL_NAMES, dataset_path,
                     networks_basedir, results_dir, safety_check_plots_dir,
                     nsd_captions_path=nsd_captions_path, nsd_embeddings_path=nsd_embeddings_path,
                     n_layers=10, epoch=200, OVERWRITE=OVERWRITE)
+

@@ -14,7 +14,7 @@ addpath(genpath(fullfile('../src/nsd_visuo_semantics/searchlight_analyses')));
 
 % parameters for plotting
 OVERWRITE = 1;  % if 0, do not redo existing plots
-SAVE_TYPE = 'png';  % 'svg' or 'png'
+SAVE_TYPE = 'svg';  % 'svg' or 'png'
 SEARCHLIGHT_SAVE_DIR = '../results_dir/searchlight_respectedsampling_correlation_newTest';
 RECTIFY_NEG_CORRS = 0;  % if 1, set all negative correlations to 0 for model comparisons (because neg rdm corrs are not so easy to interpret)
 
@@ -32,7 +32,7 @@ PLOT_INDIVIDUAL_SUBJECTS = 0;  % if 0, only do group level maps
 
 MAX_CMAP_VAL = 0  % CONSTANT CMAP MAX VAL FOR ALL GROUP SIG PLOTS. USE 0 TO AUTOMATICALLY SET THE MAX VALUE WITH EACH MAP
 
-viewz_to_plot = {5,6,11,13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
+viewz_to_plot = {13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
 
 % this actually does the plotting
 if contains(MODEL_NAMES{1}, 'var_partition')

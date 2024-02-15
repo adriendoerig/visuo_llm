@@ -15,9 +15,11 @@ from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embeddin
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average
 
 EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
-USE_ROIS = None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage' or streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
+USE_ROIS = 'streams'  # None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage' or streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
+which_rois = 'allvisROIs'  # allvisROIs, or 'independantvisRois'
+
 METRIC = "correlation"  # 'correlation', 'cosine'
-PREDICT_X_FROM_Y = "voxels_from_embeddings"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
+PREDICT_X_FROM_Y = "embeddings_from_voxels"  # 'embeddings_from_voxels' or 'voxels_from_embeddings'
 USE_GCC_LOOKUP = True
 if USE_GCC_LOOKUP:
     gcc_dir = '/share/klab/datasets/google_conceptual_captions'
@@ -40,8 +42,9 @@ fracs = np.linspace(1 / n_alphas, 1 + 1 / n_alphas, n_alphas)  # from https://gi
 # set up directories
 nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
 nsd_derivatives_dir = '/share/klab/datasets/NSD_for_visuo_semantics_derivatives/'  # we will put data modified from nsd here
+rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 betas_dir = os.path.join(nsd_derivatives_dir, "betas")
-base_save_dir = "../results_dir/decoding_analyses"
+base_save_dir = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses"
 os.makedirs(base_save_dir, exist_ok=True)
 nsd_embeddings_path = os.path.join(base_save_dir, "nsd_caption_embeddings")
 os.makedirs(nsd_embeddings_path, exist_ok=True)
@@ -71,12 +74,13 @@ else:
 
 # ROI STUFF
 if USE_ROIS is not None:
-    maskdata, roi_id2name = get_rois(
-        USE_ROIS, "./save_dir/roi_analyses/roi_defs"
-    )
+    maskdata, roi_id2name = get_rois( USE_ROIS, rois_dir)
     roi_name2id = {v: k for k, v in roi_id2name.items()}
-    ROI_NAMES = list(roi_name2id.keys())
-    ROI_NAMES.remove("Unknown")
+    if which_rois == 'allvisROIs':
+        ROI_NAMES = ['allvisROIs']
+    else:
+        ROI_NAMES = list(roi_name2id.keys())
+        ROI_NAMES.remove("Unknown")
     print(f"Using ROI_NAMES = {ROI_NAMES}")
 else:
     ROI_NAMES = ["fullbrain"]
@@ -156,7 +160,10 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
             if USE_ROIS is not None:
                 # load the lh mask
                 orig_n_voxels = betas_mean.shape[0]
-                vs_mask = maskdata == roi_name2id[ROI_NAME]
+                if ROI_NAME.lower() == 'allvisrois':
+                    vs_mask = maskdata != 0
+                else:
+                    vs_mask = maskdata == roi_name2id[ROI_NAME]
                 betas_mean = betas_mean[vs_mask, :]
                 print(f"Applied ROI mask. Went from {orig_n_voxels} to {betas_mean.shape[0]}")
 

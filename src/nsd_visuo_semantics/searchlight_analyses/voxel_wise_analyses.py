@@ -20,10 +20,12 @@ if __name__ == "__main__":
     # if 'sigonly' is in the analysis_type, the data will be plotted for the significant voxels only.
     # if 'makeclustermap' is in the analysis_type, load cluster assignments for each voxel, and save the full voxel map.
     # e.g. 'pca3D_VisROIsTrain_individualROIsTest' will train a PCA model on all visual ROIs and then project the data for each ROI separately.
-    for analysis_type in ['makeclustermap_visrois']:#, 'makeclustermap_sigonly', 'makeclustermap_fullbrain']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
+    for analysis_type in ['pca3D_VisROIs_xval']:  #['makeclustermap_visrois']:#, 'makeclustermap_sigonly', 'makeclustermap_fullbrain']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
     # for analysis_type in ['pca3D_VisROIs']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
 
         cluster_n = 5 # 2, 7, 12 or 17  -- only used if 'makeclustermap' in analysis_type
+
+        save_type = 'svg'  # 'png' or 'svg'
 
         massage_data = 'zscore'  # "zscore" or None
 
@@ -111,14 +113,14 @@ if __name__ == "__main__":
                             data_in = data_in.T
 
                         elif data_type == 'encodingModelCoeffs' and 'xval' in analysis_type.lower():
-                            this_encoding_base_dir1 = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel')
+                            this_encoding_base_dir1 = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel_split0')
                             encoding_model_dir1 = os.path.join(this_encoding_base_dir1, 'fitted_models')
-                            data_in1 = np.load(encoding_model_dir1 + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain.npy", allow_pickle=True)
+                            data_in1 = np.load(encoding_model_dir1 + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain_all-mpnet-base-v2.npy", allow_pickle=True)
                             data_in1 = data_in1.T
 
-                            this_encoding_base_dir2 = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel')
+                            this_encoding_base_dir2 = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel_split1')
                             encoding_model_dir2 = os.path.join(this_encoding_base_dir2, 'fitted_models')
-                            data_in2 = np.load(encoding_model_dir2 + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain.npy", allow_pickle=True)
+                            data_in2 = np.load(encoding_model_dir2 + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain_all-mpnet-base-v2.npy", allow_pickle=True)
                             data_in2 = data_in2.T
 
                             encoding_model_sig_mask_path = os.path.join(this_encoding_base_dir1, "encoding_sig_mask_mpnet_encodingModel.npy")
@@ -205,10 +207,9 @@ if __name__ == "__main__":
                                 raise Exception("Analysis type not recognised.")
                             filtered_data_in_avg1.append(filtered_data_in1)
                             data_in_avg1.append(data_in1)
-                            filtered_data_in_avg2.append(filtered_data_in1)
-                            data_in_avg2.append(data_in1)
+                            filtered_data_in_avg2.append(filtered_data_in2)
+                            data_in_avg2.append(data_in2)
                             
-                        
                     
                     else:
 
@@ -333,7 +334,7 @@ if __name__ == "__main__":
 
                         plt.title('2D t-SNE Plot')
                         plt.legend(loc='upper right')
-                        plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_{subj}.png')
+                        plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_{subj}.{save_type}')
                     
                     elif analysis_type == 'tsne3d':
 
@@ -422,7 +423,7 @@ if __name__ == "__main__":
                             ax[1].loglog(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio)
                             ax[1].set_xlabel('Principal Component Number')
                             ax[1].set_ylabel('Explained Variance')
-                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_explained_variance.png')
+                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_explained_variance.{save_type}')
                             
                             if 'individualrois' in analysis_type.lower():
                                 print(f"Components shape: {components.shape}")
@@ -440,7 +441,7 @@ if __name__ == "__main__":
                                 ax[1].set_xlabel('Principal Component Number')
                                 ax[1].set_ylabel('Explained Variance')
                             # plt.title('Explained Variance for Principal Components')
-                            # plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_roi{roi}_subjavg_explained_variance_loglog.png')
+                            # plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_roi{roi}_subjavg_explained_variance_loglog.{save_type}')
                             # plt.close()
                             # for c in range(n_components):
                             #     comp_NN_positive = get_gcc_nearest_neighbour(components[c], n_neighbours=10, METRIC='cosine')
@@ -463,7 +464,7 @@ if __name__ == "__main__":
                             xval1 = pca1.transform(filtered_data_in2)
                             xval_explained_variance_ratio1 = np.var(xval1, axis=0)/np.var(xval1, axis=0).sum()
                             xval_cumvar1 = xval_explained_variance_ratio1.cumsum()
-                            xval2 = pca2.transform(filtered_data_in2)
+                            xval2 = pca2.transform(filtered_data_in1)
                             xval_explained_variance_ratio2 = np.var(xval2, axis=0)/np.var(xval2, axis=0).sum()
                             xval_cumvar2 = xval_explained_variance_ratio2.cumsum()
 
@@ -483,7 +484,18 @@ if __name__ == "__main__":
                             ax[1,1].set_title('Train split 2, test split 1 (eigenspectrum)')
                             ax[1,1].set_xlabel('Principal Component Number')
                             ax[1,1].set_ylabel('Explained Variance')
-                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_XVAL_varExplained.png')
+                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_XVAL_varExplained.{save_type}')
+                            plt.close()
+
+                            plt.figure(figsize=(6, 6))  # Set figsize to create a square plot
+                            plt.loglog(range(1, len(xval_explained_variance_ratio1) + 1), xval_explained_variance_ratio1, 'k')
+                            plt.loglog(range(1, len(xval_explained_variance_ratio2) + 1), xval_explained_variance_ratio2, 'gray')
+                            plt.legend(['PCA fit on split 1, explained variance on split 2', 'PCA fit on split 2, explained variance on split 1'])
+                            plt.xlabel('Principal Component Number')
+                            plt.ylabel('Explained Variance')
+                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_XVAL_varExplained_loglog.{save_type}')
+                            plt.show()
+
 
 
             # Save the cumulative explained variance for each ROI
@@ -498,7 +510,7 @@ if __name__ == "__main__":
                 # add ROIS.values() as legends to the plots
                 ax[0].legend(varThresholds.keys())
                 ax[1].legend(varThresholds.keys())
-                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_pcaVarPlots.png')
+                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_pcaVarPlots.{save_type}')
                 plt.close()
 
                 keys = varThresholds.keys()
@@ -506,6 +518,6 @@ if __name__ == "__main__":
                 plt.bar(keys, values, color=[roi_colors[k] for k in keys])
                 plt.xlabel('ROIs')
                 plt.ylabel(f'Number of Principal Components needed for {varThreshVal*100}% variance')
-                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds_barplot_{varThreshVal*100}%.png')
+                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds_barplot_{varThreshVal*100}%.{save_type}')
 
 

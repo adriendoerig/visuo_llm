@@ -1,21 +1,22 @@
 close all; clear all;
 
 % fignames = {'pcaOnZscoreFullBrain', 'pcaOnZscoreVisROIs', 'pcaOnZscoreSigOnly', 'clusterAssigmentsFullBrain', 'clusterAssigmentsVisROIs', 'clusterAssignmentsSigOnly'};
+fignames = {'pcaOnZscoreVisROIs'};
 % fignames = {'clusterAssigmentsFullBrain', 'clusterAssigmentsVisROIs', 'clusterAssignmentsSigOnly'};
-fignames = {'clusterAssigmentsVisROIs_nclusters5'};
+% fignames = {'clusterAssigmentsVisROIs_nclusters11'};
 
 for f = 1:length(fignames)
     figname = fignames{f}
 
     if contains(lower(figname), 'cluster')
         if contains(lower(figname), 'fullbrain')
-            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_fullBrain_cluster_assignments_subjavg_nclusters5_zscored.npy';
+            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_fullBrain_cluster_assignments_subjavg_nclusters11_zscored.npy';
             mask_path = ''  % you can provide a path to mask of 0s and 1s. Not used if ''
         elseif contains(lower(figname), 'visrois')
-            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_visROIs_cluster_assignments_subjavg_nclusters5_zscored.npy';
+            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_visROIs_cluster_assignments_subjavg_nclusters11_zscored.npy';
             mask_path = ''  % you can provide a path to mask of 0s and 1s. Not used if ''
         elseif contains(lower(figname), 'sigonly')
-            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_sigOnly_cluster_assignments_subjavg_nclusters5_zscored.npy';
+            datapath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache/encodingModelCoeffs_sigOnly_cluster_assignments_subjavg_nclusters11_zscored.npy';
             mask_path = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel/encoding_sig_mask_mpnet_encodingModel.mat';  % you can provide a path to mask of 0s and 1s. Not used if ''
         end
     else
@@ -41,7 +42,7 @@ for f = 1:length(fignames)
     end
 
     OVERWRITE = 1;  % if 0, do not redo existing plots
-    SAVE_TYPE = 'png';  % 'svg' or 'png'
+    SAVE_TYPE = 'svg';  % 'svg' or 'png'
 
     % YOU NEED TO DOWNLOAD CVNCODE, FREESURFER, KNKUTILS, AND NPY-MATLAB (see README.md)
     % YOU NEED TO CHANGE THE PATHS BELOW TO YOUR OWN PATHS
@@ -65,7 +66,8 @@ for f = 1:length(fignames)
     rawdata = readNPY(datapath);
 
     % dims = {1,2,3,'huth3d','clusters'};
-    dims = {'clusters'};
+    % dims = {'clusters'};
+    dims = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
 
     for i = 1:length(dims)
 

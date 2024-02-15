@@ -111,8 +111,18 @@ for m1 = 1:length(MODEL_NAMES)
                     for v = 1:length(viewz_to_plot)
                         this_view = viewz_to_plot{v};
                         if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
-                            [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-max(abs(main_data(:))), max(abs(main_data(:)))], cmapsign4(256),[],Lookup,wantfig,extraopts);
-                             title(sprintf('%s \n max: %3.2f', subj, max(abs(main_data(:)))))
+                            if MAX_CMAP_VAL == 0
+                                boundar = max(abs(main_data(:)));
+                            else
+                                boundar = MAX_CMAP_VAL;
+                                sub
+                                % count how many values are above the boundar
+                                sum(this_subj_data>boundar)
+                                this_subj_data(this_subj_data>boundar) = boundar;
+                                this_subj_data(this_subj_data<-boundar) = -boundar;
+                            end
+                            [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-boundar, boundar], cmapsign4(256),[],Lookup,wantfig,extraopts);
+                            title(sprintf('%s \n max: %3.2f', subj, max(abs(main_data(:)))))
                             saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
                         end
                         close all;
@@ -148,7 +158,12 @@ for m1 = 1:length(MODEL_NAMES)
                 this_view = viewz_to_plot{v};
                 if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                     % non-thresholded image
-                    [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-max(mean_corrs(:)), max(mean_corrs(:))], cmapsign4(256), [], Lookup, wantfig, extraopts);
+                    if MAX_CMAP_VAL == 0
+                        boundar = max(abs(mean_corrs(:)));
+                    else
+                        boundar = MAX_CMAP_VAL;
+                    end
+                    [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
                     title(sprintf('group average max: %3.2f', max_corr))
                     saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
                 end
@@ -261,8 +276,18 @@ for m1 = 1:length(MODEL_NAMES)
                         this_subj_data = squeeze(difference_data(sub, :));
                         for v = 1:length(viewz_to_plot)
                             this_view = viewz_to_plot{v};
+                            if MAX_CMAP_VAL == 0
+                                boundar = max(abs(main_data(:)));
+                            else
+                                boundar = MAX_CMAP_VAL;
+                                sub
+                                % count how many values are above the boundar
+                                sum(this_subj_data>boundar)
+                                this_subj_data(this_subj_data>boundar) = boundar;
+                                this_subj_data(this_subj_data<-boundar) = -boundar;
+                            end
                             if OVERWRITE | ~exist(fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
-                                [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-max(abs(difference_data(:))), max(abs(difference_data(:)))], cmapsign4(256),[],Lookup,wantfig,extraopts);
+                                [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, this_subj_data', [-boundar, boundar], cmapsign4(256),[],Lookup,wantfig,extraopts);
                                  title(sprintf('%s \n max: %3.2f', subj, max(abs(difference_data(:)))))
                                 saveas(gcf, fullfile(figpath, strcat(subj, '_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE)
                             end
@@ -276,7 +301,16 @@ for m1 = 1:length(MODEL_NAMES)
                     this_view = viewz_to_plot{v};
                     if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                         % non-thresholded image
-                        [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_diff', [-max(mean_diff(:)), max(mean_diff(:))], cmapsign4(256), [], Lookup, wantfig, extraopts);
+                        if MAX_CMAP_VAL == 0
+                                boundar = max(abs(main_data(:)));
+                            else
+                                boundar = MAX_CMAP_VAL;
+                                % count how many values are above the boundar
+                                sum(this_subj_data>boundar)
+                                mean_diff(this_subj_data>boundar) = boundar;
+                                mean_diff(this_subj_data<-boundar) = -boundar;
+                            end
+                        [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_diff', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
                         % title(sprintf('%s vs. %s \n group max diff: %3.2f', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME, max(mean_diff(:))))
                         saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE);
                     end

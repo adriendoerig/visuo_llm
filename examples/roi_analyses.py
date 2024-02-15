@@ -10,9 +10,9 @@ from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import corre
 
 for roi_analysis_dnn_layer_to_use in [-1]:
 
-    plt_suffix = f"_allDNNs"
+    plt_suffix = f"_tmp"
 
-    OVERWRITE = True
+    OVERWRITE = False
 
     MODEL_INPUT_DATA = ['full_nsd']  # 'full_nsd', 'nsd_special100_gpt4Captions' or 'nsd_special100_cocoCaptions'
 
@@ -32,13 +32,14 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "fasttext_verbs",
         # "fasttext_all",
         # "guse",
-        "dnn_ecoset_category",
-        "dnn_ecoset_fasttext",
+        # "dnn_ecoset_category",
+        # "dnn_ecoset_fasttext",
     ]
 
     # dnn 10 seeds
     for epoch in [200]:
-        for target in ['multihot', 'mpnet']:
+        for target in ['mpnet']:
+        # for target in ['multihot', 'mpnet']:
             for seed in range(1, 11):
                 MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
 
@@ -63,7 +64,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "dnn_multihot_rec_old_ep200",
         # "dnn_mpnet_rec_old_ep200",
 
-        "dnn_simclr_rec_ep200",
+        # "dnn_simclr_rec_ep200",
     ]
 
     ### SENTENCE EMBEDDINGS
@@ -133,28 +134,43 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "fasttext_nouns_cocoCatsMatchPositive",
         # "fasttext_nouns_cocoCatsMatchNegative",
         # "fasttext_nouns",
+        # "mpnet_category_all",
         # "mpnetWordAvg_all",
         # "mpnetWordAvg_nouns",
         # "mpnetWordAvg_verbs",
-        "CLIP_RN50_text",
-        "CLIP_RN50_images",
-        "CLIP_ViT_text",
-        "CLIP_ViT_images",
-        "brainscore_alexnet",
-        "konkle_alexnetgn_ipcl_ref01", 
-        "konkle_alexnetgn_supervised_ref12_augset1_5x"
+        # "CLIP_RN50_text",
+        # "CLIP_RN50_images",
+        # "CLIP_ViT_text",
+        # "CLIP_ViT_images",
+        # "brainscore_alexnet",
+        # 'brainscore_regnet_y_400mf', 
+        # 'brainscore_resnet50_julios', 
+        # 'brainscore_tv_efficientnet-b1',
+        # "konkle_alexnetgn_ipcl_ref01", 
+        # "konkle_alexnetgn_supervised_ref12_augset1_5x",
+        # 'resnext101_32x8d_wsl',
+        # 'thingsvision_cornet-s',
+        # 'thingsvision_simclr-rn50',
+        # 'thingsvision_barlowtwins-rn50',
+        # 'google_simclrv1_rn50'
+        # "konkle_alexnetgn_ipcl_ref01_inputs01", 
+        # "konkle_alexnetgn_supervised_ref12_augset1_5x_inputs01",,
     ]
 
-    MODEL_NAMES = list(set(MODEL_NAMES))
-    dummy = MODEL_NAMES.copy()
-    for mn in dummy:
-        for mi in MODEL_INPUT_DATA:
-            if mi == 'full_nsd':
-                pass
-            else:
-                MODEL_NAMES.append(mn + '_' + mi)
-        if 'full_nsd' not in MODEL_INPUT_DATA:
-            MODEL_NAMES.remove(mn)
+    MODEL_NAMES += ['dnn_ecoset_category', 'thingsvision_cornet-s', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'brainscore_alexnet', 'brainscore_resnet50_julios', 
+                    'resnext101_32x8d_wsl', 'CLIP_RN50_images', 'CLIP_ViT_images',
+                    'konkle_alexnetgn_ipcl_ref01', 'google_simclrv1_rn50']
+
+    # MODEL_NAMES = list(set(MODEL_NAMES))
+    # dummy = MODEL_NAMES.copy()
+    # for mn in dummy:
+    #     for mi in MODEL_INPUT_DATA:
+    #         if mi == 'full_nsd':
+    #             pass
+    #         else:
+    #             MODEL_NAMES.append(mn + '_' + mi)
+    #     if 'full_nsd' not in MODEL_INPUT_DATA:
+    #         MODEL_NAMES.remove(mn)
 
 
     # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments

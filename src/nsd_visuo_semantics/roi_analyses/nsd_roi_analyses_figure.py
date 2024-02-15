@@ -8,7 +8,7 @@ from scipy import stats
 
 
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
-                            alphabetical_order=False, best_to_worst_order=True,
+                            alphabetical_order=False, best_to_worst_order=False,
                             custom_model_labels=None, average_seeds=False):
     '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
     Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
@@ -114,9 +114,13 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     
     if average_seeds:
 
-        # in this case, expects '_seedN_epM' in model names, and averages across seeds
-        seed_models = list(set([m for m in model_keys if '_seed' in m]))
-        non_seed_models = list(set(model_keys) - set(seed_models))
+        seed_models = []
+        non_seed_models = []
+        for item in model_keys:
+            if '_seed' in item:
+                seed_models.append(item)
+            else:
+                non_seed_models.append(item)
 
         seed_avg_corrs = {roi_key: {} for roi_key in roi_keys}
         if len(seed_models) > 0:
@@ -125,7 +129,9 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             for seed_base_model_name in seed_base_model_names:
                 seed_base_model_keys = [m for m in model_keys if seed_base_model_name in m]
                 for roi_key in roi_keys:
-                    seed_avg_corrs[roi_key][seed_base_model_name+'_seedAVG_ep'+seed_base_model_suffix] = np.mean(np.asarray([corr_samples[roi_key][m] for m in seed_base_model_keys]), axis=0)
+                    these_samples = np.asarray([corr_samples[roi_key][m] for m in seed_base_model_keys])
+                    seed_avg_corrs[roi_key][seed_base_model_name+'_seedAVG_ep'+seed_base_model_suffix] = np.mean(these_samples, axis=0)
+                    corr_samples[roi_key][seed_base_model_name+'_seedAVG_ep'+seed_base_model_suffix] = np.mean(these_samples, axis=0)
         
         model_keys = list(seed_avg_corrs[roi_keys[0]].keys()) + non_seed_models
         means = {roi_key: {model_key: means[roi_key][model_key] if model_key in non_seed_models else np.mean(seed_avg_corrs[roi_key][model_key]) for model_key in model_keys} for roi_key in roi_keys}
@@ -236,53 +242,45 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             ax.errorbar(bar_pos, perf, yerr=std, color="black", capsize=3, zorder=11)
             x_positions.append(bar_pos)
 
-    #         # statistics
-            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
-            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
-            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
-            # print('WARNING: PLEASE CHECK STATISTICS CODE IN NSD_ROI_ANALYSIS_FIGURE.PY')
-    #         s = stats.ttest_1samp(corr_samples[roi_key][model_key], 0, alternative="two-sided")
-    #         my_stats["uncorrected"]["single_model_ttest_1samp_ttest_2sided"][roi_labels[i]][model_key] = s.pvalue
+            # statistics
+            s = stats.ttest_1samp(corr_samples[roi_key][model_key], 0, alternative="two-sided")
+            my_stats["uncorrected"]["single_model_ttest_1samp_ttest_2sided"][roi_labels[i]][model_key] = s.pvalue
 
-    #         for contrast_model_key in model_keys:
-    #             if contrast_model_key != model_key:
-    #                 this_comparison = f"{model_key}_vs_{contrast_model_key}"
-    #                 this_comparison_inverse = (f"{contrast_model_key}_vs_{model_key}")
-    #                 if this_comparison not in model_comparisons_done:
-    #                     s = stats.ttest_ind(
-    #                         corr_samples[roi_key][model_key],
-    #                         corr_samples[roi_key][contrast_model_key],
-    #                         axis=0,
-    #                         alternative="two-sided",
-    #                     )
-    #                     my_stats["uncorrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[i]][this_comparison] = s.pvalue
-    #                     model_comparisons_done.append(this_comparison)
-    #                     model_comparisons_done.append(this_comparison_inverse)
+            for contrast_model_key in model_keys:
+                if contrast_model_key != model_key:
+                    this_comparison = f"{model_key}_vs_{contrast_model_key}"
+                    this_comparison_inverse = (f"{contrast_model_key}_vs_{model_key}")
+                    if this_comparison not in model_comparisons_done:
+                        s = stats.ttest_ind(corr_samples[roi_key][model_key], corr_samples[roi_key][contrast_model_key],
+                                            axis=0, alternative="two-sided")
+                        my_stats["uncorrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[i]][this_comparison] = s.pvalue
+                        model_comparisons_done.append(this_comparison)
+                        model_comparisons_done.append(this_comparison_inverse)
 
-    #     for k1 in my_stats["uncorrected"].keys():  # 'single_model_ttest_1samp_ttest_2sided', ...
-    #         print(f"\t\tTest: {k1}")
-    #         these_pvals = []
-    #         for k2 in my_stats["uncorrected"][k1][roi_labels[i]].keys():  # models names, or comparison names, ...
-    #             these_pvals.append(my_stats["uncorrected"][k1][roi_labels[i]][k2])
-    #         out = multi.multipletests(these_pvals, alpha=0.05, method="fdr_bh")
-    #         these_corrected_reject = out[0]
-    #         these_corrected_pvals = out[1]
-    #         for k_i, k2 in enumerate(my_stats["uncorrected"][k1][roi_labels[i]].keys()):
-    #             my_stats["corrected"][k1][roi_labels[i]][k2] = these_corrected_pvals[k_i]
-    #             if not these_corrected_reject[k_i]:
-    #                 print(f"\t\t\t{k2}: pval: {these_corrected_pvals[k_i]} - reject: {these_corrected_reject[k_i]}")
+        for k1 in ['model_comparisons_ttest_ind_2sided']:  # my_stats["uncorrected"].keys():  # 'single_model_ttest_1samp_ttest_2sided', ...
+            print(f"\t\tTest: {k1}")
+            these_pvals = []
+            for k2 in my_stats["uncorrected"][k1][roi_labels[i]].keys():  # models names, or comparison names, ...
+                these_pvals.append(my_stats["uncorrected"][k1][roi_labels[i]][k2])
+            out = multi.multipletests(these_pvals, alpha=0.05, method="fdr_bh")
+            these_corrected_reject = out[0]
+            these_corrected_pvals = out[1]
+            for k_i, k2 in enumerate(my_stats["uncorrected"][k1][roi_labels[i]].keys()):
+                my_stats["corrected"][k1][roi_labels[i]][k2] = these_corrected_pvals[k_i]
+                if these_corrected_reject[k_i]:
+                    # if 'dnn_mpnet_rec_seedAVG_ep200_layer-1' in k2:
+                    print(f"\t\t\t{k2}: pval: {these_corrected_pvals[k_i]:.4f} - reject: {these_corrected_reject[k_i]}")
 
-    # # save np arrays for each ROI with corrected pvals of each model comparison
-    # model_comps = list(cb(model_keys, 2))
-    # n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
-    # ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
-    # for this_roi in roi_labels:
-    #     for idx, model_comp in enumerate(model_comps):
-    #         ROI_wise_pvals[this_roi][idx] = my_stats["corrected"][
-    #             "model_comparisons_ttest_ind_2sided"
-    #         ][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
+    # save np arrays for each ROI with corrected pvals of each model comparison
+    model_comps = list(cb(model_keys, 2))
+    n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
+    ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
+    for this_roi in roi_labels:
+        for idx, model_comp in enumerate(model_comps):
+            ROI_wise_pvals[this_roi][idx] = my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
     # np.save(f"{results_dir}/PAPER_FIG{fig_id}_ROIwisePvals",  ROI_wise_pvals, allow_pickle=True)
 
+    import pdb; pdb.set_trace()
 
     ### FINAL COSMETICS
     # Add axis labels
@@ -299,6 +297,6 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    # plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
-    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
+    # plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
 
