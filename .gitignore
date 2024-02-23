@@ -11,9 +11,14 @@ examples/dnn_activities_safety_check_plots
 examples/dnn_extracted_activities
 examples/embedding_models
 examples/_debug*
+examples/google_simclr_models
 results_dir
 *.png
-
+*.svg
+*.pkl
+*.npy
+*.npz
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

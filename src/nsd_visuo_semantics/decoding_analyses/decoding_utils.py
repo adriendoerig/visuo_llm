@@ -81,7 +81,9 @@ def pairwise_corr(x, y, batch_size=-1):
         return np.hstack(corrs_out)
     
 
-def get_gcc_nearest_neighbour(embedding, n_neighbours=1, gcc_dir='/share/klab/datasets/google_conceptual_captions', 
+def get_gcc_nearest_neighbour(embedding, n_neighbours=1, 
+                              lookup_sentences=None, lookup_embeddings=None,
+                              gcc_dir='/share/klab/datasets/google_conceptual_captions', 
                               METRIC='correlatiuon', norm_mu_sigma=[0.0, 1.0]):
 
     print(f"Getting nearest neighbour (distance = {METRIC}) in GCC...")
@@ -89,38 +91,41 @@ def get_gcc_nearest_neighbour(embedding, n_neighbours=1, gcc_dir='/share/klab/da
     if embedding.ndim == 1:
         embedding = embedding[np.newaxis, :]
 
-    assert embedding.shape == (1, 768), "Embedding should be a 1x768 vector"
+    assert embedding.shape[-1] == 768, "Embedding should be a 1x768 vector"
 
-    lookup_sentences_path = os.path.join(
-        gcc_dir,
-        "conceptual_captions_{}.tsv",
-    )
-    lookup_embeddings_path = os.path.join(
-        gcc_dir,
-        "conceptual_captions_mpnet_{}.npy",
-    )
-    lookup_datasets = [
-        "train",
-        "val",
-    ]  # we can choose to use either the gcc train, val, or both for the lookup
+    if lookup_sentences is None or lookup_embeddings is None:
+        lookup_sentences_path = os.path.join(
+            gcc_dir,
+            "conceptual_captions_{}.tsv",
+        )
+        lookup_embeddings_path = os.path.join(
+            gcc_dir,
+            "conceptual_captions_mpnet_{}.npy",
+        )
+        lookup_datasets = [
+            "train",
+            "val",
+        ]  # we can choose to use either the gcc train, val, or both for the lookup
 
-    lookup_embeddings = None
-    for d in lookup_datasets:
-        # there is a train and val set in the gcc captions, we load the ones chosen by the user (concatenating them)
-        if lookup_embeddings is None:
-            lookup_embeddings = np.load(lookup_embeddings_path.format(d))
-            df = pd.read_csv(lookup_sentences_path.format(d), sep="\t", header=None, names=["sent", "url"])
-            lookup_sentences = df["sent"].to_list()
-        else:
-            lookup_embeddings = np.vstack([lookup_embeddings, np.load(lookup_embeddings_path.format(d))])
-            df = pd.read_csv(lookup_sentences_path.format(d), sep="\t", header=None, names=["sent", "url"])
-            lookup_sentences += df["sent"].to_list()
+        lookup_embeddings = None
+        for d in lookup_datasets:
+            # there is a train and val set in the gcc captions, we load the ones chosen by the user (concatenating them)
+            if lookup_embeddings is None:
+                lookup_embeddings = np.load(lookup_embeddings_path.format(d))
+                df = pd.read_csv(lookup_sentences_path.format(d), sep="\t", header=None, names=["sent", "url"])
+                lookup_sentences = df["sent"].to_list()
+            else:
+                lookup_embeddings = np.vstack([lookup_embeddings, np.load(lookup_embeddings_path.format(d))])
+                df = pd.read_csv(lookup_sentences_path.format(d), sep="\t", header=None, names=["sent", "url"])
+                lookup_sentences += df["sent"].to_list()
 
     if norm_mu_sigma[0] == 'zscore':
         norm_mu_sigma = [lookup_embeddings.mean(axis=0), lookup_embeddings.std(axis=0)]
     lookup_embeddings = (lookup_embeddings - norm_mu_sigma[0]) / norm_mu_sigma[1]
 
-    lookup_distances = cdist(embedding, lookup_embeddings, metric=METRIC).squeeze()
-    indices_of_min_values = np.argsort(lookup_distances)[:n_neighbours]
-    pred_sentences = [lookup_sentences[i] for i in indices_of_min_values]
+    lookup_distances = cdist(embedding, lookup_embeddings, metric=METRIC)
+    pred_sentences = []
+    for i in range(lookup_distances.shape[0]):
+        indices_of_min_values = np.argsort(lookup_distances[i])[:n_neighbours]
+        pred_sentences.append([lookup_sentences[j] for j in indices_of_min_values])
     return pred_sentences

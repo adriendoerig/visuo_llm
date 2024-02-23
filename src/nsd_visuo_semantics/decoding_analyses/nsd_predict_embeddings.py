@@ -74,7 +74,7 @@ else:
 
 # ROI STUFF
 if USE_ROIS is not None:
-    maskdata, roi_id2name = get_rois( USE_ROIS, rois_dir)
+    maskdata, roi_id2name = get_rois(USE_ROIS, rois_dir)
     roi_name2id = {v: k for k, v in roi_id2name.items()}
     if which_rois == 'allvisROIs':
         ROI_NAMES = ['allvisROIs']
@@ -97,18 +97,9 @@ for USE_N_STIMULI in [None]:  # None means use all stimuli
         os.makedirs(fitted_models_dir, exist_ok=True)
 
         if USE_GCC_LOOKUP:
-            lookup_sentences_path = os.path.join(
-                gcc_dir,
-                "conceptual_captions_{}.tsv",
-            )
-            lookup_embeddings_path = os.path.join(
-                gcc_dir,
-                "conceptual_captions_mpnet_{}.npy",
-            )
-            lookup_datasets = [
-                "train",
-                "val",
-            ]  # we can choose to use either the gcc train, val, or both for the lookup
+            lookup_sentences_path = os.path.join(gcc_dir, "conceptual_captions_{}.tsv")
+            lookup_embeddings_path = os.path.join(gcc_dir, "conceptual_captions_mpnet_{}.npy")
+            lookup_datasets = ["train", "val",]  # we can choose to use either the gcc train, val, or both for the lookup
 
         for s_n, subj in enumerate(subs):
             # prepare the train/val set embeddings

@@ -416,7 +416,7 @@ def get_conditions_515(nsd_dir, n_sessions=40):
     return sub_conditions
 
 
-def get_sentence_lists(nsda, image_indices):
+def get_sentence_lists(nsda, image_indices, return_coco_ids=False):
     """gets a list of captions from nsd given indices
     nsda must be an instance of NSDAccess: nsda = NSDAccess(nsd_dir)"""
 
@@ -427,13 +427,19 @@ def get_sentence_lists(nsda, image_indices):
     captions = nsda.read_image_coco_info(image_indices, info_type="captions", show_annot=False)
 
     sentence_lists = []
+    coco_ids = []
     for caption in captions:
         image_capt = []
         for j, cap in enumerate(caption):
             image_capt.append(cap["caption"])
+        coco_ids.append(caption[0]["image_id"])
         sentence_lists.append(image_capt)
 
-    return sentence_lists
+    if return_coco_ids:
+        return sentence_lists, coco_ids
+    else:
+        return sentence_lists
+
 
 
 def get_rois(which_rois, roi_defs_dir):

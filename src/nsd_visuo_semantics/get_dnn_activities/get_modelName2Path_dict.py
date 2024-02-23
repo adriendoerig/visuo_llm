@@ -11,6 +11,8 @@ def get_modelName2Path_dict(networks_basedir):
         "multihot_rec": f"{networks_basedir}/{shared_model_prefix}_multihot_Dec23",
         "mpnet_rec": f"{networks_basedir}/{shared_model_prefix}_mpnet_Dec23",
         "simclr_rec": f"{networks_basedir}/simclr_{shared_model_prefix}_simclr_Nov23",
+        "mpnet_resnet50": f"{networks_basedir}/resnet50_mpnetTrained_Feb24",
+        "multihot_resnet50": f"{networks_basedir}/resnet50_multihotTrained_Feb24",
     }
 
     for seed in range(1,11):

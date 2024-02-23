@@ -31,6 +31,11 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         "brainscore_tv_efficientnet-b1": f"{saved_dnn_activities_dir}/brainscore_tv_efficientnet-b1_nsd_image_features.pkl",
         "resnext101_32x8d_wsl": f"{saved_dnn_activities_dir}/resnext101_32x8d_wsl_nsd_image_features.pkl",
         "google_simclrv1_rn50": f"{saved_dnn_activities_dir}/google_simclrv1_rn50_nsd_image_features.pkl",
+        "timm_nf_resnet50": f"{saved_dnn_activities_dir}/timm_nf_resnet50_nsd_image_features.pkl",
+        "timm_efficientnet_b1": f"{saved_dnn_activities_dir}/timm_efficientnet_b1_nsd_image_features.pkl",
+        "timm_hardcorenas_a": f"{saved_dnn_activities_dir}/timm_hardcorenas_a_nsd_image_features.pkl",
+        "timm_xcit_nano_12_p8_224": f"{saved_dnn_activities_dir}/timm_xcit_nano_12_p8_224_nsd_image_features.pkl",
+        "timm_levit_128": f"{saved_dnn_activities_dir}/timm_levit_128_nsd_image_features.pkl",
         "konkle_alexnetgn_ipcl_ref01": f"{saved_dnn_activities_dir}/konkle_alexnetgn_ipcl_ref01_nsd_image_features.pkl",  # these are with inputs in [0,255] before the transform (I was not sure which to use)
         "konkle_alexnetgn_supervised_ref12_augset1_5x": f"{saved_dnn_activities_dir}/konkle_alexnetgn_supervised_ref12_augset1_5x_nsd_image_features.pkl",
         "konkle_alexnetgn_ipcl_ref01_01inputs": f"{saved_dnn_activities_dir}/konkle_alexnetgn_ipcl_ref01_01inputs_nsd_image_features.pkl",  # these are with inputs in [0,1] before the transform (I was not sure which to use)
@@ -41,7 +46,9 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         "guse": f"{saved_embeddings_dir}/nsd_guse_mean_embeddings.pkl",
         "mpnet": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",
         "all-mpnet-base-v2": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",  # this is a duplicate of the line above, both names work
-
+        "mpnet_resnet50_finalLayer": f"{saved_dnn_activities_dir}/mpnet_resnet50_finalLayer_nsd_image_features.pkl",
+        "multihot_resnet50_finalLayer": f"{saved_dnn_activities_dir}/multihot_resnet50_finalLayer_nsd_image_features.pkl",
+        
         # DNNs trained on ecoset activities
         "dnn_ecoset_category": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_category_post_gn_epoch80.h5",
         "dnn_ecoset_fasttext": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_fasttext_post_gn_epoch80.h5",

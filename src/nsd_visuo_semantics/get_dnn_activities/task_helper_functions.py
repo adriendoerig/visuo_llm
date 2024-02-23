@@ -141,6 +141,23 @@ def get_activities_model(net, n_layers, hparams, pre_post_norm="post", include_r
     return activities_model, readout_layer_names, readout_layer_shapes
 
 
+def get_activities_model_by_layername(net, layer_names):
+    """get activities model for a specific layer"""
+
+    if not isinstance(layer_names, list):
+        layer_names = [layer_names]
+
+    readout_layers = []
+    for layer_name in layer_names:
+        for this_layer in net.layers:
+            if layer_name.lower() in this_layer.name.lower():
+                readout_layers.append(this_layer.output)
+
+    activities_model = tf.keras.Model(inputs=net.input, outputs=readout_layers, name="activities_model")
+
+    return activities_model
+
+
 def get_n_classes(hparams=None, dataset_path=None, dataset_subset=None):
 
     if 'simclr' in hparams['model_name'].lower():
@@ -189,16 +206,15 @@ def get_closest_caption(predicted_embedding, embeddings, captions, n_closest=1):
     return [x[0] for x in closest_captions]  # return only the first of the 5 coco captions
 
 
-def np_to_pillow_img(img, scale='[0,255]'):
+def np_to_pillow_img(img):
 
     img = (img + 1) / 2  # rescale to [0, 1]
-    if scale == '[0,255]':
-        img = (img * 255).astype(np.uint8)
+    img = (img * 255).astype(np.uint8)  # PIL's RGB mode requires [0,255] uint8
     img = Image.fromarray(img, mode="RGB")
     return img
 
 
-def torchhub_preprocess_batch(tf_batch, transform, image_size=224, scale='[0,255]'):
+def torchhub_preprocess_batch(tf_batch, transform, image_size=224):
     """Formatting to translate between our data generation pipeline and the one
     used for ipcl (https://github.com/harvard-visionlab/open_ipcl) and other tochhub models"""
 
@@ -207,8 +223,8 @@ def torchhub_preprocess_batch(tf_batch, transform, image_size=224, scale='[0,255
     torch_batch = torch.zeros(np_batch.shape[0], np_batch.shape[3], image_size, image_size)
     # clip needs this kind of preprocessing
     for i in range(np_batch.shape[0]):
-        img = np_to_pillow_img(np_batch[i], scale=scale)
-        torch_batch[i] = transform(img).unsqueeze(0)
+        img = np_to_pillow_img(np_batch[i])  # we use the PIL format, which has uint8 values in [0, 255]. This is a format that the torch transform can take care of, so we are good!
+        torch_batch[i] = transform(img).unsqueeze(0)  # the transform's ToTensor method will convert the PIL Image (H x W x C) in the range [0, 255] to a torch.FloatTensor of shape (C x H x W) in the range [0.0, 1.0]
 
     return torch_batch
 

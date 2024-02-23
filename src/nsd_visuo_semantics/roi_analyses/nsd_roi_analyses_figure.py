@@ -8,7 +8,7 @@ from scipy import stats
 
 
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
-                            alphabetical_order=False, best_to_worst_order=False,
+                            alphabetical_order=False, best_to_worst_order=True,
                             custom_model_labels=None, average_seeds=False):
     '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
     Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
@@ -272,15 +272,13 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
                     print(f"\t\t\t{k2}: pval: {these_corrected_pvals[k_i]:.4f} - reject: {these_corrected_reject[k_i]}")
 
     # save np arrays for each ROI with corrected pvals of each model comparison
-    model_comps = list(cb(model_keys, 2))
-    n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
-    ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
-    for this_roi in roi_labels:
-        for idx, model_comp in enumerate(model_comps):
-            ROI_wise_pvals[this_roi][idx] = my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
+    # model_comps = list(cb(model_keys, 2))
+    # n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
+    # ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
+    # for this_roi in roi_labels:
+    #     for idx, model_comp in enumerate(model_comps):
+    #         ROI_wise_pvals[this_roi][idx] = my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
     # np.save(f"{results_dir}/PAPER_FIG{fig_id}_ROIwisePvals",  ROI_wise_pvals, allow_pickle=True)
-
-    import pdb; pdb.set_trace()
 
     ### FINAL COSMETICS
     # Add axis labels
@@ -297,6 +295,5 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
-    # plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
 

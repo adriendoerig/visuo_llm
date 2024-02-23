@@ -10,7 +10,7 @@ from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import corre
 
 for roi_analysis_dnn_layer_to_use in [-1]:
 
-    plt_suffix = f"_tmp"
+    plt_suffix = f"_resnets"
 
     OVERWRITE = False
 
@@ -37,11 +37,11 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     ]
 
     # dnn 10 seeds
-    for epoch in [200]:
-        for target in ['mpnet']:
-        # for target in ['multihot', 'mpnet']:
-            for seed in range(1, 11):
-                MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
+    # for epoch in [200]:
+    #     # for target in ['mpnet']:
+    #     for target in ['multihot', 'mpnet']:
+    #         for seed in range(1, 11):
+    #             MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
 
     # dnn extensive check
     MODEL_NAMES += [
@@ -139,12 +139,12 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # "mpnetWordAvg_nouns",
         # "mpnetWordAvg_verbs",
         # "CLIP_RN50_text",
-        # "CLIP_RN50_images",
+        "CLIP_RN50_images",
         # "CLIP_ViT_text",
         # "CLIP_ViT_images",
         # "brainscore_alexnet",
         # 'brainscore_regnet_y_400mf', 
-        # 'brainscore_resnet50_julios', 
+        'brainscore_resnet50_julios', 
         # 'brainscore_tv_efficientnet-b1',
         # "konkle_alexnetgn_ipcl_ref01", 
         # "konkle_alexnetgn_supervised_ref12_augset1_5x",
@@ -152,14 +152,23 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # 'thingsvision_cornet-s',
         # 'thingsvision_simclr-rn50',
         # 'thingsvision_barlowtwins-rn50',
-        # 'google_simclrv1_rn50'
+        'google_simclrv1_rn50',
+        'timm_nf_resnet50',
+        # 'timm_efficientnet_b1', 
+        # 'timm_hardcorenas_a', 
+        # 'timm_xcit_nano_12_p8_224', 
+        # 'timm_levit_128',
+        'mpnet_resnet50_finalLayer',
+        'multihot_resnet50_finalLayer',
         # "konkle_alexnetgn_ipcl_ref01_inputs01", 
         # "konkle_alexnetgn_supervised_ref12_augset1_5x_inputs01",,
     ]
 
-    MODEL_NAMES += ['dnn_ecoset_category', 'thingsvision_cornet-s', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'brainscore_alexnet', 'brainscore_resnet50_julios', 
-                    'resnext101_32x8d_wsl', 'CLIP_RN50_images', 'CLIP_ViT_images',
-                    'konkle_alexnetgn_ipcl_ref01', 'google_simclrv1_rn50']
+    # MODEL_NAMES += ['dnn_ecoset_category', 'thingsvision_cornet-s', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'brainscore_alexnet', 'brainscore_resnet50_julios', 
+    #                 'resnext101_32x8d_wsl', 'CLIP_RN50_images', 'CLIP_ViT_images',
+    #                 'konkle_alexnetgn_ipcl_ref01', 'google_simclrv1_rn50']
+
+    # MODEL_NAMES = ["mpnet", "mpnetWordAvg_all", "glove_all", "fasttext_all", "multihot"]
 
     # MODEL_NAMES = list(set(MODEL_NAMES))
     # dummy = MODEL_NAMES.copy()
