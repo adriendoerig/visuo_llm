@@ -7,6 +7,11 @@ function cvn_plot_fix(sig_data, viewz, fig_path, fig_name, title_prefix, SAVE_TY
     else
         cb_bound = max_cmap_val;
     end
+    if min(sig_data(:)) < 0
+        cb_bounds = [-cb_bound, cb_bound];
+    else
+        cb_bounds = [0, cb_bound];
+    end
 
     curvature = zeros(1, 327684);
     Lookup = [];
@@ -19,7 +24,7 @@ function cvn_plot_fix(sig_data, viewz, fig_path, fig_name, title_prefix, SAVE_TY
     wantfig = 0;
     Lookup = [];
     rgbimg = [];
-    [rawimg,Lookup,rgbimg] = cvnlookup('fsaverage', viewz, sig_data', [-cb_bound, cb_bound], cmapsign4(256), [], Lookup, wantfig, extraopts);
+    [rawimg,Lookup,rgbimg] = cvnlookup('fsaverage', viewz, sig_data', cb_bounds, cmapsign4(256), [], Lookup, wantfig, extraopts);
     % here we find where in the rgbimg of the effet we have nans (non_sig)
     nan_rawimg = cat(3, isnan(rawimg), isnan(rawimg), isnan(rawimg));
     % here we identify the sig ones.
@@ -37,9 +42,9 @@ function cvn_plot_fix(sig_data, viewz, fig_path, fig_name, title_prefix, SAVE_TY
 
     % add a colorbar
     axes('position', [0.375 0.035 .25 .035], 'color', 'none');
-    cb_data = -cb_bound:.0002:cb_bound;
+    cb_data = cb_bounds(1):.0002:cb_bounds(2);
     imagesc(cb_data), colormap(cmapsign4(256))
-    label = {num2str(cb_bound), num2str(0), num2str(cb_bound)};
+    label = {cb_bounds(1), num2str(0), cb_bounds(2)};
     set(gca, 'xtick', [1, round(length(cb_data)/2), length(cb_data) ])
     set(gca, 'xticklabel', label)
     set(gca,'ytick',[])

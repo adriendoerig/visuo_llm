@@ -81,7 +81,7 @@ for m1 = 1:length(MODEL_NAMES)
                             try
                                 seed_data = cat(2, seed_data, readNPY(sprintf(datapath, subj, string(seed), string(seed), this_hemi, subj, string(map_id))));
                             catch
-                                strcat('could not load seed ', string(seed), ' for subj ', subj, ' hemi ', this_hemi, ' map_id ', string(map_id))
+                                strcat('could not load seed ', string(seed), ' for ', subj, ' hemi ', this_hemi, ' map_id ', string(map_id))
                             end
                         end
                         avg_seed_data = nanmean(seed_data, 2);
@@ -156,17 +156,17 @@ for m1 = 1:length(MODEL_NAMES)
             % plot
             for v = 1:length(viewz_to_plot)
                 this_view = viewz_to_plot{v};
-                if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
-                    % non-thresholded image
-                    if MAX_CMAP_VAL == 0
-                        boundar = max(abs(mean_corrs(:)));
-                    else
-                        boundar = MAX_CMAP_VAL;
-                    end
-                    [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
-                    title(sprintf('group average max: %3.2f', max_corr))
-                    saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
+                if MAX_CMAP_VAL == 0
+                    boundar = max(abs(mean_corrs(:)));
+                else
+                    boundar = MAX_CMAP_VAL;
                 end
+                % if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
+                    % non-thresholded image
+                %     [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_corrs', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
+                %     title(sprintf('group average max: %3.2f', max_corr))
+                %     saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME)), SAVE_TYPE)
+                % end
                 close all;
                 if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '.', SAVE_TYPE)))
                     % significant voxels only. Need hack to fix bug in cvnlookup
@@ -277,7 +277,7 @@ for m1 = 1:length(MODEL_NAMES)
                         for v = 1:length(viewz_to_plot)
                             this_view = viewz_to_plot{v};
                             if MAX_CMAP_VAL == 0
-                                boundar = max(abs(main_data(:)));
+                                boundar = max(abs(this_subj_data(:)));
                             else
                                 boundar = MAX_CMAP_VAL;
                                 sub
@@ -299,21 +299,17 @@ for m1 = 1:length(MODEL_NAMES)
                 % plot group contrast
                 for v = 1:length(viewz_to_plot)
                     this_view = viewz_to_plot{v};
-                    if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
-                        % non-thresholded image
-                        if MAX_CMAP_VAL == 0
-                                boundar = max(abs(main_data(:)));
-                            else
-                                boundar = MAX_CMAP_VAL;
-                                % count how many values are above the boundar
-                                sum(this_subj_data>boundar)
-                                mean_diff(this_subj_data>boundar) = boundar;
-                                mean_diff(this_subj_data<-boundar) = -boundar;
-                            end
-                        [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_diff', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
-                        % title(sprintf('%s vs. %s \n group max diff: %3.2f', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME, max(mean_diff(:))))
-                        saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE);
+                    if MAX_CMAP_VAL == 0
+                        boundar = max(abs(mean_diff(:)));
+                    else
+                        boundar = MAX_CMAP_VAL;
                     end
+                    % if OVERWRITE | ~exist(fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
+                    %     % non-thresholded image
+                    %     [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_diff', [-boundar, boundar], cmapsign4(256), [], Lookup, wantfig, extraopts);
+                    %     % title(sprintf('%s vs. %s \n group max diff: %3.2f', SAVE_MODEL_NAME, CONTRAST_SAVE_MODEL_NAME, max(mean_diff(:))))
+                    %     saveas(gcf, fullfile(figpath, strcat('group_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix)), SAVE_TYPE);
+                    % end
                     close all;
                     if OVERWRITE | ~exist(fullfile(figpath, strcat('group_sig_view', num2str(this_view), '_', SAVE_MODEL_NAME, '_minus_', CONTRAST_SAVE_MODEL_NAME, plt_suffix, '.', SAVE_TYPE)))
                         % significant voxels only. Need hack to fix bug in cvnlookup

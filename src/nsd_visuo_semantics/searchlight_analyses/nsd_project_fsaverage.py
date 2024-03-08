@@ -162,7 +162,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
 
                     # port the model
                     for h, d in zip(hemis, data):
-                        print(f"\t\tsaving {output_file} to disk")
+                        print(f"\t\tsaving {output_file.format(h)} to disk")
                         transformed_data = nsd.fit(
                                                 subjix + 1,
                                                 f"{h}.white",

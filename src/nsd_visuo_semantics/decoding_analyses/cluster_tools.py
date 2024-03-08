@@ -158,19 +158,20 @@ if __name__ == "__main__":
 
     zscore = True
     zscore_suffix = "_zscored" if zscore else ""
+    data_type = 'encodingModelCoeffs_random_predictors'
 
     roi = 'visROIs' #  "sigOnly"#"visROIs" #fullBrain
-    min_clusters = 4
-    max_clusters = 12
-    stepsize = 1
+    min_clusters = 7
+    max_clusters = 15
+    stepsize = 4
     log_steps = False
     n_cvals = 10
     seed = 42
     minibatchKmeans = False
     rand_test_size = 0.1
 
-    data_path = "/share/klab/datasets/_for_philip_clustering_from_adrien"
-    data_fname = f"encodingModelCoeffs_{roi}_filtered_data_in_subjavg.npy"
+    data_path = "/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/voxel_wise_analyses/cache"
+    data_fname = f"{data_type}_savefiltereddata_{roi}_filtered_data_in_subjavg.npy"
     X = np.load(os.path.join(data_path, data_fname))
 
     if zscore:
@@ -200,8 +201,8 @@ if __name__ == "__main__":
     plot_silhouette_scores_per_k(df, out_dir, analysis_name=roi)
     print(silhouette_score)
     # store the csv 
-    df.to_csv(os.path.join(out_dir, f"silhouette_scores_per_k_{roi}_{min_clusters}_{max_clusters}_{stepsize}{zscore_suffix}.csv"))
-    df_labels_all.to_csv(os.path.join(out_dir, f"cluster_labels_all_{roi}_{min_clusters}_{max_clusters}_{stepsize}{zscore_suffix}.csv"))
+    df.to_csv(os.path.join(out_dir, f"silhouette_scores_per_k_{data_type}_{roi}_{min_clusters}_{max_clusters}_{stepsize}{zscore_suffix}.csv"))
+    df_labels_all.to_csv(os.path.join(out_dir, f"cluster_labels_all_{data_type}_{roi}_{min_clusters}_{max_clusters}_{stepsize}{zscore_suffix}.csv"))
 
   
   

@@ -47,13 +47,16 @@ def load_and_override_hparams(saved_model_path, **kwargs):
     return hparams
 
 
-def load_model_from_path(saved_model_path, epoch_to_load, print_summary=True, hparams=None):
+def load_model_from_path(saved_model_path, epoch_to_load, print_summary=True, hparams=None, override_n_classes=None):
 
     if hparams is None:
         with open(f'{saved_model_path}/hparams.pickle', 'rb') as f:
             hparams = pickle.load(f)
 
-    n_classes = get_n_classes(hparams)
+    if override_n_classes is not None:
+        n_classes = override_n_classes
+    else:
+        n_classes = get_n_classes(hparams)
 
     print('\ncreating model...')
     net = get_model(hparams, n_classes, saved_model_path=saved_model_path)

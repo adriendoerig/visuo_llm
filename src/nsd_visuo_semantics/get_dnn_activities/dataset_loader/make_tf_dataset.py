@@ -6,7 +6,7 @@ class HDF5Sequence(tf.keras.utils.Sequence):
 
     def __init__(self, hparams, dataset_path, dataset, 
                  target_dataset_name, target_dataset_dtype, n_dataset_elements,
-                 dataset_subset, no_labels_flag):
+                 dataset_subset, no_labels_flag, force_no_shuffle=False):
         self.hdf5_path = dataset_path
         self.dataset_subset = dataset_subset
         self.dataset = dataset  # str, train, test, val
@@ -17,6 +17,7 @@ class HDF5Sequence(tf.keras.utils.Sequence):
         self.indices = np.arange(n_dataset_elements)
         self.use_class_weights = hparams['calculate_class_weights'] if self.dataset == 'train' else False
         self.no_labels_flag = no_labels_flag
+        self.force_no_shuffle = force_no_shuffle
 
         self.load_dataset()
         if self.use_class_weights:
@@ -54,8 +55,12 @@ class HDF5Sequence(tf.keras.utils.Sequence):
             self.shuffle_indices()
 
     def shuffle_indices(self):
-        print('Shuffling dataset indices')
-        np.random.shuffle(self.indices)
+        if not self.force_no_shuffle:
+            print('Shuffling dataset indices')
+            np.random.shuffle(self.indices)
+        else:
+            print('force_no_shuffle is True, in make_tf_dataset.py \
+                  not shuffling dataset indices.')
 
     def load_dataset(self):
         with h5py.File(self.hdf5_path, "r") as hdf5_file:
@@ -103,7 +108,8 @@ class HDF5Sequence(tf.keras.utils.Sequence):
         return np.array(class_weights)
 
 
-def get_dataset(hparams, dataset, dataset_path=None, dataset_subset=None, plot_generated_data=False):
+def get_dataset(hparams, dataset, dataset_path=None, dataset_subset=None, 
+                plot_generated_data=False, force_no_shuffle=False, force_no_augment=False, force_no_labels=False):
     '''Make a tf.data.Dataset based on a python generator gen (here, a keras sequence).
        hparams: dict containing pipeline options
        dataset: str, "train", "val" or "test"
@@ -116,7 +122,7 @@ def get_dataset(hparams, dataset, dataset_path=None, dataset_subset=None, plot_g
         # if no dataset_path is given, take the dataset path from hparams
         dataset_path = hparams['dataset']
 
-    if 'simclr' in hparams['model_name']:
+    if 'simclr' in hparams['model_name'] or force_no_labels:
         # In some contexts, eg self-supervised learning, labels are not needed
         print('Dataset will not contain labels.')
         no_labels_flag = True
@@ -126,7 +132,11 @@ def get_dataset(hparams, dataset, dataset_path=None, dataset_subset=None, plot_g
     if dataset != 'train' or 'simclr' in hparams['model_name']:
         augment_data = False
     else:
-        augment_data = True
+        if force_no_augment:
+            print('force_no_augment is True in make_tf_dataset.py: not augmenting dataset.')
+            augment_data = False
+        else:
+            augment_data = True
 
     print(f'Making {dataset} dataset from {dataset_path}'+f' subset {dataset_subset}' if dataset_subset is not None else '')
 
@@ -158,7 +168,7 @@ def get_dataset(hparams, dataset, dataset_path=None, dataset_subset=None, plot_g
     # create generator
     seq = HDF5Sequence(hparams, dataset_path, dataset,
                        target_dataset_name, target_dataset_dtype, n_dataset_elements,
-                       dataset_subset, no_labels_flag)
+                       dataset_subset, no_labels_flag, force_no_shuffle)
     data_iter = lambda: (s for s in seq)
 
     # create tf.data.Dataset

@@ -38,7 +38,7 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
     os.makedirs(save_embeddings_to, exist_ok=1)
 
 
-    save_name = f"nsd_{EMBEDDING_TYPE}_CATEGORY_embeddings"
+    save_name = f"nsd_{EMBEDDING_TYPE}_CATEGORY_mean_embeddings"
 
     if not OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")

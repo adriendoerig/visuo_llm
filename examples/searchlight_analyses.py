@@ -31,11 +31,14 @@ MODEL_NAMES = [
     # "dnn_multihot_rec_seed1_ep200",
     # "dnn_multihot_rec_old_ep200",
     # "dnn_mpnet_rec_old_ep200",
-    # "dnn_multihot_rec_seed1_ep200"
+    # "dnn_multihot_rec_seed1_ep200",
+    # 'mpnet_resnet50_finalLayer',
+    # 'multihot_resnet50_finalLayer',
+
 ]
 
-MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [4,5]]
-MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [4,5]]
+# MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [5,4]]
+# MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [4,5]]
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)

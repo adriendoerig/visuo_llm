@@ -16,7 +16,7 @@ We average across space to keep size reasonable
 """
 
 
-def get_nsd_activations(MODEL_NAMES, dataset_path,
+def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                         networks_basedir, results_dir, safety_check_plots_dir,
                         nsd_captions_path=None, nsd_embeddings_path=None,
                         n_layers=10, epoch=400, OVERWRITE=False, train_val_nsd='nsd'):
@@ -33,13 +33,14 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
 
     modelname2path = get_modelName2Path_dict(networks_basedir)
 
-
     for model_name in MODEL_NAMES:
 
         if ('brainscore' in model_name.lower() or 'clip' in model_name.lower() or 'konkle_' in model_name.lower() or 'resnext101_32x8d_wsl' in model_name.lower() or 'thingsvision' in model_name.lower() or 'google_' in model_name.lower() or 'timm_' in model_name.lower()):
             model_savedir = modelname2path['default']
         elif 'finalLayer' in model_name:
-            model_savedir = modelname2path[model_name.replace('_finalLayer', '').replace('GAP', '')]
+            model_savedir = modelname2path[model_name.replace('_finalLayer', '').replace('GAP', '').replace('_places365', '')]
+        elif 'places365' in model_name.lower():
+            model_savedir = modelname2path[model_name.replace('_places365', '')]
         else:
             model_savedir = modelname2path[model_name]
         print(model_savedir)
@@ -163,7 +164,10 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
 
         else:
             print(f"Creating {model_name} model and loading weights from {model_savedir}")
-            net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True)
+            if 'scenecateg' in model_name.lower():
+                net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True, override_n_classes=365)
+            else:
+                net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True)
             if 'layer' in model_name.lower():
                 if 'resnet' in model_name.lower():
                     readout_layer_name = 'avg_pool'
@@ -179,7 +183,6 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                 print(f"Reading from layers: {readout_layer_names}")
                 activations_file_name = f"{results_dir}/{model_name}_nsd_activations_epoch{epoch}.h5"
 
-
         if train_val_nsd != 'test':
             # insert '_train' or '_val' in the filename before extension
             activations_file_name = activations_file_name.replace('.h5', f'_{train_val_nsd}.h5')
@@ -192,16 +195,27 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
             print(f"Saving activations in {activations_file_name}")
         
         try:
-            dummy = nsd_dataset.__dict__
+            dummy = input_dataset.__dict__
             print('Dataset exists, will not be recreated')
         except NameError:
             print('Creating dataset')
-            nsd_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd)
-            with h5py.File(dataset_path, 'r') as f:
-                n_imgs = f[train_val_nsd]['img_multi_hot'].shape[0]
+            if 'places365' in model_name.lower():
+                hparams['embedding_target'] = False
+                hparams['target_dataset_name'] = 'labels'
+                input_dataset = get_dataset(hparams, dataset_path=dataset_path_places365, 
+                                            dataset='train', force_no_shuffle=True, force_no_augment=True)
+                n_imgs = 73000
+            else:
+                if 'scenecateg' in model_name.lower():
+                    input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd, force_no_labels=True)
+                else:
+                    input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd)
+                with h5py.File(dataset_path, 'r') as f:
+                    n_imgs = f[train_val_nsd]['img_multi_hot'].shape[0]
         
-        for x in nsd_dataset:
-            if 'simclr' in model_name.lower() and 'google' not in model_name.lower():
+        for x in input_dataset:
+            if ('simclr' in model_name.lower() and 'google' not in model_name.lower()) or 'scenecateg' in model_name.lower():
+                # these models don't use labels, either because they are self-supervised or because they are trained on a different dataset
                 btch_sz, imh, imw, imc = x.shape
             else:
                 btch_sz, imh, imw, imc = x[0].shape
@@ -275,7 +289,10 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                 
         else:
             if 'finalLayer' in model_name:
-                dummy_batch = x[0]
+                if 'scenecateg' in model_name.lower():
+                    dummy_batch = x
+                else:
+                    dummy_batch = x[0]
                 dummy_out = activities_model(dummy_batch)
                 if 'GAP' in model_name:
                     layer_features = np.zeros((n_imgs, dummy_out.shape[-1]), dtype=np.float32)
@@ -286,17 +303,18 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
             else:
                 # prepare h5 file structure to collect all layer activities
                 print(f"Preparing to save in {activations_file_name}")
-                for lin in range(n_layers):
-                    for t in range(hparams["n_recurrent_steps"]):
-                        activations_file.create_dataset(
-                            readout_layer_names[lin][t],
-                            shape=(n_imgs, readout_layer_shapes[lin][t][-1]),  # we avg across space to keep size reasonable
-                            dtype=np.float32,
-                        )
+                with h5py.File(activations_file_name, 'w') as activations_file:
+                    for lin in range(n_layers):
+                        for t in range(hparams["n_recurrent_steps"]):
+                            activations_file.create_dataset(
+                                readout_layer_names[lin][t],
+                                shape=(n_imgs, readout_layer_shapes[lin][t][-1]),  # we avg across space to keep size reasonable
+                                dtype=np.float32,
+                            )
 
         # get activities
-        for i, x in enumerate(nsd_dataset):
-            if 'simclr' in model_name.lower() and 'google' not in model_name.lower():
+        for i, x in enumerate(input_dataset):
+            if ('simclr' in model_name.lower() and 'google' not in model_name.lower()) or 'scenecateg' in model_name.lower():
                 batch_imgs = x
             else:
                 batch_imgs, batch_labels, batch_class_weights = x
@@ -420,9 +438,10 @@ def get_nsd_activations(MODEL_NAMES, dataset_path,
                         layer_features[i * btch_sz : (i + 1) * btch_sz] = flat_layer_activities
                 else:
                     layer_activities = activities_model(batch_imgs)
-                    for lin in range(n_layers):
-                        for t in range(hparams["n_recurrent_steps"]):
-                            activations_file[readout_layer_names[lin][t]][i * btch_sz : (i + 1) * btch_sz] = np.mean(layer_activities[lin][t], axis=(1, 2))
+                    with h5py.File(activations_file_name, 'a') as activations_file:
+                        for lin in range(n_layers):
+                            for t in range(hparams["n_recurrent_steps"]):
+                                activations_file[readout_layer_names[lin][t]][i * btch_sz : (i + 1) * btch_sz] = np.mean(layer_activities[lin][t], axis=(1, 2))
 
                 if i % print_every_N_batches == 0:
                     print(f'\nGetting NSD activities for {model_name} dnn: {i*hparams["batch_size"]/n_imgs*100}%')

@@ -1,0 +1,121 @@
+import os
+import numpy as np
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_rois
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import seaborn as sns
+
+model_names = ['dnn_mpnet_rec_ep200_avgSeed_SL', 'mpnet_SL']
+dnn_layer = 60
+
+nsd_dir = '/share/klab/datasets/NSD_for_visuo_semantics'
+searchlights_save_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/searchlight_respectedsampling_correlation_newTest'
+encoding_model_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel/fitted_models'
+
+which_rois = 'streams'
+rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
+maskdata, ROIS = get_rois(which_rois, rois_dir)
+ROIS[1] = "EVC" # replace the 'early' ROI name with "EVC"
+ROIdata = [ROIS[int(k)] for k in maskdata]
+
+n_subjects = 8
+subs = [f'subj0{i}' for i in range(1, n_subjects + 1)]
+n_voxels = 327684
+
+roi_keys = [
+        "earlyROI",
+        "midventralROI",
+        "ventralROI",
+        "midlateralROI",
+        "lateralROI",
+        "midparietalROI",
+        "parietalROI",
+    ]
+roi_labels = [
+    "EVC",
+    "midventral",
+    "ventral",
+    "midlateral",
+    "lateral",
+    "midparietal",
+    "parietal",
+]
+roi_colors = [
+    "mediumaquamarine",
+    "khaki",
+    "yellow",
+    "lightskyblue",
+    "royalblue",
+    "lightcoral",
+    "red",
+]
+# i flipped the key and label. 
+roi_specs = {
+    l: {"key": k, "color": c} 
+    for k, l, c in zip(roi_keys, roi_labels, roi_colors)
+}
+
+# gather data, averaging across subjects, and, if needed, across DNN seeds
+final_fsaverage_voxels = {}
+for model_name in model_names:
+    
+    if 'SL' in model_name:
+        subjwise_fsavg_voxels = np.zeros((n_subjects, n_voxels))
+
+        for s, subj in enumerate(subs):
+
+            if 'dnn' in model_name:
+                map_id = dnn_layer
+            else:
+                map_id = 1
+            
+            if 'avgSeed' in model_name:
+                avg_seed_fsavg_voxels = np.zeros((10, n_voxels))
+                seedless_model_name = model_name.split('_avgSeed')[0]
+                
+                for seed in range(10):
+                    seed_id = seed + 1  # 1-indexing for this seed ID
+                    split_name = seedless_model_name.split('_ep200')[0]
+                    seed_model_name = split_name + f'_seed{seed_id}' + '_ep200'
+                    seed_model_folder = f"{searchlights_save_dir}/{subj}/{seed_model_name}/{seed_model_name}_correlation_fsaverage"
+                    lh = np.load(f"{seed_model_folder}/lh.{subj}-model-{map_id}-surf.npy")
+                    rh = np.load(f"{seed_model_folder}/rh.{subj}-model-{map_id}-surf.npy")
+                    avg_seed_fsavg_voxels[seed] = np.concatenate((lh, rh))
+                
+                subjwise_fsavg_voxels[s] = avg_seed_fsavg_voxels.mean(axis=0)
+
+            else:
+                name = model_name.split('_SL')[0]
+                model_folder = f"{searchlights_save_dir}/{subj}/{name}/{name}_correlation_fsaverage"
+                lh = np.load(f"{model_folder}/lh.{subj}-model-{map_id}-surf.npy")
+                rh = np.load(f"{model_folder}/rh.{subj}-model-{map_id}-surf.npy")
+                subjwise_fsavg_voxels[s] = np.concatenate((lh, rh))
+                
+        
+        final_fsaverage_voxels[model_name] = subjwise_fsavg_voxels.mean(axis=0)
+
+    else:
+        raise NotImplementedError('Only searchlight models are implemented for now')
+
+roi_colors_data = [roi_specs[k]["color"] if k != 'Unknown' else "lightgray" for k in ROIdata]
+labels_data = [roi_specs[k]["key"] if k != 'Unknown' else "Non-visual" for k in ROIdata]
+
+
+roi_colors_leg = roi_colors.copy()
+roi_colors_leg.insert(0, 'lightgray')
+roi_labels_leg = roi_labels.copy()
+roi_labels_leg.insert(0, 'Non-visual')
+patches = [mpatches.Patch(color=color, label=label) for color, label in zip(roi_colors_leg, roi_labels_leg)]
+
+plt.figure(figsize=(6, 6))
+plt.scatter(final_fsaverage_voxels[model_names[0]], final_fsaverage_voxels[model_names[1]], c=roi_colors_data, alpha=0.5, s=0.2)
+plt.xlabel('RCNN(LLM) to brain correlation\n[pearson, voxel-wise]')
+plt.ylabel('RCNN(Category) to brain correlation\n[pearson, voxel-wise]')
+plt.plot([0, 1], [0, 1], color='black', linestyle='--', alpha = 0.8)
+plt.xlim([0, 0.3])
+plt.ylim([0, 0.3])
+plt.legend(handles=patches)
+plt.savefig(f"scatter_{model_names[0]}_{model_names[1]}.svg")
+plt.close()
+
+# accidental save in: {searchlights_save_dir}/

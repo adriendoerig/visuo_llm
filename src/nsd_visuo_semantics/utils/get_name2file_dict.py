@@ -43,11 +43,13 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         "mpnetWordAvg_all": f"{saved_embeddings_dir}/nsd_all-mpnet-base-v2_ALLWORDS_mean_embeddings.pkl",
         "mpnetWordAvg_nouns": f"{saved_embeddings_dir}/nsd_all-mpnet-base-v2_NOUNS_mean_embeddings.pkl",
         "mpnetWordAvg_verbs": f"{saved_embeddings_dir}/nsd_all-mpnet-base-v2_VERB_mean_embeddings.pkl",
+        "taskonomy_scenecat_resnet50": f"{saved_dnn_activities_dir}/taskonomy_scenecat_resnet50_nsd_image_features.pkl",
         "guse": f"{saved_embeddings_dir}/nsd_guse_mean_embeddings.pkl",
         "mpnet": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",
         "all-mpnet-base-v2": f"{saved_embeddings_dir}/nsd_all_mpnet_base_v2_mean_embeddings.pkl",  # this is a duplicate of the line above, both names work
         "mpnet_resnet50_finalLayer": f"{saved_dnn_activities_dir}/mpnet_resnet50_finalLayer_nsd_image_features.pkl",
         "multihot_resnet50_finalLayer": f"{saved_dnn_activities_dir}/multihot_resnet50_finalLayer_nsd_image_features.pkl",
+        "sceneCateg_resnet50_finalLayer": f"{saved_dnn_activities_dir}/sceneCateg_resnet50_finalLayer_nsd_image_features.pkl",
         
         # DNNs trained on ecoset activities
         "dnn_ecoset_category": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_category_post_gn_epoch80.h5",

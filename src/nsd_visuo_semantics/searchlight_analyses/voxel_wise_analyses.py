@@ -15,17 +15,20 @@ if __name__ == "__main__":
     # if 'individualrois' is in the analysis_type, the data will be plotted for each ROI separately.
     # if 'xval' is in the analysis_type, the PCA will be trained on an ecoding model trained on one half of the nsd data, and we plot the variance explained on the weights of another encoding model trained on the other half of the nsd data.
     # if 'train' is in the analysis_type, the PCA model will be trained on the whole data and then used to project the data for each ROI.
+    # if 'highervisrois' is in the analysis_type, the data will be plotted for the ventral, lateral and dorsal ROIs only.
     # if 'visrois' is in the analysis_type, the data will be plotted for the visual ROIs only.
     # if 'fullbrain' is in the analysis_type, the data will be plotted for the whole brain.
     # if 'sigonly' is in the analysis_type, the data will be plotted for the significant voxels only.
+    # if 'savefiltereddata' will saved the filtered (i.e., ROI, or sig mask filtered) data.
     # if 'makeclustermap' is in the analysis_type, load cluster assignments for each voxel, and save the full voxel map.
+    # if 'getclustersentences' is in the analysis_type, load cluster assignments for each voxel, and get the nearest neighbour sentence for each cluster centroid.
     # e.g. 'pca3D_VisROIsTrain_individualROIsTest' will train a PCA model on all visual ROIs and then project the data for each ROI separately.
-    for analysis_type in ['pca3D_VisROIs_xval']:  #['makeclustermap_visrois']:#, 'makeclustermap_sigonly', 'makeclustermap_fullbrain']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
+    for analysis_type in ['makeclustermap_visROIs']:  #['makeclustermap_visrois']:#, 'makeclustermap_sigonly', 'makeclustermap_fullbrain']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
     # for analysis_type in ['pca3D_VisROIs']:  # ['tsne2d', 'tsne3d', 'pca3D', 'pca3DTrain', 'pca3D_VisROIsTrain_individualROIsTest', 'pca3D_VisROIsTrain', 'pca3D_VisROIs', 'pca3D_individualROIs', 'pca3D_individualROIsTrain
 
-        cluster_n = 5 # 2, 7, 12 or 17  -- only used if 'makeclustermap' in analysis_type
+        cluster_n = 11 # -- must have been pre-computed ../decoding_analyses/cluster_tools.py. only used if 'makeclustermap' in analysis_type
 
-        save_type = 'svg'  # 'png' or 'svg'
+        save_type = 'png'  # 'png' or 'svg'
 
         massage_data = 'zscore'  # "zscore" or None
 
@@ -73,7 +76,7 @@ if __name__ == "__main__":
         # Get roi info
         maskdata, ROIS = get_rois(which_rois, rois_dir)
 
-        for data_type in ['encodingModelCoeffs']:  # ['encodingModelCoeffs_mpnetDnnLayer0', 'encodingModelCoeffs', 'var_part_uniquevars', 'var_part_scores', 'clusterAssignments']:
+        for data_type in ['encodingModelCoeffs_random_predictors']:  # ['encodingModelCoeffs_mpnetDnnLayer0', 'encodingModelCoeffs', 'var_part_uniquevars', 'var_part_scores', 'clusterAssignments']:
 
             varThreshVal = 0.7  # if we are doing PCA analyses, we will plot n_components required to explain this fraction of variance
             cumvars = {}
@@ -110,6 +113,30 @@ if __name__ == "__main__":
                             encoding_model_dir = os.path.join(this_encoding_base_dir, 'fitted_models')
                             encoding_model_sig_mask_path = os.path.join(this_encoding_base_dir, "encoding_sig_mask_mpnet_encodingModel.npy")
                             data_in = np.load(encoding_model_dir + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain.npy", allow_pickle=True)
+                            data_in = data_in.T
+
+                        elif data_type == 'encodingModelCoeffs_shuffle_betas_order' and not 'xval' in analysis_type.lower():
+                            print('Using encodingModelCoeffs_shuffle_betas_order')
+                            this_encoding_base_dir = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel_shuffle_betas_order')
+                            encoding_model_dir = os.path.join(this_encoding_base_dir, 'fitted_models')
+                            encoding_model_sig_mask_path = os.path.join(this_encoding_base_dir, "encoding_sig_mask_mpnet_encodingModel.npy")
+                            data_in = np.load(encoding_model_dir + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain_all-mpnet-base-v2_shuffleCtrl.npy", allow_pickle=True)
+                            data_in = data_in.T
+
+                        elif data_type == 'encodingModelCoeffs_scramble_embeddings' and not 'xval' in analysis_type.lower():
+                            print('Using encodingModelCoeffs_scramble_embeddings')
+                            this_encoding_base_dir = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel_scramble_embeddings')
+                            encoding_model_dir = os.path.join(this_encoding_base_dir, 'fitted_models')
+                            encoding_model_sig_mask_path = os.path.join(this_encoding_base_dir, "encoding_sig_mask_mpnet_encodingModel.npy")
+                            data_in = np.load(encoding_model_dir + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain_all-mpnet-base-v2.npy", allow_pickle=True)
+                            data_in = data_in.T
+
+                        elif data_type == 'encodingModelCoeffs_random_predictors' and not 'xval' in analysis_type.lower():
+                            print('Using encodingModelCoeffs_random_predictors')
+                            this_encoding_base_dir = os.path.join(encoding_base_dir, 'all-mpnet-base-v2_results_ROIfullbrain_encodingModel_random_predictors')
+                            encoding_model_dir = os.path.join(this_encoding_base_dir, 'fitted_models')
+                            encoding_model_sig_mask_path = os.path.join(this_encoding_base_dir, "encoding_sig_mask_mpnet_encodingModel.npy")
+                            data_in = np.load(encoding_model_dir + f"/{subj}_fittedFracridgeEncodingCoefs_fullbrain_all-mpnet-base-v2.npy", allow_pickle=True)
                             data_in = data_in.T
 
                         elif data_type == 'encodingModelCoeffs' and 'xval' in analysis_type.lower():
@@ -173,10 +200,17 @@ if __name__ == "__main__":
                             elif 'individualrois' in analysis_type.lower():
                                 filtered_data_in = data_in[maskdata == roi, :]
                                 filtered_labels = maskdata[maskdata == roi]
+                            elif 'highervisrois' in analysis_type.lower():
+                                filtered_data_in = data_in[maskdata >= 5, :]
+                                filtered_labels = maskdata[maskdata >= 5]
+                            elif 'ventralrois' in analysis_type.lower():
+                                filtered_indices = np.isin(maskdata, [2, 5])
+                                filtered_data_in = data_in[filtered_indices, :]
+                                filtered_labels = maskdata[filtered_indices]
                             elif 'visrois' in analysis_type.lower():
                                 filtered_data_in = data_in[maskdata != 0, :]
                                 filtered_labels = maskdata[maskdata != 0]
-                            elif 'makeclustermap' in analysis_type.lower():
+                            elif 'cluster' in analysis_type.lower():
                                 continue
                             else:
                                 raise Exception("Analysis type not recognised.")
@@ -199,6 +233,14 @@ if __name__ == "__main__":
                                 filtered_data_in1 = data_in1[maskdata == roi, :]
                                 filtered_data_in2 = data_in2[maskdata == roi, :]
                                 filtered_labels = maskdata[maskdata == roi]
+                            elif 'highervisrois' in analysis_type.lower():
+                                filtered_data_in1 = data_in1[maskdata >= 5, :]
+                                filtered_data_in2 = data_in2[maskdata >= 5, :]
+                                filtered_labels = maskdata[maskdata >= 5]
+                            elif 'ventralrois' in analysis_type.lower():
+                                filtered_data_in1 = data_in1[filtered_indices, :]
+                                filtered_data_in2 = data_in2[filtered_indices, :]
+                                filtered_labels = maskdata[filtered_indices]
                             elif 'visrois' in analysis_type.lower():
                                 filtered_data_in1 = data_in1[maskdata != 0, :]
                                 filtered_data_in2 = data_in2[maskdata != 0, :]
@@ -213,16 +255,22 @@ if __name__ == "__main__":
                     
                     else:
 
-                        if 'makeclustermap' in analysis_type.lower():
+                        if 'cluster' in analysis_type.lower():
                             import pandas as pd
-                            if 'visrois' in analysis_type.lower():
+                            if 'highervisrois' in analysis_type.lower():
+                                f = 'higherVisROIs'
+                            elif 'ventralrois' in analysis_type.lower():
+                                f = 'ventralROIs'
+                            elif 'visrois' in analysis_type.lower():
                                 f = 'visROIs'
                             elif 'fullbrain' in analysis_type.lower():
                                 f = 'fullBrain'
                             elif 'sigonly' in analysis_type.lower():
                                 f = 'sigOnly'
+                            else:
+                                raise Exception("Analysis type not recognised.")
                             # cluster_assignments = pd.read_csv(f'{cache_dir}/semantic_clusters/cluster_labels_all_{f}_2_22_5{"_zscored" if massage_data == "zscore" else ""}.csv')
-                            cluster_assignments = pd.read_csv(f'{cache_dir}/semantic_clusters/cluster_labels_all_{f}_4_12_1{"_zscored" if massage_data == "zscore" else ""}.csv')
+                            cluster_assignments = pd.read_csv(f'{cache_dir}/semantic_clusters/cluster_labels_all_{data_type}_{f}_7_15_4{"_zscored" if massage_data == "zscore" else ""}.csv')
                             cluster_vector = np.array(cluster_assignments[str(cluster_n)])+1  # 0 is kept for no cluster (e.g. for non-significant voxels)
 
                         else:
@@ -237,32 +285,62 @@ if __name__ == "__main__":
                                 filtered_data_in2 = np.nanmean(filtered_data_in_avg2, axis=0)
     
 
-                    if 'makeclustermap' in analysis_type.lower() and subj == 'average':
-                        if 'visrois' in analysis_type.lower():
+                    if 'cluster' in analysis_type.lower() and subj == 'average':
+                        if 'highervisrois' in analysis_type.lower():
+                            f = 'higherVisROIs'
+                        elif 'ventralrois' in analysis_type.lower():
+                            f = 'ventralROIs'
+                        elif 'visrois' in analysis_type.lower():
                             f = 'visROIs'
                         elif 'fullbrain' in analysis_type.lower():
                             f = 'fullBrain'
                         elif 'sigonly' in analysis_type.lower():
                             f = 'sigOnly'
-                        d = 'encodingModelCoeffs'
+                        d = data_type
                         # data_in = np.load(f'{cache_dir}/{d}_{f}_data_in_subjavg.npy')
-                        maskdata = np.load(f'{cache_dir}/{d}_{f}_maskdata.npy')
+                        maskdata = np.load(f'{cache_dir}/{d}_savefiltereddata_{f}_maskdata.npy')
                         # filtered_data_in = np.load(f'{cache_dir}/{d}_{f}_filtered_data_in_subjavg.npy')
                         # filtered_labels = np.load(f'{cache_dir}/{d}_{f}_filtered_maskdata.npy')
-                        if not 'fullbrain' in analysis_type.lower():
-                            full_brain_map = np.zeros((maskdata.shape[0],))
-                            if 'sigonly' in analysis_type.lower():
-                                full_brain_map[sig_mask != 0] = cluster_vector
-                            elif 'individualrois' in analysis_type.lower():
-                                full_brain_map[maskdata == roi] = cluster_vector
-                            elif 'visrois' in analysis_type.lower():
-                                full_brain_map[maskdata != 0] = cluster_vector
+                        if 'makeclustermap' in analysis_type.lower():
+                            if not 'fullbrain' in analysis_type.lower():
+                                full_brain_map = np.zeros((maskdata.shape[0],))
+                                if 'sigonly' in analysis_type.lower():
+                                    full_brain_map[sig_mask != 0] = cluster_vector
+                                elif 'individualrois' in analysis_type.lower():
+                                    full_brain_map[maskdata == roi] = cluster_vector
+                                elif 'highervisrois' in analysis_type.lower():
+                                    full_brain_map[maskdata >= 5] = cluster_vector
+                                elif 'ventralrois' in analysis_type.lower():
+                                    full_brain_map[filtered_indices] = cluster_vector
+                                elif 'visrois' in analysis_type.lower():
+                                    full_brain_map[maskdata != 0] = cluster_vector
+                                else:
+                                    raise Exception("Analysis type not recognised.")
                             else:
-                                raise Exception("Analysis type not recognised.")
+                                full_brain_map = cluster_vector
+                            print('saving in', f'{cache_dir}/{d}_{f}_cluster_assignments_subjavg_nclusters{cluster_n}{"_zscored" if massage_data == "zscore" else ""}.npy')
+                            np.save(f'{cache_dir}/{d}_{f}_cluster_assignments_subjavg_nclusters{cluster_n}{"_zscored" if massage_data == "zscore" else ""}.npy', full_brain_map)
+                        
+                        elif 'getclustersentences' in analysis_type.lower():
+
+                            if massage_data == 'zscore':
+                                mu, sigma = np.mean(filtered_data_in, axis=0), np.std(filtered_data_in, axis=0)
+                                filtered_data_in = (filtered_data_in - mu) / sigma
+                            else:
+                                mu, sigma = np.zeros(filtered_data_in.shape[1]), np.ones(filtered_data_in.shape[1])
+
+                            for cluster in range(1, cluster_n+1):
+                                cluster_indices = np.where(cluster_vector == cluster)[0]
+                                print(f"Cluster {cluster} has {len(cluster_indices)} voxels.")
+                                cluster_avg = np.nanmean(filtered_data_in[cluster_indices, :], axis=0)
+                                NN_positive = get_gcc_nearest_neighbour(cluster_avg, n_neighbours=3, METRIC='cosine')
+                                NN_negative = get_gcc_nearest_neighbour(-cluster_avg, n_neighbours=3, METRIC='cosine')
+                                print(f"Cluster {cluster} NN positive: {NN_positive}")
+                                print(f"Cluster {cluster} NN negative: {NN_negative}")
+                                
                         else:
-                            full_brain_map = cluster_vector
-                        print('saving in', f'{cache_dir}/{d}_{f}_cluster_assignments_subjavg_nclusters{cluster_n}{"_zscored" if massage_data == "zscore" else ""}.npy')
-                        np.save(f'{cache_dir}/{d}_{f}_cluster_assignments_subjavg_nclusters{cluster_n}{"_zscored" if massage_data == "zscore" else ""}.npy', full_brain_map)
+                            raise Exception("Analysis type not recognised.")
+
                         continue
 
                     if 'savefiltereddata' in analysis_type.lower() and subj == 'average':
@@ -359,98 +437,149 @@ if __name__ == "__main__":
                         fig.write_html(f'{results_dir}/{data_type}_{analysis_type}_{subj}.html')
 
 
-                    elif 'pca3D' in analysis_type and not 'xval' in analysis_type.lower():
-                        # reduce dimensionality to 3D using PCA, then plot in RGB colorspace
+                    elif ('pca' in analysis_type or 'ica' in analysis_type.lower()) and not 'xval' in analysis_type.lower():
 
                         n_components = 768
 
                         embedding_path = f'{cache_dir}/{data_type}_{analysis_type}_{subj}_{n_components}components{massage_data}.npy'
-                        pca_to_load_name = analysis_type if not 'train' in analysis_type.lower() else analysis_type.split('Train')[0]
-                        pca_to_load_path = f'{cache_dir}/pca_model_{pca_to_load_name}_{subj}_{n_components}components{massage_data}.pkl'
+                        to_load_name = analysis_type if not 'train' in analysis_type.lower() else analysis_type.split('Train')[0]
+                        if 'pca' in analysis_type.lower():
+                            to_load_path = f'{cache_dir}/pca_model_{to_load_name}_{subj}_{n_components}components{massage_data}.pkl'
+                        elif 'ica' in analysis_type.lower():
+                            to_load_path = f'{cache_dir}/ica_model_{to_load_name}_{subj}_{n_components}components{massage_data}.pkl'
 
-                        if 'train' in analysis_type.lower() and not os.path.exists(pca_to_load_path):
+                        if 'train' in analysis_type.lower() and not os.path.exists(to_load_path):
                             import pdb; pdb.set_trace()
                             raise Exception(f"PCA model not found for {analysis_type} analysis. Please run the analysis without 'train' in the name first.")
 
-                        if OVERWRITE or not os.path.exists(pca_to_load_path):
-                            pca = PCA(n_components=n_components)
-                            embedding = pca.fit_transform(filtered_data_in)
-                            if nan_mask is not None:
-                                drop_rows_idx = np.where(nan_mask)[0]
-                                embedding = restore_nan_dims(embedding, drop_rows_idx, axis=0)
-                                embedding[np.isnan(embedding)] = 0
+                        if OVERWRITE or not os.path.exists(to_load_path):
 
-                            with open(f'{cache_dir}/pca_model_{analysis_type}_{subj}_{n_components}components{massage_data}.pkl', 'wb') as file:
-                                pickle.dump(pca, file)
+                            if 'pca' in analysis_type.lower():
+                                pca = PCA(n_components=n_components)
+                                embedding = pca.fit_transform(filtered_data_in)
+                                if nan_mask is not None:
+                                    drop_rows_idx = np.where(nan_mask)[0]
+                                    embedding = restore_nan_dims(embedding, drop_rows_idx, axis=0)
+                                    embedding[np.isnan(embedding)] = 0
 
-                            if not 'fullbrain' in analysis_type:
+                                with open(f'{cache_dir}/pca_model_{analysis_type}_{subj}_{n_components}components{massage_data}.pkl', 'wb') as file:
+                                    pickle.dump(pca, file)
+
+                            elif 'ica' in analysis_type.lower():
+                                from sklearn.decomposition import FastICA
+                                ica = FastICA(n_components=n_components, max_iter=1000, random_state=42)
+                                embedding = ica.fit_transform(filtered_data_in)
+                                if nan_mask is not None:
+                                    drop_rows_idx = np.where(nan_mask)[0]
+                                    embedding = restore_nan_dims(embedding, drop_rows_idx, axis=0)
+                                    embedding[np.isnan(embedding)] = 0
+
+                                with open(f'{cache_dir}/ica_model_{analysis_type}_{subj}_{n_components}components{massage_data}.pkl', 'wb') as file:
+                                    pickle.dump(ica, file)
+
+                            if not 'fullbrain' in analysis_type.lower():
                                 all_vox_embedding = np.zeros((maskdata.shape[0], n_components))
-                                if 'sigOnly' in analysis_type:
+                                if 'sigonly' in analysis_type.lower():
                                     all_vox_embedding[sig_mask != 0, :] = embedding
-                                elif 'individualrois' in analysis_type:
+                                elif 'individualrois' in analysis_type.lower():
                                     all_vox_embedding[maskdata == roi, :] = embedding
-                                else:
+                                elif 'highervisrois' in analysis_type.lower():
+                                    all_vox_embedding[maskdata >= 5, :] = embedding
+                                elif 'ventralrois' in analysis_type.lower():
+                                    all_vox_embedding[filtered_indices, :] = embedding
+                                elif 'visrois' in analysis_type.lower():
                                     all_vox_embedding[maskdata != 0, :] = embedding
+                                else:
+                                    raise Exception("Analysis type not recognised.")
                                 embedding = all_vox_embedding
 
                             np.save(embedding_path, embedding)
                         else:
 
-                            with open(pca_to_load_path, 'rb') as file:
-                                pca = pickle.load(file)
+                            if 'pca' in analysis_type.lower():
+                                with open(to_load_path, 'rb') as file:
+                                    pca = pickle.load(file)
+                            elif 'ica' in analysis_type.lower():
+                                with open(to_load_path, 'rb') as file:
+                                    ica = pickle.load(file)
+                            else:
+                                raise Exception("Analysis type not recognised.")
                             # embedding = np.load(embedding_path)
 
 
                         if subj == 'average':
 
-                            if 'train' in analysis_type.lower():
-                                # this projects the roi data onto the pca fitted on the whole data 
-                                # (e.g. the visual rois if 'visroi' in analysis_type)
-                                roi_projected = pca.transform(filtered_data_in)
-                                explained_variance_ratio = np.var(roi_projected, axis=0)/np.var(roi_projected, axis=0).sum()
+                            if 'pca' in analysis_type.lower():
+                                if 'train' in analysis_type.lower():
+                                    # this projects the roi data onto the pca fitted on the whole data 
+                                    # (e.g. the visual rois if 'visroi' in analysis_type)
+                                    roi_projected = pca.transform(filtered_data_in)
+                                    explained_variance_ratio = np.var(roi_projected, axis=0)/np.var(roi_projected, axis=0).sum()
+                                else:
+                                    explained_variance_ratio = pca.explained_variance_ratio_
+                                    cumvars = explained_variance_ratio.cumsum()
+
+                                # Access the components (eigenvectors) if needed
+                                components = pca.components_
+
+                            elif 'ica' in analysis_type.lower():
+                                if 'train' in analysis_type.lower():
+                                    # this projects the roi data onto the pca fitted on the whole data 
+                                    # (e.g. the visual rois if 'visroi' in analysis_type)
+                                    roi_projected = ica.transform(filtered_data_in)
+                                    # Note: explained variance is not straighforward to interpret for ICA, so we skip this
+                                    # explained_variance_ratio = np.var(roi_projected, axis=0)/np.var(roi_projected, axis=0).sum()
+                                else:
+                                    # Note: there is no explained variance for ICA
+
+                                    # Access the components (eigenvectors) if needed
+                                    components = ica.components_
+
                             else:
-                                explained_variance_ratio = pca.explained_variance_ratio_
-                                cumvars = explained_variance_ratio.cumsum()
+                                raise Exception("Analysis type not recognised.")
 
-                            # Access the components (eigenvectors) if needed
-                            components = pca.components_
 
-                            # Plot the cumulative explained variance
-                            ax[0].plot(range(1, len(cumvars) + 1), cumvars)
-                            ax[0].set_xlabel('Number of Principal Components')
-                            ax[0].set_ylabel('Cumulative Explained Variance')
-                            # Plot the cumulative explained variance
-                            ax[1].loglog(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio)
-                            ax[1].set_xlabel('Principal Component Number')
-                            ax[1].set_ylabel('Explained Variance')
-                            plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_explained_variance.{save_type}')
-                            
-                            if 'individualrois' in analysis_type.lower():
-                                print(f"Components shape: {components.shape}")
-                                eigenspectrums[ROIS[roi]] = explained_variance_ratio
-                                cumvars[ROIS[roi]] = explained_variance_ratio.cumsum()
-                                varThresholds[ROIS[roi]] = np.argmax(cumvars[ROIS[roi]] > varThreshVal*cumvars[ROIS[roi]][-1])+1  # +1 because of 0 indexing
-                                
-                                
+                            if not 'ica' in analysis_type.lower():
                                 # Plot the cumulative explained variance
-                                ax[0].plot(range(1, len(cumvars[ROIS[roi]]) + 1), cumvars[ROIS[roi]], color=roi_colors[ROIS[roi]])
+                                ax[0].plot(range(1, len(cumvars) + 1), cumvars)
                                 ax[0].set_xlabel('Number of Principal Components')
                                 ax[0].set_ylabel('Cumulative Explained Variance')
                                 # Plot the cumulative explained variance
-                                ax[1].loglog(range(1, len(eigenspectrums[ROIS[roi]]) + 1), eigenspectrums[ROIS[roi]], color=roi_colors[ROIS[roi]])
+                                ax[1].loglog(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio)
                                 ax[1].set_xlabel('Principal Component Number')
                                 ax[1].set_ylabel('Explained Variance')
-                            # plt.title('Explained Variance for Principal Components')
-                            # plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_roi{roi}_subjavg_explained_variance_loglog.{save_type}')
-                            # plt.close()
-                            # for c in range(n_components):
-                            #     comp_NN_positive = get_gcc_nearest_neighbour(components[c], n_neighbours=10, METRIC='cosine')
-                            #     comp_NN_negative = get_gcc_nearest_neighbour(-components[c], n_neighbours=10, METRIC='cosine')
+                                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_explained_variance.{save_type}')
+                                
+                                if 'individualrois' in analysis_type.lower():
+                                    print(f"Components shape: {components.shape}")
+                                    eigenspectrums[ROIS[roi]] = explained_variance_ratio
+                                    cumvars[ROIS[roi]] = explained_variance_ratio.cumsum()
+                                    varThresholds[ROIS[roi]] = np.argmax(cumvars[ROIS[roi]] > varThreshVal*cumvars[ROIS[roi]][-1])+1  # +1 because of 0 indexing
+                                    
+                                    # Plot the cumulative explained variance
+                                    ax[0].plot(range(1, len(cumvars[ROIS[roi]]) + 1), cumvars[ROIS[roi]], color=roi_colors[ROIS[roi]])
+                                    ax[0].set_xlabel('Number of Principal Components')
+                                    ax[0].set_ylabel('Cumulative Explained Variance')
+                                    # Plot the cumulative explained variance
+                                    ax[1].loglog(range(1, len(eigenspectrums[ROIS[roi]]) + 1), eigenspectrums[ROIS[roi]], color=roi_colors[ROIS[roi]])
+                                    ax[1].set_xlabel('Principal Component Number')
+                                    ax[1].set_ylabel('Explained Variance')
+                                plt.title('Explained Variance for Principal Components')
+                                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_roi{roi}_subjavg_explained_variance_loglog.{save_type}')
+                                plt.close()
+                            for c in range(10):
+                                
+                                comp_to_use = (components[c] + np.mean(filtered_data_in, axis=0))
 
-                            #     print(f"Component {c} NN positive: {comp_NN_positive}")
-                            #     print(f"Component {c} NN negative: {comp_NN_negative}")
+                                comp_NN_positive, dists_pos = get_gcc_nearest_neighbour(comp_to_use, n_neighbours=3, METRIC='cosine', norm_mu_sigma=['center'])
+                                comp_NN_negative, dists_pos = get_gcc_nearest_neighbour(-comp_to_use, n_neighbours=3, METRIC='cosine', norm_mu_sigma=['center'])
 
-                    elif 'pca3D' in analysis_type and 'xval' in analysis_type.lower():
+                                print(f"Component {c} NN positive: {comp_NN_positive}")
+                                print(f'\tDists to NN: {dists_pos}')
+                                print(f"Component {c} NN negative: {comp_NN_negative}")
+                                print(f'\tDists to NN: {dists_pos}')
+
+                    elif 'pca' in analysis_type and 'xval' in analysis_type.lower():
             
                         if subj == 'average':
                             # this projects the roi data onto the pca fitted on the whole data 
@@ -499,25 +628,26 @@ if __name__ == "__main__":
 
 
             # Save the cumulative explained variance for each ROI
-            if subj == 'average' and 'pca3D' in analysis_type.lower():
-                with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_cumulative_explained_variances.pkl', 'wb') as file:
-                    pickle.dump(cumvars, file)
-                with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_eigenspectrums.pkl', 'wb') as file:
-                    pickle.dump(eigenspectrums, file)
-                with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds.pkl', 'wb') as file:
-                    pickle.dump(varThresholds, file)
-                
-                # add ROIS.values() as legends to the plots
-                ax[0].legend(varThresholds.keys())
-                ax[1].legend(varThresholds.keys())
-                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_pcaVarPlots.{save_type}')
-                plt.close()
+            if subj == 'average':
+                if 'pca' in analysis_type.lower():
+                    with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_cumulative_explained_variances.pkl', 'wb') as file:
+                        pickle.dump(cumvars, file)
+                    with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_eigenspectrums.pkl', 'wb') as file:
+                        pickle.dump(eigenspectrums, file)
+                    with open(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds.pkl', 'wb') as file:
+                        pickle.dump(varThresholds, file)
+                    
+                    # add ROIS.values() as legends to the plots
+                    ax[0].legend(varThresholds.keys())
+                    ax[1].legend(varThresholds.keys())
+                    plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_pcaVarPlots.{save_type}')
+                    plt.close()
 
-                keys = varThresholds.keys()
-                values = varThresholds.values()
-                plt.bar(keys, values, color=[roi_colors[k] for k in keys])
-                plt.xlabel('ROIs')
-                plt.ylabel(f'Number of Principal Components needed for {varThreshVal*100}% variance')
-                plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds_barplot_{varThreshVal*100}%.{save_type}')
+                    keys = varThresholds.keys()
+                    values = varThresholds.values()
+                    plt.bar(keys, values, color=[roi_colors[k] for k in keys])
+                    plt.xlabel('ROIs')
+                    plt.ylabel(f'Number of Principal Components needed for {varThreshVal*100}% variance')
+                    plt.savefig(f'{results_dir}/{data_type}_{analysis_type}_subjavg_varThresholds_barplot_{varThreshVal*100}%.{save_type}')
 
 

@@ -8,7 +8,7 @@ from scipy import stats
 
 
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
-                            alphabetical_order=False, best_to_worst_order=True,
+                            alphabetical_order=False, best_to_worst_order=False,
                             custom_model_labels=None, average_seeds=False):
     '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
     Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
@@ -176,9 +176,9 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         model_labels = model_keys
         model_alphas = np.linspace(0.1, 1, len(model_keys))
         bar_specs = {
-            "width": 0.021*(44/n_models),  # rough estimate of what will look good
+            "width": 0.00975*(44/n_models),  # rough estimate of what will look good
             "edgecolor": "black",
-            "linewidth": 0.7,
+            "linewidth": 0.7*(0.00975/0.021),
             "zorder": 10,
         }
         fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
@@ -239,7 +239,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
                 facecolor=facecolor,
                 label="_no_legend_",
             )  # roi_label)
-            ax.errorbar(bar_pos, perf, yerr=std, color="black", capsize=3, zorder=11)
+            ax.errorbar(bar_pos, perf, yerr=std, color="black", capsize=1, capthick=(0.00975/0.021), lw=(0.00975/0.021), zorder=11)
             x_positions.append(bar_pos)
 
             # statistics
@@ -267,7 +267,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             these_corrected_pvals = out[1]
             for k_i, k2 in enumerate(my_stats["uncorrected"][k1][roi_labels[i]].keys()):
                 my_stats["corrected"][k1][roi_labels[i]][k2] = these_corrected_pvals[k_i]
-                if these_corrected_reject[k_i]:
+                if not these_corrected_reject[k_i]:
                     # if 'dnn_mpnet_rec_seedAVG_ep200_layer-1' in k2:
                     print(f"\t\t\t{k2}: pval: {these_corrected_pvals[k_i]:.4f} - reject: {these_corrected_reject[k_i]}")
 
@@ -295,5 +295,5 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
 
