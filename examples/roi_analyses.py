@@ -10,7 +10,7 @@ from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import corre
 
 for roi_analysis_dnn_layer_to_use in [-1]:
 
-    plt_suffix = f"_allDNNs"
+    plt_suffix = f"_allLLMs"
 
     OVERWRITE = False
 
@@ -26,11 +26,11 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     ### BELOW IS CODE TO GET ALL MODELS
     # models from original paper
     MODEL_NAMES += [
-        "multihot",
-        "mpnet",
-        "fasttext_categories",
+        # "multihot",
+        # "mpnet",
+        # "fasttext_categories",
         # "fasttext_verbs",
-        "fasttext_all",
+        # "fasttext_all",
         # "guse",
         # "dnn_ecoset_category",
         # "dnn_ecoset_fasttext",
@@ -38,8 +38,8 @@ for roi_analysis_dnn_layer_to_use in [-1]:
 
     # dnn 10 seeds
     # for epoch in [200]:
-    #     # for target in ['mpnet']:
     #     for target in ['mpnet']:
+    #     # for target in ['mpnet', 'multihot']:
     #         for seed in range(1, 11):
     #             MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep{epoch}"]    
 
@@ -68,12 +68,12 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     ]
 
     ### SENTENCE EMBEDDINGS
-    # SENTENCE_EMBEDDING_MODEL_TYPES = ['mpnet', 'multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
-    #                                   'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
-    #                                   'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
-    #                                   'GUSE_transformer']#, 'GUSE_DAN']#, 'USE_CMLM_Base', 'T5']
+    SENTENCE_EMBEDDING_MODEL_TYPES = ['mpnet', 'multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
+                                      'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
+                                      'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
+                                      'GUSE_transformer']#, 'GUSE_DAN']#, 'USE_CMLM_Base', 'T5']
     # SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2']
-    # RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
+    RANDOMIZE_WORD_ORDER = False  # If True, word order will be randomized in each sentence.
 
     # sentence embeddings with various randomized words
     # RANDOMIZE_BY_WORD_TYPES = []  # randomize within word type (e.g. use a random other verb instead of the sentence verb). Ignored if empty list.
@@ -81,17 +81,17 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     #     # randomize all combinations of word types
     #     RANDOMIZE_BY_WORD_TYPES.extend([list(elem) for elem in itertools.combinations(WORD_TYPES, i)])
     # RANDOMIZE_BY_WORD_TYPES = [[w] for w in WORD_TYPES]  # Just randomize single word types
-    # RANDOMIZE_BY_WORD_TYPES = [None]#, ['noun'], ['verb']]  # add no randomization to the list
+    RANDOMIZE_BY_WORD_TYPES = [None]#, ['noun'], ['verb']]  # add no randomization to the list
 
-    # for RANDOMIZE_WORD_ORDER in [False]:
-    #     for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
-    #         for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
+    for RANDOMIZE_WORD_ORDER in [False]:
+        for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
+            for RANDOMIZE_BY_WORD_TYPE in RANDOMIZE_BY_WORD_TYPES:
                 
-    #             this_save_name = f"nsd_{SENTENCE_EMBEDDING_MODEL_TYPE}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"     
-    #             this_short_name = this_save_name.replace("nsd_", "").replace("_mean_embeddings", "")#.replace("all_mpnet_base_v2", "mpnet")
+                this_save_name = f"nsd_{SENTENCE_EMBEDDING_MODEL_TYPE}_mean_embeddings{'_SCRAMBLED_WORD_ORDER' if RANDOMIZE_WORD_ORDER else ''}{'' if RANDOMIZE_BY_WORD_TYPE is None else '_RND_BY_' + '_'.join(RANDOMIZE_BY_WORD_TYPE)}"     
+                this_short_name = this_save_name.replace("nsd_", "").replace("_mean_embeddings", "")#.replace("all_mpnet_base_v2", "mpnet")
                 
-    #             # add model without cutoff distance in the randomization
-    #             MODEL_NAMES.append(this_short_name)
+                # add model without cutoff distance in the randomization
+                MODEL_NAMES.append(this_short_name)
 
     #             # add model with cutoff dist = 0.7
     #             if RANDOMIZE_BY_WORD_TYPE is None:
@@ -105,8 +105,8 @@ for roi_analysis_dnn_layer_to_use in [-1]:
 
     # sentence embeddings on (lists of) words of a single type (e.g. nouns)
     # MODEL_NAMES += ['all-mpnet-base-v2']
-    for wt in WORD_TYPES:
-        MODEL_NAMES += [f"mpnet_{wt}s"]
+    # for wt in WORD_TYPES:
+    #     MODEL_NAMES += [f"mpnet_{wt}s"]
         # MODEL_NAMES += [f"mpnet_{wt}s_concat5caps"]
         # for max_n_words in range(1,6):
         #     MODEL_NAMES += [f'mpnet_{wt}_max{max_n_words}words']
@@ -127,16 +127,16 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     # other new models
     MODEL_NAMES += [
         # "glove_verbs",
-        "glove_all",
+        # "glove_all",
         # "glove_nouns_cocoCatsMatchPositive",
         # "glove_nouns_cocoCatsMatchNegative",
         # "glove_nouns",
-        "glove_categories",
+        # "glove_categories",
         # "fasttext_nouns_cocoCatsMatchPositive",
         # "fasttext_nouns_cocoCatsMatchNegative",
         # "fasttext_nouns",
-        "mpnet_category_all",
-        "mpnetWordAvg_all",
+        # "mpnet_category_all",
+        # "mpnetWordAvg_all",
         # "mpnetWordAvg_nouns",
         # "mpnetWordAvg_verbs",
         # "CLIP_RN50_text",
@@ -164,7 +164,8 @@ for roi_analysis_dnn_layer_to_use in [-1]:
         # 'sceneCateg_resnet50_finalLayer',
         # 'taskonomy_scenecat_resnet50',
         # "konkle_alexnetgn_ipcl_ref01_inputs01", 
-        # "konkle_alexnetgn_supervised_ref12_augset1_5x_inputs01",,
+        # "konkle_alexnetgn_supervised_ref12_augset1_5x_inputs01",
+        # 'dnn_ecoset_category',
     ]
 
     # MODEL_NAMES += ['thingsvision_cornet-s', 'dnn_ecoset_category', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 'timm_nf_resnet50', 'brainscore_resnet50_julios', 'brainscore_alexnet', 
@@ -172,7 +173,6 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     #                 'CLIP_RN50_images', 'resnext101_32x8d_wsl', 'CLIP_ViT_images',
     #                 'google_simclrv1_rn50', 'konkle_alexnetgn_ipcl_ref01']
 
-    # MODEL_NAMES = ["mpnet", "mpnetWordAvg_all", "glove_all", "fasttext_all", "multihot"]
 
     # MODEL_NAMES = list(set(MODEL_NAMES))
     # dummy = MODEL_NAMES.copy()
@@ -230,7 +230,6 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     # nsd_roi_analyses(MODEL_NAMES, models_rdm_distance, roi_analysis_dnn_layer_to_use, which_rois,
     #                 nsd_dir, betas_dir, rois_dir, base_save_dir,
     #                 remove_shared_515, OVERWRITE_NEURO_RDMs=False, OVERWRITE_RDM_CORRs=OVERWRITE)
-
 
     nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
                             fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,

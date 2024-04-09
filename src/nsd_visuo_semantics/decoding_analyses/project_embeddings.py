@@ -13,7 +13,7 @@ os.makedirs(save_dir, exist_ok=True)
 
 embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
 
-for name in ['unique_sentence_objects', 'objects']:  #sentences_zoo.keys():
+for name in ['objects']:  #sentences_zoo.keys():
 
     sentences = sentences_zoo[name]
 

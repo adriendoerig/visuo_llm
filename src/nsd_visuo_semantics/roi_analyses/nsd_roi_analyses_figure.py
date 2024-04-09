@@ -43,7 +43,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             "linewidth": 0.7,
             "zorder": 10,
         }
-        fig, ax = plt.subplots(figsize=(10, 3))
+        fig, ax = plt.subplots(figsize=(6, 3))
 
     elif fig_id == 5:
         model_keys = ["multihot", "dnn_multihot_rec", "mpnet", "dnn_mpnet_rec"]
@@ -55,29 +55,29 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     roi_keys = [
         "earlyROI",
-        "midventralROI",
+        # "midventralROI",
         "ventralROI",
-        "midlateralROI",
+        # "midlateralROI",
         "lateralROI",
-        "midparietalROI",
+        # "midparietalROI",
         "parietalROI",
     ]
     roi_labels = [
         "EVC",
-        "midventral",
+        # "midventral",
         "ventral",
-        "midlateral",
+        # "midlateral",
         "lateral",
-        "midparietal",
+        # "midparietal",
         "parietal",
     ]
     roi_colors = [
         "mediumaquamarine",
-        "khaki",
+        # "khaki",
         "yellow",
-        "lightskyblue",
+        # "lightskyblue",
         "royalblue",
-        "lightcoral",
+        # "lightcoral",
         "red",
     ]  # tab:cyan
     roi_specs = {
@@ -297,3 +297,97 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     plt.tight_layout()
     plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg")  # , dpi=300)
 
+
+
+    plot_pval_tables = False
+    if plot_pval_tables:
+        import pandas as pd
+        from matplotlib.colors import Normalize
+        import seaborn as sns
+        from matplotlib.patches import Rectangle
+
+
+        model_names_to_plot = {
+            'multihot': 'multihot categ',
+            'fasttext_categories': 'fasttext categ',
+            'glove_categories': 'glove categ',
+            'mpnet': 'LLM caption',
+            'mpnet_verbs': 'LLM verbs',
+            'mpnet_nouns': 'LLM nouns',
+            'mpnet_category_all': 'LLM categ',
+            'mpnetWordAvg_all': 'LLM wordavg',
+            'fasttext_all': 'fasttext wordavg',
+            'glove_all': 'glove wordavg',
+
+            'dnn_mpnet_rec_seedAVG_ep200_layer-1': 'LLM trained (ours)',
+            'thingsvision_cornet-s': 'cornet-s', 
+            'dnn_ecoset_category_layer-1': 'rcnn_ecoset', 
+            'konkle_alexnetgn_supervised_ref12_augset1_5x': 'alexnet-gn-sv', 
+            'timm_nf_resnet50': 'nf_resnet50', 
+            'brainscore_resnet50_julios': 'resnet50', 
+            'brainscore_alexnet': 'alexnet', 
+            'sceneCateg_resnet50_finalLayer': 'resnet50_Places365', 
+            'taskonomy_scenecat_resnet50': 'taskonomy_scene_cat',
+            'CLIP_RN50_images': 'CLIP_RN50_imgs', 
+            'resnext101_32x8d_wsl': 'resnext101_32x8d', 
+            'CLIP_ViT_images': 'CLIP_ViT_imgs', 
+            'google_simclrv1_rn50': 'google_simclr_rn50', 
+            'konkle_alexnetgn_ipcl_ref01': 'alexnetgn_ipcl',
+        }
+
+        roi_labels_to_plot = ['ventral', 'lateral', 'parietal']
+        num_plots = len(roi_labels_to_plot)
+        num_cols = 2  # Number of columns for subplots
+        num_rows = -(-num_plots // num_cols)  # Ceiling division to ensure enough rows
+        fig, axes = plt.subplots(num_rows, num_cols, figsize=(24, 10 * num_rows))  # Adjust the figsize as needed
+        axes = [item for sublist in axes for item in sublist]
+
+        for i, (this_roi, this_ax) in enumerate(zip(roi_labels_to_plot, axes)):
+            stats_dict = my_stats['corrected']['model_comparisons_ttest_ind_2sided'][this_roi]
+            # model_names = set()
+            # for comparison in stats_dict.keys():
+            #     model_names.update(comparison.split('_vs_'))
+            # model_names = list(model_names)
+            # model_names = [model_names_to_plot[m] for m in model_names]
+            # df = pd.DataFrame(index=model_names, columns=model_names)
+            model_names = [model_names_to_plot[m] for m in model_keys]
+            df = pd.DataFrame(index=model_names, columns=model_names)
+            for comparison in stats_dict.keys():
+                model1, model2 = [model_names_to_plot[c] for c in comparison.split('_vs_')]
+                if model1 == model2:
+                    df.loc[model1, model2] = None
+                else:
+                    df.loc[model1, model2] = stats_dict[comparison]
+                    df.loc[model2, model1] = stats_dict[comparison]
+
+            df_reordered = df.reindex(index=model_names, columns=model_names)
+
+            p_values = np.around(df.values.astype(np.float), 20)
+            tick_labels = model_names
+            mask = p_values > 0.05
+            cmap = sns.color_palette("Blues_r", as_cmap=True)
+            norm = Normalize(vmin=0, vmax=0.05)
+
+            # Plot the heatmap on the current subplot
+            ax = sns.heatmap(
+                p_values, mask=None, cmap=cmap, norm=norm, annot=True, cbar=True,
+                linewidths=1, linecolor="gray", ax=this_ax
+            )
+            ax.set_xticklabels(tick_labels, rotation=45, fontsize=14, fontweight='bold')
+            ax.set_yticklabels(tick_labels, rotation=45, fontsize=14, fontweight='bold')
+            cbar = ax.collections[0].colorbar
+            cbar.set_label("p-value", fontsize=20)
+            cbar.ax.tick_params(labelsize=16)
+            # Add a thick border around the entire heatmap
+            ax.add_patch(Rectangle((0, 0), len(p_values[0]), len(p_values), fill=False, edgecolor="black", lw=2, clip_on=False))
+
+            # Add subtitle
+            this_ax.set_title(f'{this_roi}', fontsize=24, fontweight='bold')
+
+        # Adjust the layout
+        plt.tight_layout()
+        plt.savefig(f'{results_dir}/{plt_suffix}_stats.png', dpi=300)
+        plt.savefig(f'{results_dir}/{plt_suffix}_stats.svg', dpi=300)
+        plt.show()
+
+    

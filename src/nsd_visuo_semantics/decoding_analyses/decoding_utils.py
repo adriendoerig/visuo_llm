@@ -186,7 +186,7 @@ sentences_zoo = {
             ['A bicycle leaning against a wall.',
              'A collection of books on a shelf.',
              'A stack of papers.',
-             'A set of kitchen utensils.',
+             'A sofa, a board game and a pencil',
              'A collection of toys.'],
                 
     'social': [

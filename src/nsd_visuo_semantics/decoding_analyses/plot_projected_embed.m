@@ -1,10 +1,10 @@
 close all; clear all;
 
 all_names = {'tim_people', 'tim_places', 'gpt_people', 'gpt_places', 'gpt_food', 'single_word_people', 'single_word_places', 'single_word_food'};
-names_A = {'unique_sentence_food'};
-names_B = {'unique_sentence_objects'};
+names_A = {'people'};
+names_B = {'places'};
 
-FDR = 0
+FDR = 1
 
 maps = {'contrast'};
 
@@ -84,7 +84,7 @@ for i = 1:length(names_A)
                 correc_str = 'p0.05 (no correc)';
             end
 
-            mean_data_threshold(isnan(mean_data_threshold)) = 0;
+            % mean_data_threshold(isnan(mean_data_threshold)) = 0;
 
             [figname ' sum of significant vertices: ' num2str(sum(mean_data_threshold))]
 
@@ -95,10 +95,7 @@ for i = 1:length(names_A)
             extraopts = {'rgbnan', 1, 'hemibordercolor', [1 1 1], 'overlayalpha', mean_data_threshold};
 
             for v = 1:length(viewz_to_plot)
-                this_view = viewz_to_plot{v};
-                [rawimg, unused, rgbimg] = cvnlookup('fsaverage', this_view, mean_data, [], colormap, [], Lookup, wantfig, extraopts);
-                title([figname '(subjAvg, ' correc_str ') , min= ' num2str(min(mean_data)) ', max = ' num2str(max(mean_data))])
-                saveas(gcf, fullfile(figpath, strcat(figname, '_subjAvg_view', num2str(this_view))), SAVE_TYPE)
+                cvn_plot_fix(mean_data', viewz_to_plot{v}, figpath, [figname '_view' num2str(viewz_to_plot{v}) '_' correc_str '.' SAVE_TYPE], figname, SAVE_TYPE, max_data, extraopts);
             end
         end
     end
