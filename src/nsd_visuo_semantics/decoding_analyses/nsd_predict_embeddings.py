@@ -12,7 +12,7 @@ from nsd_access import NSDAccess
 from scipy.spatial.distance import cdist, correlation, cosine, pdist
 from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, restore_nan_dims, pairwise_corr
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_100, get_conditions_515, get_1000, get_rois,get_sentence_lists, load_or_compute_betas_average
 
 EMBEDDING_MODEL_NAME = "all-mpnet-base-v2"
 USE_ROIS = 'streams'  # None  # "mpnet_noShared515_sig0.005_fsaverage"  # None, or 'mpnet_noShared515_sig0.005_fsaverage' or streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
@@ -53,7 +53,10 @@ nsda = NSDAccess(nsd_dir)
 
 # get the condition list for the special 515
 # these will be used as testing set for the guse predictions
+conditions_1000 = get_1000(nsd_dir)
 conditions_515 = get_conditions_515(nsd_dir)
+conditions_100 = get_conditions_100(nsd_dir)
+
 images_515 = nsda.read_images(np.asarray(conditions_515) - 1)
 sentences_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
 

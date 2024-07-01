@@ -21,15 +21,23 @@ ms_coco_nsd_val_captions = f"{base_path}/ms_coco_nsd_captions_val.pkl"
 nsd_captions_path = f"{base_path}/ms_coco_nsd_captions_test.pkl"
 nsd_special100_gpt4Captions_path = f"{base_path}/nsd_special100_gpt4Captions.pkl"
 nsd_special100_cocoCaptions_path = f"{base_path}/nsd_special100_cocoCaptions.pkl"
+nsd_all_gpt4CaptionsLong = f"/share/klab/adoerig/adoerig/nsd_all_gpt4CaptionsLong.npy"
 
-captions_to_embed_path = nsd_special100_cocoCaptions_path
+captions_to_embed_path = nsd_all_gpt4CaptionsLong
 
 # GENERAL SENTENCE EMBEDDING PARAMETERS
 # SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
 #                                   'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
 #                                   'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
 #                                   'GUSE_transformer', 'GUSE_DAN', 'USE_CMLM_Base', 'T5']  
-# SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2']
+SENTENCE_EMBEDDING_MODEL_TYPES = ['all-mpnet-base-v2']
+for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
+    # JUST STANDARD EMBEDDINGS
+    get_nsd_sentence_embeddings(SENTENCE_EMBEDDING_MODEL_TYPE, captions_to_embed_path, 
+                                None, None, 0, 
+                                h5_dataset_path, 
+                                use_saved_randomized_sentences_from_other_model=None,
+                                OVERWRITE=OVERWRITE)
 # WORD_TYPES = ['noun', 'verb']  # , 'adjective', 'adverb', 'preposition']
 
 # RANDOMIZATION VERSIONS OF NSD SENTENCE EMBEDDINGS
@@ -78,4 +86,4 @@ captions_to_embed_path = nsd_special100_cocoCaptions_path
 #             get_nsd_noun_embeddings(WORD_EMBEDDING_TYPE, WORD_CONCATENATE_EMBEDDINGS, WORD_NOUNS_MATCH_TO_COCO_CATEGORY_NOUNS,
 #                                     h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, captions_to_embed_path, OVERWRITE=OVERWRITE)
 
-get_nsd_category_embeddings('glove', h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE)
+# get_nsd_category_embeddings('glove', h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE)

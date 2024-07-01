@@ -174,7 +174,10 @@ def get_n_classes(hparams=None, dataset_path=None, dataset_subset=None):
         print(f'getting n_classes from {dataset_path}')
         if hparams['embedding_target']:
             print(f'\tusing embeddings dimension from {hparams["target_dataset_name"]}')
-            return f['train'][hparams['target_dataset_name']][0].shape[-1]
+            try:
+                return f['train'][hparams['target_dataset_name']][0].shape[-1]
+            except:
+                return f['test'][hparams['target_dataset_name']][0].shape[-1]
         else:
             print(f'\tusing len(categories)')
             return f['categories'][:].shape[0]

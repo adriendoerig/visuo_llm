@@ -7,11 +7,11 @@ function cvn_plot_fix(sig_data, viewz, fig_path, fig_name, title_prefix, SAVE_TY
     else
         cb_bound = max_cmap_val;
     end
-    if min(sig_data(:)) < 0
-        cb_bounds = [-cb_bound, cb_bound];
-    else
-        cb_bounds = [0, cb_bound];
-    end
+    %if min(sig_data(:)) < 0
+    cb_bounds = [-cb_bound, cb_bound];
+    %else
+    %    cb_bounds = [0, cb_bound];
+    %end
 
     curvature = zeros(1, 327684);
     Lookup = [];

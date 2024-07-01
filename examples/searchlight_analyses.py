@@ -18,6 +18,7 @@ conda activate tensorflowGPU'''
 ### DECLARE PARAMS
 
 OVERWRITE = False
+MODEL_INPUT_DATA = ['full_nsd']#['nsd_all_gpt4CaptionsLong']  # 'full_nsd' (all coco captions), 'nsd_special100_gpt4Captions' (gpt4captions for special 100), 'nsd_special100_cocoCaptions', 'nsd_all_gpt4CaptionsLong' (long gpt4 captions for all nsd)
 
 # models to test
 MODEL_NAMES = [
@@ -39,6 +40,25 @@ MODEL_NAMES = [
 
 # MODEL_NAMES += [f"dnn_mpnet_rec_seed{s}_ep200" for s in [5,4]]
 # MODEL_NAMES += [f"dnn_multihot_rec_seed{s}_ep200" for s in [4,5]]
+
+MODEL_NAMES += [
+    'dnn_bihem_singleStreamApr24',
+    'dnn_bihem_bottleneckNoCCApr24',
+    'dnn_bihem_bottleneckCCApr24',
+    # 'dnn_bihem_bottleneckBlurNoDelayCCApr24',
+    # 'dnn_bihem_bottleneckBlurLDelayCCApr24',
+                ]
+
+MODEL_NAMES = list(set(MODEL_NAMES))
+dummy = MODEL_NAMES.copy()
+for mn in dummy:
+    for mi in MODEL_INPUT_DATA:
+        if mi == 'full_nsd':
+            pass
+        else:
+            MODEL_NAMES.append(mn + '_' + mi)
+    if 'full_nsd' not in MODEL_INPUT_DATA:
+        MODEL_NAMES.remove(mn)
 
 # if true, the 515 stimuli seen by all subjects are removed (so they can be used in the test set of other experiments
 # based on searchlight maps while avoiding double-dipping)
@@ -68,9 +88,9 @@ rdms_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_5
 
 
 ### RUN SEARCHLIGHT
-# nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
-#                         nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
-#                         remove_shared_515, OVERWRITE)
+nsd_searchlight_main_tf(MODEL_NAMES, models_rdm_distance, 
+                        nsd_dir, nsd_derivatives_dir, betas_dir, base_save_dir, 
+                        remove_shared_515, OVERWRITE)
 
 
 ### PROJECT SEARCHLIGHT MAPS TO FSAVERAGE

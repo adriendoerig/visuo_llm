@@ -65,8 +65,13 @@ def get_nsd_sentence_embeddings(embedding_model_type, captions_to_embed_path,
             sentence_embeddings_sanity_check(embedding_model_type, embedding_model, METRIC, save_test_imgs_to)
 
         if GET_EMBEDDINGS:
-            with open(captions_to_embed_path, "rb") as fp:
-                loaded_captions = pickle.load(fp)
+            if '.pkl' in captions_to_embed_path:
+                with open(captions_to_embed_path, "rb") as fp:
+                    loaded_captions = pickle.load(fp)
+            elif '.npy' in captions_to_embed_path:
+                loaded_captions = np.load(captions_to_embed_path, allow_pickle=True)
+            else:
+                raise ValueError("Captions file format not recognized.")
 
             randomized_captions = []
 

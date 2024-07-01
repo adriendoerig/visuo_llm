@@ -122,13 +122,21 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
                     this_short_name_cutoff = this_short_name + f"_cutoffDist{cutoff}"
                     modelname2file[this_short_name_cutoff] = f"{saved_embeddings_dir}/{this_save_name_cutoff}.pkl"
 
+    modelname2file['nsd_all_gpt4CaptionsLong_openai-text-embedding-3-small'] = f"{saved_embeddings_dir}/nsd_all_gpt4CaptionsLong_openai-text-embedding-3-small_embeddings.npy"  # large openai model on 
 
     # add all the same keys and values for the other input data possible for the models
     # (i.e. models on the special100 with coco or gpt4-generated captions)
-    additional_prefixes = ['nsd_special100_gpt4Captions', 'nsd_special100_cocoCaptions']
+    additional_prefixes = ['nsd_special100_gpt4Captions', 'nsd_special100_cocoCaptions', 'nsd_all_gpt4CaptionsLong']
     dummy_dict = modelname2file.copy()
     for this_prefix in additional_prefixes:
         for k, v in dummy_dict.items():
             modelname2file[f"{k}_{this_prefix}"] = v.replace("nsd_", f"{this_prefix}_")
+
+    bihemNet_path = '/share/klab/vbosch/students/sballe/BLTeral/nsd_activations'
+    modelname2file['dnn_bihem_singleStreamApr24'] = f"{bihemNet_path}/Single Stream, LRFlip, 16 total bottleneck units, params matched manually, 16-64.h5"
+    modelname2file['dnn_bihem_bottleneckNoCCApr24'] = f"{bihemNet_path}/CapacityBottleneck Sweep, NoCC Config05, LRFlip, 8 bottleneck units per side, 16-64.h5"
+    modelname2file['dnn_bihem_bottleneckCCApr24'] = f"{bihemNet_path}/CapacityBottleneck Sweep, mult ConvCC Config05, LRFlip, 8 bottleneck units per side, 16-64.h5"
+    modelname2file['dnn_bihem_bottleneckBlurLDelayCCApr24'] = f"{bihemNet_path}/Blur, left delay until epoch 30, mult ConvCC Config05, LRFlip, 8 bottleneck units per side, 16-64.h5"
+    modelname2file['dnn_bihem_bottleneckBlurNoDelayCCApr24'] = f"{bihemNet_path}/Blur, no delay, mult ConvCC Config05, LRFlip, 8 bottleneck units per side, 16-64.h5"
 
     return modelname2file

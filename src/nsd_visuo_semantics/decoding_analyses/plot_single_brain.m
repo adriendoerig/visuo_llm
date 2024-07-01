@@ -1,12 +1,6 @@
 close all; clear all;
 
-all_names = {'tim_people', 'tim_places', 'gpt_people', 'gpt_places', 'gpt_food', 'single_word_people', 'single_word_places', 'single_word_food'};
-names_A = {'unique_sentence_food'};
-names_B = {'unique_sentence_people'};
-
 FDR = 0
-
-maps = {'contrast'};
 
 np_map_dir = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel/project_embeddings/cache';
 figpath = '/share/klab/adoerig/adoerig/nsd_visuo_semantics/results_dir/decoding_analyses/all-mpnet-base-v2_results_ROIfullbrain_encodingModel/project_embeddings/brain_maps';
@@ -36,36 +30,12 @@ wantfig = 1;
 n_vertices = 327684;
 n_subjects = 8;
 
-for i = 1:length(names_A)
-    name_A = names_A{i};
-    
-    for j = i:length(names_B)
-        name_B = names_B{j};
-
-        if strcmp(name_A, name_B)
-            continue
-        end
-
-        for idx = 1:length(maps)
-            s = maps{idx};
-
             rawdata = zeros(8, n_vertices);
 
             for sub = 1:n_subjects
-
-                datapath_A = strcat(np_map_dir, '/subj0', num2str(sub), '_pred_voxels_', name_A, '.npy');
-                datapath_B = strcat(np_map_dir, '/subj0', num2str(sub), '_pred_voxels_', name_B, '.npy');
-
-                if strcmp(s, 'A')
-                    rawdata(sub,: ) = readNPY(datapath_A);
-                    figname = name_A;
-                elseif strcmp(s, 'B')
-                    rawdata(sub,: ) = readNPY(datapath_B);
-                    figname = name_B;
-                elseif strcmp(s, 'contrast')
-                    rawdata(sub,: ) = readNPY(datapath_A) - readNPY(datapath_B);
-                    figname = [name_A '_minus_' name_B];
-                end
+                datapath = strcat(np_map_dir, '/subj0', num2str(sub), '.npy');
+                rawdata(sub,: ) = readNPY(datapath);
+                figname = name_A;
             end
             
             all_data = squeeze(rawdata);

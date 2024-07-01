@@ -3,13 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from nsd_visuo_semantics.get_dnn_activities.dataset_loader.make_tf_dataset import get_dataset
-from nsd_visuo_semantics.get_dnn_activities.task_helper_functions import get_activities_model, get_activities_model_by_layername, load_and_override_hparams, load_model_from_path, \
-                                                                         float2multihot, get_closest_caption, clip_preprocess_batch, brainscore_preprocess_batch, \
-                                                                         get_brainscore_layer_activations, torchhub_preprocess_batch, google_simclr_preprocess_batch
+from nsd_visuo_semantics.get_dnn_activities.task_helper_functions import get_activities_model, get_activities_model_by_layername, load_and_override_hparams, load_model_from_path, get_closest_caption
 from nsd_visuo_semantics.get_dnn_activities.ipcl_feature_extractor import FeatureExtractor
 from nsd_visuo_semantics.get_dnn_activities.get_modelName2Path_dict import get_modelName2Path_dict
-from nsd_visuo_semantics.get_embeddings.nsd_embeddings_utils import get_words_from_multihot
-from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
 
 """Get activities for all layers of a network on the nsd dataset.
 We average across space to keep size reasonable
@@ -43,7 +39,10 @@ def get_nsd_activations_LLMnets(model_name, dataset_path,
 
     print(f"Creating {model_name} model and loading weights from {model_savedir}")
     net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True)
-    activities_model, readout_layer_names, readout_layer_shapes = get_activities_model(net, n_layers, hparams)
+    if 'resnet' in model_name.lower():
+        activities_model, readout_layer_names, readout_layer_shapes = get_activities_model_by_layername(net, layer_names=['avgpool'])
+    else:
+        activities_model, readout_layer_names, readout_layer_shapes = get_activities_model(net, n_layers, hparams)
     print(f"Reading from layers: {readout_layer_names}")
     activations_file_name = f"{results_dir}/{model_name}_nsd_activations_epoch{epoch}.h5"
     

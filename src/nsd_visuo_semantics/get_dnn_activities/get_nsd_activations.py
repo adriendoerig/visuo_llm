@@ -19,7 +19,8 @@ We average across space to keep size reasonable
 def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                         networks_basedir, results_dir, safety_check_plots_dir,
                         nsd_captions_path=None, nsd_embeddings_path=None,
-                        n_layers=10, epoch=400, OVERWRITE=False, train_val_nsd='nsd'):
+                        n_layers=10, epoch=400, OVERWRITE=False, train_val_nsd='nsd', 
+                        batch_size=50):
     
     if train_val_nsd == 'nsd':
         # nsd is stored in the test part of our h5 file.
@@ -44,7 +45,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
         else:
             model_savedir = modelname2path[model_name]
         print(model_savedir)
-        hparams = load_and_override_hparams(model_savedir, dataset=dataset_path, batch_size=50)  # CAREFUL: batch_size must divide n_images to an int, otherwise there will be images missing at the end of the dataset
+        hparams = load_and_override_hparams(model_savedir, dataset=dataset_path, batch_size=batch_size)  # CAREFUL: batch_size must divide n_images to an int, otherwise there will be images missing at the end of the dataset
 
         if 'mpnet' in model_name.lower():
             # if we're doing mpnet, we load the embeddings and captions
@@ -150,7 +151,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
 
                 dataset = HDF5Dataset(hdf5_fp=dataset_path, img_ds_key='test/data', 
                                       backend=extractor.get_backend(), transforms=extractor.get_transformations())
-                batches = DataLoader(dataset=dataset, batch_size=50, backend=extractor.get_backend())
+                batches = DataLoader(dataset=dataset, batch_size=batch_size, backend=extractor.get_backend())
 
                 features = extractor.extract_features(batches=batches, module_name=features_layer, flatten_acts=True)
             
@@ -211,7 +212,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 else:
                     input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd)
                 with h5py.File(dataset_path, 'r') as f:
-                    n_imgs = f[train_val_nsd]['img_multi_hot'].shape[0]
+                    n_imgs = f[train_val_nsd]['labels'].shape[0]
         
         for x in input_dataset:
             if ('simclr' in model_name.lower() and 'google' not in model_name.lower()) or 'scenecateg' in model_name.lower():

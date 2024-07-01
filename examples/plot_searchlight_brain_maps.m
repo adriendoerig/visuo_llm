@@ -28,11 +28,11 @@ DNN_TIMESTEP = 6;  % 'all' % 6  % 'all' to do all timesteps, else an int
 DNN_CONTRAST_LAYER = 'same';  % same: compare net1 layer l time t with net2 same lt. 'first': compare with first timestep
 CONTRAST_SAME_MODEL = 0;  % if 0, do not contrast model with itself. else, do it. useful for e.g. contrasting t6 vs t0
 
-PLOT_INDIVIDUAL_SUBJECTS = 0;  % if 0, only do group level maps
+PLOT_INDIVIDUAL_SUBJECTS = 1;  % if 0, only do group level maps
 
 MAX_CMAP_VAL = 0  % CONSTANT CMAP MAX VAL FOR ALL GROUP SIG PLOTS. USE 0 TO AUTOMATICALLY SET THE MAX VALUE WITH EACH MAP
 
-viewz_to_plot = {5,6,11};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
+viewz_to_plot = {13};  % determines which angle the brain is seen at. 13 is the standard flatmap. see also 5&6.
 
 % this actually does the plotting
 if contains(MODEL_NAMES{1}, 'var_partition')
