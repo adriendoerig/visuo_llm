@@ -1,3 +1,10 @@
+'''This is used to project the searchlight results to fsaverage space. Searchlight results
+are computed in ./nsd_searchlight_main_tf.py and the output of this is 100 correlation volumes,
+each based on a randomly sampled 100x100 RDM. This script averages these 100 volumes and projects
+the average to fsaverage space. The same is done for the t-values between these 100 volumes (this
+can be used for subject-wise statistics, which is not done in the paper where we do not show
+single-subject stats, but between subject stats instead).'''
+
 import glob
 import os
 import numpy as np
@@ -37,7 +44,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
         # define where the searchlights are saved
         data_dir = os.path.join(
             base_save_dir,
-            f"searchlight_respectedsampling_{models_rdm_distance}_newTest",
+            f"searchlight_respectedsampling_{models_rdm_distance}",
             "{}",
             MODEL_NAME,
             f"corr_vols{MODEL_SUFFIX}_{models_rdm_distance}",
@@ -46,7 +53,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
         # define where the fsaverage maps will be saved
         data_dir_fsav = os.path.join(
             base_save_dir,
-            f"searchlight_respectedsampling_{models_rdm_distance}_newTest",
+            f"searchlight_respectedsampling_{models_rdm_distance}",
             "{}",
             MODEL_NAME,
             f"{MODEL_NAME}{MODEL_SUFFIX}_{models_rdm_distance}_fsaverage",

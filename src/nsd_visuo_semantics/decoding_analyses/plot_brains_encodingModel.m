@@ -1,3 +1,6 @@
+% MATLAB script to plot the performance of the encoding model trained in nsd_predict_embeddings.py
+% at each voxel. 
+
 close all; clear all;
 
 MODEL_NAME = 'mpnet_encodingModel'

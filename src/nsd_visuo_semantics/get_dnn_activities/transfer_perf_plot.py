@@ -1,3 +1,5 @@
+'''Load the results computed in transfer_readout.py and plot the results in a bar plot.'''
+
 import h5py, pickle
 import matplotlib.pyplot as plt
 import numpy as np

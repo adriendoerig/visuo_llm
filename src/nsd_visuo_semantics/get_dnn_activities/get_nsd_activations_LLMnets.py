@@ -8,7 +8,10 @@ from nsd_visuo_semantics.get_dnn_activities.ipcl_feature_extractor import Featur
 from nsd_visuo_semantics.get_dnn_activities.get_modelName2Path_dict import get_modelName2Path_dict
 
 """Get activities for all layers of a network on the nsd dataset.
-We average across space to keep size reasonable
+We average across space to keep size reasonable.
+This is a simplified version of get_dnn_activities.py, which is more general and 
+can be used for any kind of model. Here we assume the model is a LLM-trained RCNN.
+This can be helpful for sharing code, etc.
 """
 
 

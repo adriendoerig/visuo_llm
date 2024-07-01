@@ -1,3 +1,6 @@
+'''In this script, we preject sentences into LLM embedding space,
+and then predict voxel activities based on these embeddings.'''
+
 import pickle, os
 import numpy as np
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings

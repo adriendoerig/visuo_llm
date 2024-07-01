@@ -1,3 +1,8 @@
+'''Main script to compute searchlight correlations between model RDMs and brain RDMs.
+the output of this is 100 correlation volumes, each based on a randomly sampled 100x100 RDM.
+This is done for computational efficiency (correlating this amount of 10'000x10'000 RDMs 
+takes too long).'''
+
 import os, time, pickle
 import numpy as np
 from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
@@ -38,7 +43,7 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
             subj = f"subj0{sub}"
 
             # called like this because all models sample the same 100 images every time for fair comparison
-            results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}_newTest/{subj}"
+            results_dir = f"{base_save_dir}/searchlight_respectedsampling_{rdm_distance}/{subj}"
             os.makedirs(results_dir, exist_ok=True)
 
             # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.

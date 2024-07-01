@@ -1,3 +1,5 @@
+'''Helper that returns a dictionary with the paths to the embeddings and DNN activities files'''
+
 import itertools
 
 def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,

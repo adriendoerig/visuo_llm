@@ -1,3 +1,6 @@
+% MATLAB script used to plot brain predictions based on written sentences (which 
+% are computed in project_embeddings.py)
+
 close all; clear all;
 
 all_names = {'tim_people', 'tim_places', 'gpt_people', 'gpt_places', 'gpt_food', 'single_word_people', 'single_word_places', 'single_word_food'};

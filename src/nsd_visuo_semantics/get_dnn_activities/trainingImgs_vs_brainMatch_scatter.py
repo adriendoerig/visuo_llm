@@ -1,3 +1,6 @@
+'''Create the scatter plots found in the paper's last figure. Here, the data is
+input by hand based on results computed in the ../roi_analyses scripts'''
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns

@@ -1,8 +1,11 @@
+'''In this script, we load the betas on the 515 test set for each subject, and the fitted models for each subject.
+Then, we run different analyses to evaluate the consistency of the predictions compared to human brains.'''
+
 import pickle, os
 import numpy as np
 import pandas as pd
 from aac_metrics import evaluate
-from scipy.spatial.distance import cdist, correlation, cosine, pdist
+from scipy.spatial.distance import correlation, cosine
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
 from nsd_visuo_semantics.decoding_analyses.decoding_utils import remove_inert_embedding_dims, restore_inert_embedding_dims, get_gcc_nearest_neighbour
@@ -138,16 +141,6 @@ for ROI_NAME in ROI_NAMES:
         test_preds = fitted_fracridge.predict(betas_test)
         test_preds = restore_inert_embedding_dims(test_preds, drop_dims_idx, drop_dims_avgs)
 
-        # h5_for_mpnet2text = '/share/klab/vbosch/mpnet_t5/adrien_pred_embeds'
-        # h5_file = f'{h5_for_mpnet2text}/{subj}_predicted_mpnet.h5'
-        # import h5py
-        # dt = h5py.string_dtype(encoding='utf-8')
-        # with h5py.File(h5_file, 'w') as f:
-        #     # Create 'val' group
-        #     val_group = f.create_group('val')
-        #     val_group.create_dataset('captions', data=[s[0] for s in sentences_515], shape=len(sentences_515), dtype=dt)
-        #     val_group.create_dataset('mpnet_embeddings', data=test_preds)
-
         lookup_save_path = f"{fitted_models_dir}/{subj}_predLookup_{ROI_NAME}.pkl"
         if not os.path.exists(lookup_save_path):
             test_preds_NN_lookup = get_gcc_nearest_neighbour(test_preds, lookup_embeddings=lookup_embeddings, lookup_sentences=lookup_sentences, METRIC='cosine')
@@ -168,7 +161,6 @@ for ROI_NAME in ROI_NAMES:
         with open(f"{save_dir}/{subj}_capEval_scores.pkl", "wb") as f:
             pickle.dump(all_scores, f)
 
-        # prediction-target similarities will be used to visualize examples with different prediction accuracies
         print("Getting prediction-target scores on test set [PREDICTED EMBED VS AVG EMBED OVER 5 CAPTIONS]...")
         avg_cap_corrs = []
         for image_i in range(mean_embeddings_test.shape[0]):

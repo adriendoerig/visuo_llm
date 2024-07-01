@@ -1,3 +1,5 @@
+% Used to circumvent a bug in the cvn plotting.
+
 function cvn_plot_fix(sig_data, viewz, fig_path, fig_name, title_prefix, SAVE_TYPE, max_cmap_val, extraopts)
     %% plot statistical results
     % make an image with only curvature

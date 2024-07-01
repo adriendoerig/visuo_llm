@@ -1,3 +1,6 @@
+'''Make a scatter plot of the correlation between two models and the brain, 
+with each ROI having a different color'''
+
 import os
 import numpy as np
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_rois

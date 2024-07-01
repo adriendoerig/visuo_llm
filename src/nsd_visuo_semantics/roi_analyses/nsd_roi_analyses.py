@@ -1,3 +1,5 @@
+'''Compute ROI-wise correlations between model RDMs and brain RDMs for NSD data.'''
+
 import os
 import pickle
 import numpy as np

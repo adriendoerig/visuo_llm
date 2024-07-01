@@ -241,7 +241,7 @@ for roi_analysis_dnn_layer_to_use in [-1]:
     #                 remove_shared_515, OVERWRITE_NEURO_RDMs=False, OVERWRITE_RDM_CORRs=OVERWRITE)
 
     nsd_roi_analyses_figure(base_save_dir, which_rois, models_rdm_distance, plot_noise_ceiling, 
-                            fig_id=0, custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
+                            custom_model_keys=MODEL_NAMES, plt_suffix=plt_suffix,
                             custom_model_labels=None, average_seeds=True)
 
     # correlate_model_rdms_figure(MODEL_NAMES, nsd_dir, base_save_dir, models_rdm_distance, 

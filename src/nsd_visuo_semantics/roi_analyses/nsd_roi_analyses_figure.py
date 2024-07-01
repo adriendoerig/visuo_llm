@@ -1,3 +1,6 @@
+'''Plotting functions for ROI analyses.
+'''
+
 import pickle, os
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -7,51 +10,17 @@ from itertools import combinations as cb
 from scipy import stats
 
 
-def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, fig_id=0, custom_model_keys=None, plt_suffix='', 
+def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, custom_model_keys=None, plt_suffix='', 
                             alphabetical_order=False, best_to_worst_order=False,
-                            custom_model_labels=None, average_seeds=False):
-    '''Use fig_id=2,5 and custom_model_keys = None to remake the figures in the paper (as of June 2023).
-    Use fig_id=0 and custom_model_keys = whichever models you like to make your own figure (make sure you have saved the roi results for the mdoels you ask for).'''
-
-
+                            custom_model_labels=None, average_seeds=False,
+                            plot_pval_tables = False):
+   
     roi_analyses_dir = os.path.join(base_save_dir, "roi_analyses")
     results_dir = os.path.join(roi_analyses_dir, f"{which_rois}_roi_results_{rdm_distance}")
 
-    print(f"Fig: {fig_id}")
-
-    if fig_id == 2:
-        model_keys = [
-            "multihot",
-            "fasttext_categories",
-            "fasttext_verbs",
-            "fasttext_all",
-            "guse",
-            "mpnet",
-        ]
-        model_labels = [
-            "categ multihot",
-            "categ word embeds",
-            "verb word embeds",
-            "all word embeds",
-            "GUSE",
-            "MPNet",
-        ]
-        model_alphas = [0.25, 0.40, 0.55, 0.70, 0.85, 1.0]
-        bar_specs = {
-            "width": 0.13,
-            "edgecolor": "black",
-            "linewidth": 0.7,
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=(6, 3))
-
-    elif fig_id == 5:
-        model_keys = ["multihot", "dnn_multihot_rec", "mpnet", "dnn_mpnet_rec"]
-
-    else:
-        if alphabetical_order:
-            custom_model_keys = sorted(custom_model_keys)
-        model_keys = custom_model_keys
+    if alphabetical_order:
+        custom_model_keys = sorted(custom_model_keys)
+    model_keys = custom_model_keys
 
     roi_keys = [
         "earlyROI",
@@ -137,51 +106,17 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         means = {roi_key: {model_key: means[roi_key][model_key] if model_key in non_seed_models else np.mean(seed_avg_corrs[roi_key][model_key]) for model_key in model_keys} for roi_key in roi_keys}
         stds = {roi_key: {model_key: stds[roi_key][model_key] if model_key in non_seed_models else np.std(seed_avg_corrs[roi_key][model_key])/np.sqrt(8) for model_key in model_keys} for roi_key in roi_keys}
 
-    if fig_id == 2:
-        model_labels = [
-            "categ multihot",
-            "categ word embeds",
-            "verb word embeds",
-            "all word embeds",
-            "GUSE",
-            "MPNet",
-        ]
-        model_alphas = [0.25, 0.40, 0.55, 0.70, 0.85, 1.0]
-        bar_specs = {
-            "width": 0.13,
-            "edgecolor": "black",
-            "linewidth": 0.7,
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=(10, 3))
 
-    elif fig_id == 5:
-        model_labels = [
-            "multihot",
-            "multihot-trained RCNN",
-            "MPNet",
-            "MPNet-trained RCNN",
-        ]
-        model_alphas = [0.25, 0.50, 0.75, 1.0]
-        bar_specs = {
-            "width": 0.13,
-            "edgecolor": "black",
-            "linewidth": 0.7,
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=(10, 3))
-
-    else:
-        n_models = len(model_keys)
-        model_labels = model_keys
-        model_alphas = np.linspace(0.1, 1, len(model_keys))
-        bar_specs = {
-            "width": 0.00975*(44/n_models),  # rough estimate of what will look good
-            "edgecolor": "black",
-            "linewidth": 0.7*(0.00975/0.021),
-            "zorder": 10,
-        }
-        fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
+    n_models = len(model_keys)
+    model_labels = model_keys
+    model_alphas = np.linspace(0.1, 1, len(model_keys))
+    bar_specs = {
+        "width": 0.00975*(44/n_models),  # rough estimate of what will look good
+        "edgecolor": "black",
+        "linewidth": 0.7*(0.00975/0.021),
+        "zorder": 10,
+    }
+    fig, ax = plt.subplots(figsize=((n_models+5)*2, 5))  # rough estimate of what will look good
 
     if custom_model_labels is not None:
         model_labels = custom_model_labels
@@ -271,15 +206,6 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
                     # if 'dnn_mpnet_rec_seedAVG_ep200_layer-1' in k2:
                     print(f"\t\t\t{k2}: pval: {these_corrected_pvals[k_i]:.4f} - reject: {these_corrected_reject[k_i]}")
 
-    # save np arrays for each ROI with corrected pvals of each model comparison
-    # model_comps = list(cb(model_keys, 2))
-    # n_comparisons = len(my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][roi_labels[0]].keys())
-    # ROI_wise_pvals = {k: np.empty(n_comparisons) for k in roi_labels}
-    # for this_roi in roi_labels:
-    #     for idx, model_comp in enumerate(model_comps):
-    #         ROI_wise_pvals[this_roi][idx] = my_stats["corrected"]["model_comparisons_ttest_ind_2sided"][this_roi][f"{model_comp[0]}_vs_{model_comp[1]}"]
-    # np.save(f"{results_dir}/PAPER_FIG{fig_id}_ROIwisePvals",  ROI_wise_pvals, allow_pickle=True)
-
     ### FINAL COSMETICS
     # Add axis labels
     ax.set_ylabel("Noise-ceiling corrected\nPearson correlation\n(mean across subjects)")
@@ -295,11 +221,8 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(f"{results_dir}/PAPER_FIG{fig_id}{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+    plt.savefig(f"{results_dir}/ROIFIG{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
 
-
-
-    plot_pval_tables = False
     if plot_pval_tables:
         import pandas as pd
         from matplotlib.colors import Normalize

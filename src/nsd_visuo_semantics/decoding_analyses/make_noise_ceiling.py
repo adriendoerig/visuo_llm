@@ -1,3 +1,6 @@
+'''In this script, we lead the betas for the shared 525 images, and we compute noise ceiling for each 
+fMRI voxel by correlating each subject with the mean of other subjects, and averaging that across subjects'''
+
 import os
 import numpy as np
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_rois,get_sentence_lists, load_or_compute_betas_average

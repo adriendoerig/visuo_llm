@@ -1,3 +1,7 @@
+'''Plots histogram of decoding model performance (i.e., correlation between predicted and target embeddings) 
+for each subject, as well as the noise ceiling between subjects.
+NOTE: the data used in this function are computed in decoding_extra_analyses.py.'''
+
 import pickle
 import numpy as np
 import seaborn as sns
@@ -51,20 +55,3 @@ plt.legend()
 # Show plot
 plt.savefig(f'multisubj_kde_plot_means_{cap_perf_metric}.svg')
 plt.close()
-
-# # Create a figure and axis
-# fig, ax = plt.subplots(figsize=(10, 6))
-
-# # Plot each subject's distribution with a slightly transparent shade of blue
-# for i in range(n_subj):
-#     sns.histplot(subj_scores[i], color=palette[i], bins=100, fill=True, alpha=0.3, ax=ax)
-
-# ax.axvline(x=np.mean(cap_consists), linestyle='-', linewidth=1)
-
-# # Set labels and title
-# ax.set_xlabel(f'{cap_perf_metric}(pred,target)', fontsize=12)
-# ax.set_ylabel('Density', fontsize=12)
-
-# # Show plot
-# plt.savefig(f'multisubj_hist_plot_{cap_perf_metric}.png')
-# plt.close()

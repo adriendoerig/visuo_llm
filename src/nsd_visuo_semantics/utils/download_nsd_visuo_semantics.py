@@ -1,3 +1,5 @@
+'''Script to download the required parts of NSD'''
+
 import os
 import boto3
 import numpy as np

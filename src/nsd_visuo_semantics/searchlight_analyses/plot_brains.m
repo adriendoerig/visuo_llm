@@ -1,3 +1,5 @@
+% Matlab script to plot brain maps. Intended to be called by examples/plot_searchlight_brain_maps.py
+
 USE_FDR = 1;
 
 % some parameters
