@@ -8,6 +8,19 @@ except:
     print("PRINTED FROM DECODING_UTILS: Tensorflow probability cannot be imported, some functions may not work.")
 
 
+def make_515_embeddings(nsda, conditions_515, EMBEDDING_MODEL_NAME):
+    '''get embeddings for the 515 special images. 
+    This is used as the test set for the encoding/decoding models.'''
+    embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
+    captions_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
+    dummy_embedding = get_embeddings(captions_515[0], embedding_model, EMBEDDING_MODEL_NAME)
+    embedding_dim = dummy_embedding.shape[-1]
+    embeddings_test = np.empty((515, embedding_dim))
+    for i in range(len(captions_515)):
+        embeddings_test[i] = np.mean(get_embeddings(captions_515[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
+    return embeddings_test
+
+
 def remove_inert_embedding_dims(embeddings, cutoff=1e-20):
     """Remove embedding dimensions whose mean is < embedding_mean*cutoff. This is done because some dims may contain
     only minuscule numbers (e.g. all values smaller than 1e-33), which are pointless and lead to NaNs in fracridge.
@@ -150,19 +163,6 @@ def get_gcc_nearest_neighbour(embedding, n_neighbours=1,
     return pred_sentences, pred_distances
 
 
-def interpolate_vectors(v1, v2, n):
-    # Generate N equally spaced points between 0 and 1
-    steps = np.linspace(0, 1, n)
-
-    # Interpolate between corresponding points linearly
-    interpolated_vectors = []
-    for step in steps:
-        interpolated_vector = (1 - step) * v1 + step * v2
-        interpolated_vectors.append(interpolated_vector)
-
-    return interpolated_vectors
-
-
 sentences_zoo = {
     'people':
             ['Man with a beard smiling at the camera.',
@@ -182,129 +182,10 @@ sentences_zoo = {
              'A bowl of fruit.',
              'A plate of spaghetti.',
              'A bowl of soup.'],
-    'objects':
-            ['A bicycle leaning against a wall.',
-             'A collection of books on a shelf.',
-             'A stack of papers.',
-             'A sofa, a board game and a pencil',
-             'A collection of toys.'],
-                
-    'social': [
-        'She is explaining the rules of the game to a her daughter.',
-        "People are discussing the latest news.",
-        "He is interacting with his friends.",
-        "They are playing a game together.",
-        "You are arguing with another person."
-    ],
-    'nonsocial': [
-        'She is alone and motionless.',
-        'He is sitting in a chair.',
-        'They are standing still.',
-        'You are deep in thought.',
-        'I am sleeping quietly.'
-    ],
-    'gpt_people': [
-        "The old man fed pigeons in the park.",
-        "A woman smiled while walking along the trail.",
-        "Children laughed and played in the playground.",
-        "The mother held her newborn baby close.",
-        "Friends gathered around the bonfire, roasting marshmallows.",
-        "The fisherman mended his nets by the dock.",
-        "The teacher explained a difficult concept to her students.",
-        "The athlete crossed the finish line with raised arms.",
-        "A musician played guitar on the street corner.",
-        "The baker kneaded dough in the early hours."
-    ],
-    'gpt_places': [
-        "The conference took place in a convention center.",
-        "The laboratory is equipped with state-of-the-art technology.",
-        "The research institute is located in a bustling urban area.",
-        "The beach stretched out for miles, with waves crashing against the shore.",
-        "The cozy cafe had comfortable seating and warm lighting.",
-        "The mountain trail wound through dense forests and rocky terrain.",
-        "The historic church stood tall in the town square, surrounded by old cobblestone streets.",
-        "The local market bustled with activity, with vendors selling fresh produce and handmade crafts.",
-        "The library was a quiet sanctuary filled with rows of books and study desks.",
-        "The quaint bed and breakfast offered charming rooms with views of the countryside."
-    ],
-    'gpt_food': [
-        "The restaurant served succulent steaks cooked to perfection.",
-        "The bakery offered a tempting array of pastries and desserts.",
-        "The ice cream parlor scooped up creamy cones in a variety of flavors.",
-        "The farmers' market brimmed with ripe fruits and vegetables straight from the farm.",
-        "The seafood restaurant boasted a menu featuring the catch of the day.",
-        "The pizzeria baked piping hot pies topped with fresh ingredients and gooey cheese.",
-        "The street vendor sold sizzling hot dogs with all the fixings.",
-        "The sushi bar rolled up delicate bites of fish and rice, garnished with wasabi and soy sauce.",
-        "The taco truck dished out spicy tacos filled with savory meats and zesty salsa.",
-        "The diner served up classic comfort foods like burgers, fries, and milkshakes."
-    ],
-    'single_word_people': [
-        'woman', 'man', 'child', 'person', 'human',
-        'player', 'resident', 'kid', 'baby', 'folk'
-    ],
-    'single_word_places': [
-        'city', 'house', 'home', 'kitchen', 'bedroom',
-        'field', 'toilet', 'environment', 'ocean', 'park'
-    ],
-    'single_word_food': [
-        'pizza', 'fruit', 'meal', 'snack', 'donut',
-        'meat', 'vegetables', 'salad', 'dessert', 'soup'
-    ],
-    'unique_sentence_people': [
-        'An average-looking person.'
-    ],
-    'unique_sentence_places': [
-        'A typical house in the suburbs.'
-    ],
-    'unique_sentence_food': [
-        'A sandwich with ham and cheese.'
-    ],
-    'unique_sentence_social': [
-        'She is explaining the rules of the game to a her daughter.'
-    ],
-    'unique_sentence_nonsocial': [
-        'She is alone and motionless.'
-    ],
-    'tim_unique_sentence_social': [
-        'A group of people interacting in deep social discussion looking at each other.'
-    ],
-    'tim_unique_sentence_nonsocial': [
-        'A lonely man.'
-    ],
-    'unique_sentence_face': [
-        'A face with blue eyes.'
-    ],
-    'unique_sentence_bodyparts': [
-        'Arms and hands are close to the chest.'
-    ],
-    'unique_sentence_words':[
-        'Lots of written text, written in large font on a sheet of paper.'
-        ],
-    'unique_sentence_objects': [
-        'A set of chairs, tables, a lamp, and a guitar.'
-    ],
-    'unique_word_people': [
-        'human'
-    ],
-    'unique_word_places': [
-        'house'
-    ],
-    'unique_word_food': [
-        'sandwich'
-    ],
-    'faces': [
-        'A face with blue eyes.',
-        'A bearded man smiling at the camera.',
-        "A woman's face with sunglasses.",
-        "A child's face with an open mouth.",
-        "A face with a mustache and a beard." 
-    ],
-    'bodyparts': [
-        'Arms and hands are close to the chest.',
-        "His legs are crossed.",
-        "Her hands are on her hips.",
-        "He has big feet.",
-        "Your fingers touch your knees."
-    ],
+    'unique_sentence_people': 
+            ['An average-looking person.'],
+    'unique_sentence_places': 
+            ['A typical house in the suburbs.'],
+    'unique_sentence_food': 
+            ['A sandwich with ham and cheese.'],
 }

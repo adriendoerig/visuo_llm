@@ -8,24 +8,22 @@ from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import load_word_vectors, get_word_embedding
 
 
-def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
-                               h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE):
+def get_nsd_allWord_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path, 
+                                      fasttext_embeddings_path, glove_embeddings_path, 
+                                      nsd_captions_path, SAVE_PATH, OVERWRITE):
     
     print(f"GATHERING ALL WORD EMBEDDINGS \n "
         f"EMBEDDING_TYPE: {EMBEDDING_TYPE} \n "
-        f"ON: {nsd_captions_path} \n "
-        f"WITH CONCATENATE_EMBEDDINGS: {CONCATENATE_EMBEDDINGS}") 
+        f"ON: {nsd_captions_path} \n ") 
     
     GET_WORD_EMBEDDINGS = 1
     DO_SANITY_CHECK = 1
 
-    save_test_imgs_to = "../results_dir/_check_imgs"
-    save_embeddings_to = "../results_dir/saved_embeddings"
-    os.makedirs("../results_dir", exist_ok=1)
+    save_embeddings_to = SAVE_PATH
+    save_test_imgs_to = f"{save_embeddings_to}/_check_imgs"
     os.makedirs(save_test_imgs_to, exist_ok=1)
-    os.makedirs(save_embeddings_to, exist_ok=1)
 
-    save_name = f"nsd_{EMBEDDING_TYPE}_ALLWORDS_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings"
+    save_name = f"nsd_{EMBEDDING_TYPE}_ALLWORDS_embeddings"
 
     if OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
@@ -40,6 +38,7 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                 embeddings = load_word_vectors(glove_embeddings_path, 'glove')
             else:
                 try:
+                    # check if EMBEDDING_TYPE is a sentence transformer. If so, load it.
                     from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
                     embeddings = get_embedding_model(EMBEDDING_TYPE)
                 except Exception as e:
@@ -48,14 +47,14 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
             with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
 
-            n_nsd_elements = len(loaded_captions)
-            img_words = [[] for _ in range(n_nsd_elements)]  # we will also save all verbs for each image
-            final_allWord_embeddings = np.empty((n_nsd_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
+            n_elements = len(loaded_captions)
+            img_words = [[] for _ in range(n_elements)]  # we will also save all verbs for each image
+            final_allWord_embeddings = np.empty((n_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
 
-            for i in range(n_nsd_elements):
+            for i in range(n_elements):
 
                 if i % 100 == 0:
-                    print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
+                    print(f"\rRunning... {i/n_elements*100:.2f}%", end="")
 
                 for j in range(len(loaded_captions[i])):
                     this_sentence = loaded_captions[i][j]
@@ -64,7 +63,6 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                         if s in verb_adjustments.keys():
                             # some spelling mistakes are made in the captions. Here, we fix them. In addition, some crap is
                             # miscalssified as verbs. We discard these. We also discard verbs that have no embedding (e.g. waterskiing).
-                            # at the bottom of the script, we prinit out how many are rejected in this way, etc.
                             if verb_adjustments[s] == "_____not_verb_/_unknown_____":
                                 pass
                             elif verb_adjustments[s] == "_____no_embedding_____":
@@ -82,10 +80,7 @@ def get_nsd_allWord_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                         # if the word does not exist in fasttext (e.g. "unpealed"), skip.
                         pass
                 
-                if CONCATENATE_EMBEDDINGS:
-                    final_allWord_embeddings[i] = np.concatenate(img_allWord_embeddings)
-                else:
-                    final_allWord_embeddings[i] = np.mean(np.asarray(img_allWord_embeddings), axis=0)
+                final_allWord_embeddings[i] = np.mean(np.asarray(img_allWord_embeddings), axis=0)
 
             with open(f"{save_embeddings_to}/{save_name}.pkl", "wb") as fp:  # Pickling
                 pickle.dump(final_allWord_embeddings, fp)

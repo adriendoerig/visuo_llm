@@ -9,26 +9,24 @@ from nsd_visuo_semantics.get_embeddings.word_lists import verb_adjustments
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import load_word_vectors, get_word_embedding
 
 
-def get_nsd_verb_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
-                            h5_dataset_path, fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE):
+def get_nsd_verb_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path, 
+                                   fasttext_embeddings_path, glove_embeddings_path, 
+                                   nsd_captions_path, SAVE_PATH, OVERWRITE):
     
     
     print(f"GATHERING VERB EMBEDDINGS \n "
         f"EMBEDDING_TYPE: {EMBEDDING_TYPE} \n "
-        f"ON: {nsd_captions_path} \n "
-        f"WITH CONCATENATE_EMBEDDINGS: {CONCATENATE_EMBEDDINGS}") 
+        f"ON: {nsd_captions_path} \n ") 
     
     CHECK_EMBEDDINGS = 1
     GET_VERB_EMBEDDINGS = 1
     DO_SANITY_CHECK = 1
 
-    save_test_imgs_to = "../results_dir/_check_imgs"
-    save_embeddings_to = "../results_dir/saved_embeddings"
-    os.makedirs("../results_dir", exist_ok=1)
+    save_embeddings_to = SAVE_PATH
+    save_test_imgs_to = f"{save_embeddings_to}/_check_imgs"
     os.makedirs(save_test_imgs_to, exist_ok=1)
-    os.makedirs(save_embeddings_to, exist_ok=1)
 
-    save_name = f"nsd_{EMBEDDING_TYPE}_VERB_{'concat' if CONCATENATE_EMBEDDINGS else 'mean'}_embeddings"
+    save_name = f"nsd_{EMBEDDING_TYPE}_VERB_embeddings"
 
     if OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
@@ -36,11 +34,12 @@ def get_nsd_verb_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
     else:
 
         if EMBEDDING_TYPE == 'fasttext':
-                embeddings = load_word_vectors(fasttext_embeddings_path, 'fasttext')
+            embeddings = load_word_vectors(fasttext_embeddings_path, 'fasttext')
         elif EMBEDDING_TYPE == 'glove':
             embeddings = load_word_vectors(glove_embeddings_path, 'glove')
         else:
             try:
+                # check if EMBEDDING_TYPE is a sentence transformer. If so, load it.
                 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
                 embeddings = get_embedding_model(EMBEDDING_TYPE)
             except Exception as e:
@@ -109,10 +108,7 @@ def get_nsd_verb_embeddings(EMBEDDING_TYPE, CONCATENATE_EMBEDDINGS,
                     final_verb_embeddings[i] = get_word_embedding("is", embeddings, EMBEDDING_TYPE)
                     no_verbs_counter += 1
                 else:
-                    if CONCATENATE_EMBEDDINGS:
-                        final_verb_embeddings[i] = np.concatenate(img_verb_embeddings)
-                    else:
-                        final_verb_embeddings[i] = np.mean(np.asarray(img_verb_embeddings), axis=0)
+                    final_verb_embeddings[i] = np.mean(np.asarray(img_verb_embeddings), axis=0)
 
             with open(f"{save_embeddings_to}/{save_name}.pkl", "wb") as fp:  # Pickling
                 pickle.dump(final_verb_embeddings, fp)

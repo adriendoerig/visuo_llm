@@ -2,20 +2,17 @@
     module to gather the full model RDMs for different models (MPNet, multihot, DNNs, etc) 
     correspoding to each subject's images.
     Need quite some RAM, but no need for GPU.
-
 """
-import os
-import pickle
-import h5py
+import os, pickle, h5py, re
 import numpy as np
 from scipy.spatial.distance import pdist
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions
 from nsd_visuo_semantics.utils.get_name2file_dict import get_name2file_dict
 
 def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                           saved_embeddings_dir, rdms_dir, nsd_dir,
                           ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir, 
-                          remove_shared_515, OVERWRITE):
+                          OVERWRITE, RCNN_LAYER=None):
     
     if not isinstance(MODEL_NAMES, list):
         MODEL_NAMES = [MODEL_NAMES]
@@ -31,12 +28,6 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                                         ecoset_saved_dnn_activities_dir)
     
     for MODEL_NAME in MODEL_NAMES:
-
-        if "special100" in MODEL_NAME:
-            print("You requested rdm for special100 captions, we will not index "
-                  "the images as usual, but rather just make a simple 100x100rdm "
-                  "from the model responses to the 100 special images. this can be "
-                  "done easily, since all subjects saw the same images.")
         
         save_dir = os.path.join(rdms_dir, MODEL_NAME)
         os.makedirs(save_dir, exist_ok=True)
@@ -51,46 +42,41 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
             print("You requested rdm for DNN activities, creating one rdm per layer & timestep")
         else:
             raise Exception(f"Embeddings file type not understood. "
-                            f"Found: {modelname2file[MODEL_NAME]}. Please sue .pkl or.npy.")
+                            f"Found: {modelname2file[MODEL_NAME]}. Please use .pkl or.npy.")
         
         # loop over subjects
         for sub in subs:
 
-            if not "special100" in MODEL_NAME:
-                # extract conditions data (see nsd_searchlight_main_tf.py for a detailed explanation of how this works)
-                conditions = get_conditions(nsd_dir, sub, n_sessions)
-                # we also need to reshape conditions to be ntrials x 1
-                conditions = np.asarray(conditions).ravel()
-                # then we find the valid trials for which we do have 3 repetitions.
-                conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
-                if remove_shared_515:
-                    conditions_515 = get_conditions_515(nsd_dir)  # [515,]  (nsd_indices for the 515 shared images)
-                    conditions_515_bool = [True if x in conditions_515 else False for x in conditions]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
-                    conditions_bool = [True if x and not y else False for x, y in zip(conditions_bool, conditions_515_bool)]  # [n_subj_stims-515,] array of nsd_indices
-                conditions_sampled = conditions[conditions_bool]
-                # find the subject's condition list (sample pool)
-                sample = np.unique(conditions[conditions_bool])
+            # extract conditions data (see nsd_searchlight_main_tf.py for a detailed explanation of how this works)
+            conditions = get_conditions(nsd_dir, sub, n_sessions)
+            # we also need to reshape conditions to be ntrials x 1
+            conditions = np.asarray(conditions).ravel()
+            # then we find the valid trials for which we do have 3 repetitions.
+            conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
+            conditions_sampled = conditions[conditions_bool]
+            # find the subject's condition list (sample pool)
+            sample = np.unique(conditions_sampled)
 
             if "dnn" in MODEL_NAME:
-                try:
-                    with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
+                with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
+                    if RCNN_LAYER is not None:
+                        if RCNN_LAYER == -1:
+                            RCNN_LAYER = len(activations_file.keys())
+                        layer_names = [x for x in activations_file.keys() if re.search(f"layer{RCNN_LAYER}(\\D|$)", x)]
+                    else:
+                        # do all layers
                         layer_names = [x for x in activations_file.keys()]
-                        for layer_name in layer_names:
-                            # if 'layer_9' in layer_name:  # if you only want the last layer to save time
-                            save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_{layer_name}_fullrdm.npy")
-                            if os.path.exists(save_name) and not OVERWRITE:
-                                print(f"Found file at {save_name}. Skipping...")
-                            else:
-                                print(f"Creating {MODEL_NAME} {layer_name} rdm for {sub}")
-                                if "special100" in MODEL_NAME:
-                                    this_embedding = activations_file[layer_name]  # 100xfeatures
-                                else:
-                                    this_embedding = activations_file[layer_name][sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
-                                this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
-                                print(f"Saving in {save_name}")
-                                np.save(save_name, this_rdm)
-                except:
-                    import pdb; pdb.set_trace()
+
+                    for layer_name in layer_names:
+                        save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_{layer_name}_fullrdm.npy")
+                        if os.path.exists(save_name) and not OVERWRITE:
+                            print(f"Found file at {save_name}. Skipping...")
+                        else:
+                            print(f"Creating {MODEL_NAME} {layer_name} rdm for {sub}")
+                            this_embedding = activations_file[layer_name][sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                            this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
+                            print(f"Saving in {save_name}")
+                            np.save(save_name, this_rdm)
 
             else:
                 save_name = os.path.join(save_dir, f"{sub}_{MODEL_NAME}_fullrdm.npy")
@@ -98,10 +84,7 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                     print(f"Found file at {save_name}. Skipping...")
                 else:
                     print(f"Creating {MODEL_NAME} rdm for {sub}")
-                    if "special100" in MODEL_NAME:
-                        this_embedding = embeddings  # 100xfeatures
-                    else: 
-                        this_embedding = embeddings[sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
+                    this_embedding = embeddings[sample-1, :]  # 10'000xn_features (other subjects have fewer images) - NOTE: from NSD's 1-based indexing pipeline, so we move back to 0-based
                                         
                     this_rdm = pdist(this_embedding, rdm_distance).astype(np.float32)  # subject based RDM for 10000 items
                     print(f"Saving in {save_name}")

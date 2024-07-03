@@ -4,23 +4,21 @@ import h5py
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial.distance import cdist, correlation
-from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91, noun_adjustments
+from nsd_visuo_semantics.get_embeddings.word_lists import coco_categories_91
 from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import load_word_vectors, get_word_embedding
 from nsd_visuo_semantics.get_embeddings.nsd_embeddings_utils import get_words_from_multihot
 
 
-def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path, 
-                                fasttext_embeddings_path, glove_embeddings_path, nsd_captions_path, OVERWRITE):
+def get_nsd_category_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path, 
+                                       fasttext_embeddings_path, glove_embeddings_path, 
+                                       nsd_captions_path, SAVE_PATH, OVERWRITE):
     '''
     Retrieves the embeddings for nouns in the nsd dataset.
     EMBEDDING_TYPE: 'glove' or 'fasttext'
-    MATCH_TO_COCO_CATEGORY_NOUNS: if 'positive', we only use nouns that have an embedding CLOSE to COCO category nouns. 
-                                  ff 'negative', we only use nouns that have an embedding FAR to COCO category nouns.
-                                  if None, we use all nouns.
     h5_dataset_path: path to the h5 dataset with the images
     fasttext_embeddings_path: path to the fasttext embeddings
     glove_embeddings_path: path to the glove embeddings
-    nasd_captions_path: path to the nsd captions
+    nsd_captions_path: path to the nsd captions
     OVERWRITE: if True, we overwrite the existing embeddings'''
     
     print(f"GATHERING NOUN EMBEDDINGS \n "
@@ -28,15 +26,12 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
         f"ON: {nsd_captions_path} \n ") 
     
     CHECK_EMBEDDINGS = 1
-    GET_NOUN_EMBEDDINGS = 1
+    GET_WORD_EMBEDDINGS = 1
     DO_SANITY_CHECK = 1
 
-    save_test_imgs_to = "../results_dir/_check_imgs"
-    save_embeddings_to = "../results_dir/saved_embeddings"
-    os.makedirs("../results_dir", exist_ok=1)
+    save_embeddings_to = SAVE_PATH
+    save_test_imgs_to = f"{save_embeddings_to}/_check_imgs"
     os.makedirs(save_test_imgs_to, exist_ok=1)
-    os.makedirs(save_embeddings_to, exist_ok=1)
-
 
     save_name = f"nsd_{EMBEDDING_TYPE}_CATEGORY_mean_embeddings"
 
@@ -45,7 +40,7 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
     
     else:
 
-        if CHECK_EMBEDDINGS or GET_NOUN_EMBEDDINGS:
+        if CHECK_EMBEDDINGS or GET_WORD_EMBEDDINGS:
             # get all word embeddings
             if EMBEDDING_TYPE == 'fasttext':
                 embeddings = load_word_vectors(fasttext_embeddings_path, 'fasttext')
@@ -53,6 +48,7 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
                 embeddings = load_word_vectors(glove_embeddings_path, 'glove')
             else:
                 try:
+                    # check if EMBEDDING_TYPE is a sentence transformer. If so, load it.
                     from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model
                     embeddings = get_embedding_model(EMBEDDING_TYPE)
                 except Exception as e:
@@ -68,11 +64,11 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
             print("correlation_dist(table, sky)", correlation(get_word_embedding("table", embeddings, EMBEDDING_TYPE), get_word_embedding("sky", embeddings, EMBEDDING_TYPE)))
 
 
-        if GET_NOUN_EMBEDDINGS:
+        if GET_WORD_EMBEDDINGS:
 
             with open(nsd_captions_path, "rb") as fp:
                 loaded_captions = pickle.load(fp)
-            n_nsd_elements = len(loaded_captions)
+            n_elements = len(loaded_captions)
 
             with h5py.File(h5_dataset_path,'r') as f:
                 loaded_multihot_labels = f['test']['img_multi_hot'][:]
@@ -94,13 +90,13 @@ def get_nsd_category_embeddings(EMBEDDING_TYPE, h5_dataset_path,
                 else:
                     coco_cat_embeds[cat] = get_word_embedding(cat, embeddings, EMBEDDING_TYPE)
 
-            final_categ_embeddings = np.empty((n_nsd_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))
+            final_categ_embeddings = np.empty((n_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))
             final_categ_words = []
 
-            for i in range(n_nsd_elements):
+            for i in range(n_elements):
 
                 if i % 100 == 0:
-                    print(f"\rRunning... {i/n_nsd_elements*100:.2f}%", end="")
+                    print(f"\rRunning... {i/n_elements*100:.2f}%", end="")
 
                 img_category_labels = loaded_multihot_labels[i]
                 these_embeds = []
