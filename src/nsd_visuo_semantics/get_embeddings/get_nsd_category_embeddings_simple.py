@@ -110,6 +110,8 @@ def get_nsd_category_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
             with open(f"{save_embeddings_to}/nsd_categ_words_per_image.pkl", "wb") as fp:  # Pickling
                 pickle.dump(final_categ_words, fp)
 
+        del embeddings, final_categ_embeddings, final_categ_words  # make space
+
     if DO_SANITY_CHECK:
         print("Sanity check for embeddings")
         with h5py.File(h5_dataset_path, "r") as h5_dataset:

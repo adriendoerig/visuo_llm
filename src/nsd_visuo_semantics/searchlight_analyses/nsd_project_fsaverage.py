@@ -12,7 +12,7 @@ from nsdcode.nsd_mapdata import NSDmapdata
 from tqdm import tqdm
 
 
-def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_dir, remove_shared_515):
+def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_dir):
     
     # initiate NSDmapdata
     nsd = NSDmapdata(nsd_dir)  # Takes subject data in mni and project to freesurfer, etcetc. All the transformations that we can do to the data can be done with this
@@ -38,7 +38,7 @@ def nsd_project_fsaverage(MODEL_NAMES, models_rdm_distance, nsd_dir, base_save_d
     # we do it for the two henispheres (always left right order)
     hemis = ["lh", "rh"]
 
-    MODEL_SUFFIX = "_noShared515" if remove_shared_515 else ""
+    MODEL_SUFFIX = ""
 
     for MODEL_NAME in MODEL_NAMES:
         # define where the searchlights are saved

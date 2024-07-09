@@ -16,10 +16,10 @@ We average across space to keep size reasonable
 """
 
 
-def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
+def get_nsd_activations(MODEL_NAMES, dataset_path,
                         networks_basedir, results_dir, safety_check_plots_dir,
                         nsd_captions_path=None, nsd_embeddings_path=None,
-                        n_layers=10, epoch=400, OVERWRITE=False, train_val_nsd='nsd', 
+                        n_layers=10, epoch=200, OVERWRITE=False, train_val_nsd='nsd', 
                         batch_size=50):
     
     if train_val_nsd == 'nsd':
@@ -39,9 +39,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
         if ('brainscore' in model_name.lower() or 'clip' in model_name.lower() or 'konkle_' in model_name.lower() or 'resnext101_32x8d_wsl' in model_name.lower() or 'thingsvision' in model_name.lower() or 'google_' in model_name.lower() or 'timm_' in model_name.lower()):
             model_savedir = modelname2path['default']
         elif 'finalLayer' in model_name:
-            model_savedir = modelname2path[model_name.replace('_finalLayer', '').replace('GAP', '').replace('_places365', '')]
-        elif 'places365' in model_name.lower():
-            model_savedir = modelname2path[model_name.replace('_places365', '')]
+            model_savedir = modelname2path[model_name.replace('_finalLayer', '')]
         else:
             model_savedir = modelname2path[model_name]
         print(model_savedir)
@@ -135,12 +133,6 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
             if 'cornet-s' in model_name.lower():
                 source = 'custom'
                 features_layer = 'decoder.avgpool'
-            elif 'simclr-rn50' in model_name.lower():
-                source = 'ssl'
-                features_layer = 'avgpool'
-            elif 'barlowtwins-rn50' in model_name.lower():
-                source = 'ssl'
-                features_layer = 'avgpool'
             else:
                 raise ValueError(f"model_name {model_name} not recognized")
 
@@ -160,10 +152,10 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 print(f"Saved {model_name} features in {activations_file_name}")
             else:
                 print(f"Activations file {activations_file_name} already exists. Skipping.")
-
-            continue
+                continue
 
         else:
+            # this case is for our custom trained models
             print(f"Creating {model_name} model and loading weights from {model_savedir}")
             if 'scenecateg' in model_name.lower():
                 net, hparams = load_model_from_path(model_savedir, epoch, hparams=hparams, print_summary=True, override_n_classes=365)
@@ -172,8 +164,6 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
             if 'layer' in model_name.lower():
                 if 'resnet' in model_name.lower():
                     readout_layer_name = 'avg_pool'
-                elif 'GAP' in model_name:
-                    readout_layer_name = 'GlobalAvgPool_Time_5'
                 else:
                     readout_layer_name = 'LayerNorm_Layer_9_Time_5'
                 activities_model = get_activities_model_by_layername(net, readout_layer_name)
@@ -200,19 +190,13 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
             print('Dataset exists, will not be recreated')
         except NameError:
             print('Creating dataset')
-            if 'places365' in model_name.lower():
-                hparams['embedding_target'] = False
-                hparams['target_dataset_name'] = 'labels'
-                input_dataset = get_dataset(hparams, dataset_path=dataset_path_places365, 
-                                            dataset='train', force_no_shuffle=True, force_no_augment=True)
-                n_imgs = 73000
+            if 'scenecateg' in model_name.lower():
+                # skip labels in this case, as they will not match the scene categ labels
+                input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd, force_no_labels=True)
             else:
-                if 'scenecateg' in model_name.lower():
-                    input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd, force_no_labels=True)
-                else:
-                    input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd)
-                with h5py.File(dataset_path, 'r') as f:
-                    n_imgs = f[train_val_nsd]['labels'].shape[0]
+                input_dataset = get_dataset(hparams, dataset_path=dataset_path, dataset=train_val_nsd)
+            with h5py.File(dataset_path, 'r') as f:
+                n_imgs = f[train_val_nsd]['labels'].shape[0]
         
         for x in input_dataset:
             if ('simclr' in model_name.lower() and 'google' not in model_name.lower()) or 'scenecateg' in model_name.lower():
@@ -238,7 +222,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 print(f"Activations file {activations_file_name} already exists. Skipping.")
                 continue
             else:
-                dummy_batch = torchhub_preprocess_batch(x[0], transform, image_size=im_sz, scale='[0,255]')
+                dummy_batch = torchhub_preprocess_batch(x[0], transform, image_size=im_sz)
                 dummy_out = model(dummy_batch)
                 timm_features = np.zeros((n_imgs, dummy_out.shape[-1]))
 
@@ -273,7 +257,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 print(f"Activations file {activations_file_name} already exists. Skipping.")
                 continue
             else:
-                dummy_batch = torchhub_preprocess_batch(x[0], transform, 224, scale='[0,1]' if '01inputs' in model_name else '[0,255]')
+                dummy_batch = torchhub_preprocess_batch(x[0], transform, 224)
                 with FeatureExtractor(model, 'fc7') as extractor:
                     dummy_out = extractor(dummy_batch)['fc7']
                 ipcl_features = np.zeros((n_imgs, dummy_out.shape[-1]))
@@ -283,7 +267,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 print(f"Activations file {activations_file_name} already exists. Skipping.")
                 continue
             else:
-                dummy_batch = torchhub_preprocess_batch(x[0], transform, 224, scale='[0,255]')
+                dummy_batch = torchhub_preprocess_batch(x[0], transform, 224)
                 with FeatureExtractor(model, 'avgpool') as extractor:
                     dummy_out = extractor(dummy_batch)['avgpool'].squeeze()
                 resnext_features = np.zeros((n_imgs, dummy_out.shape[-1]))
@@ -295,12 +279,8 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                 else:
                     dummy_batch = x[0]
                 dummy_out = activities_model(dummy_batch)
-                if 'GAP' in model_name:
-                    layer_features = np.zeros((n_imgs, dummy_out.shape[-1]), dtype=np.float32)
-                else:
-                    # flatten and save space with float16
-                    dummy_out = dummy_out.numpy().reshape(dummy_out.shape[0], -1)
-                    layer_features = np.zeros((n_imgs, dummy_out.shape[-1]), dtype=np.float16)
+                dummy_out = dummy_out.numpy().reshape(dummy_out.shape[0], -1)
+                layer_features = np.zeros((n_imgs, dummy_out.shape[-1]), dtype=np.float16)
             else:
                 # prepare h5 file structure to collect all layer activities
                 print(f"Preparing to save in {activations_file_name}")
@@ -312,6 +292,8 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
                                 shape=(n_imgs, readout_layer_shapes[lin][t][-1]),  # we avg across space to keep size reasonable
                                 dtype=np.float32,
                             )
+
+        print(f'\t{model_name} was succesfully loaded.')
 
         # get activities
         for i, x in enumerate(input_dataset):
@@ -338,7 +320,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
 
             elif 'timm' in model_name.lower():
                 with torch.no_grad():
-                    timm_batch = torchhub_preprocess_batch(batch_imgs, transform, image_size=im_sz, scale='[0,255]')
+                    timm_batch = torchhub_preprocess_batch(batch_imgs, transform, image_size=im_sz)
                     timm_out = model(timm_batch)
                     timm_features[i * btch_sz : (i + 1) * btch_sz] = timm_out.numpy()
 
@@ -395,7 +377,7 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
 
             elif 'konkle_' in model_name.lower():
 
-                ipcl_batch = torchhub_preprocess_batch(batch_imgs, transform, 224, scale='[0,1]' if '01inputs' in model_name else '[0,255]')
+                ipcl_batch = torchhub_preprocess_batch(batch_imgs, transform, 224)
                 with FeatureExtractor(model, 'fc7') as extractor:
                     ipcl_out = extractor(ipcl_batch)['fc7']
                 ipcl_features[i * btch_sz : (i + 1) * btch_sz] = ipcl_out.numpy()
@@ -432,11 +414,8 @@ def get_nsd_activations(MODEL_NAMES, dataset_path, dataset_path_places365,
             else:
                 if 'finalLayer' in model_name:
                     layer_activities = activities_model(batch_imgs)
-                    if 'GAP' in model_name:
-                        layer_features[i * btch_sz : (i + 1) * btch_sz] = layer_activities.numpy()
-                    else:
-                        flat_layer_activities = layer_activities.numpy().reshape(dummy_out.shape[0], -1).astype(np.float16)
-                        layer_features[i * btch_sz : (i + 1) * btch_sz] = flat_layer_activities
+                    flat_layer_activities = layer_activities.numpy().reshape(dummy_out.shape[0], -1).astype(np.float16)
+                    layer_features[i * btch_sz : (i + 1) * btch_sz] = flat_layer_activities
                 else:
                     layer_activities = activities_model(batch_imgs)
                     with h5py.File(activations_file_name, 'a') as activations_file:

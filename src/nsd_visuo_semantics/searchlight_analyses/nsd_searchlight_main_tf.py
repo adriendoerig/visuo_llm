@@ -8,12 +8,12 @@ import numpy as np
 from nsd_visuo_semantics.utils.tf_utils import chunking, corr_rdms, sort_spheres
 from nsd_visuo_semantics.searchlight_analyses.tf_searchlight import tf_searchlight as tfs
 from nsd_visuo_semantics.utils.batch_gen import BatchGen
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_masks, get_model_rdms, load_or_compute_betas_average
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_subject_conditions, get_masks, get_model_rdms, load_or_compute_betas_average
 from nsd_visuo_semantics.utils.utils import reorder_rdm
 
 def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance, 
                             nsd_dir, precompsl_dir, betas_dir, base_save_dir, 
-                            remove_shared_515, OVERWRITE):
+                            OVERWRITE):
 
     initial_time = time.time()
 
@@ -32,7 +32,7 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
     for MODEL_NAME in MODEL_NAMES:
 
         print(f"Starting main searchlight computations for {MODEL_NAME}")
-        models_dir = f'{base_save_dir}/serialised_models{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}/{MODEL_NAME}'
+        models_dir = f'{base_save_dir}/serialised_models_{rdm_distance}/{MODEL_NAME}'
         print(f"Loading serialised model rdms from {models_dir}")
 
         # loop over subjects
@@ -48,11 +48,11 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
 
             # where to save/load sample ids: all models sample the same 100 images every time for fair comparison.
             # we compute them only once for guse, and then will reload them for others
-            samples_dir = f'{results_dir}/saved_sampling{"_noShared515" if remove_shared_515 else ""}'
+            samples_dir = f'{results_dir}/saved_sampling'
             os.makedirs(samples_dir, exist_ok=True)
 
             # where to save searchlight correlations
-            searchlight_correlations_dir = f'{results_dir}/{MODEL_NAME}/corr_vols{"_noShared515" if remove_shared_515 else ""}_{rdm_distance}'
+            searchlight_correlations_dir = f'{results_dir}/{MODEL_NAME}/corr_vols_{rdm_distance}'
             os.makedirs(searchlight_correlations_dir, exist_ok=True)
 
             print(f"\tthe output files will be stored in {searchlight_correlations_dir}..")
@@ -105,37 +105,7 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
             rdms_sort = np.hstack(rdms_sort).astype(int)
 
             # extract conditions data and reshape conditions to be ntrials x 1
-            # extract conditions data.
-            # NOTES ABOUT HOW THIS WORKS:
-            # get_conditions returns a list with one item for each session the subject attended. Each of these items contains
-            # the NSD_ids for the images presented in that session. Then, we reshape all this into a single array, which now
-            # contains all the NSD_ids for the subject, in the order in which they were shown. Next, we create a boolean list of
-            # the same size as the conditions array, which assigns True to NSD_ids that are present 3x in the condition array.
-            # We use this boolean to create conditions_sampled, which now contains all NSD_indices for stimuli the subject has
-            # seen 3x. This list still contains the 3 repetitions of each stimulus, and is still in the stimulus presentation
-            # order. For example: [46003, 61883,   829, ...]
-            # Hence, we need to only keep each NSD_id once (since we compute everything on the average fMRI data over
-            # the 3 presentations), and we also need to order them in increasing NSD_id order (so that we can then easily
-            # for all subjects/models). Both of these desiderata are addressed by using np.unique (which sorts the unique idx).
-            # So subj_sample contains the unique NSD_ids for that subject, in increasing order (e.g. [ 14,  28,  72, ...]).
-            # Importantly, the average betas loaded above are arranged in the same way, so that if we want to find the betas
-            # for NSD_id=72, we just need to find the idx of 72 in subj_sample (in the present example: 2). Using this method, we can
-            # find the avg_betas corresponding to the shared 515 images as done below with subj_indices_515 (hint: the trick to
-            # go from an ordered list of nsd_ids to finding the idx as described above is to use enumerate).
-            # For example sample[subj_indices_515[0]] = conditions_515[0].
-            conditions = np.asarray(get_conditions(nsd_dir, subj, n_sessions)).ravel()
-            # then we find the valid trials for which we do have 3 repetitions.
-            conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
-            if remove_shared_515:
-                conditions_3repeats = np.unique(conditions[conditions_bool])  # save for later n_subj images WITH 515 -> THIS CAN INDEX THE BETAS CORRECTLY
-            if remove_shared_515:
-                conditions_515 = get_conditions_515(nsd_dir)  # [515,]  (nsd_indices for the 515 shared images)
-                conditions_515_bool = [True if x in conditions_515 else False for x in conditions]  # [n_subj_stims,] boolean array with True if this idx is a 515 shared img
-                conditions_bool = [True if x and not y else False for x, y in zip(conditions_bool, conditions_515_bool)]  # [n_subj_stims-515,] array of nsd_indices
-            # apply the condition boolean (which conditions had 3 repeats)
-            conditions_sampled = conditions[conditions_bool]
-            # find the subject's condition list (sample pool)
-            subj_sample = np.unique(conditions_sampled)  # ordered nsd_indices for single conditions seen 3x, optionally removing the shared515  (10000 if NSD subject completed all conds 3 times and we are not removing the 515)
+            conditions, conditions_sampled, subj_sample = get_subject_conditions(nsd_dir, subj, n_sessions, keep_only_3repeats=True)
             subj_n_images = len(subj_sample)
             all_conditions = range(subj_n_images)
             subj_n_samples = int(subj_n_images // 100)
@@ -145,35 +115,23 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
             betas_file = os.path.join(betas_dir, f"{subj}_betas_average_{targetspace}.npy")
             betas = load_or_compute_betas_average(betas_file, nsd_dir, subj, n_sessions, conditions, conditions_sampled, targetspace)
             
-            if remove_shared_515:
-                # When removing the shared 515, we need to change the indices of the betas in the same way as we changed
-                # the indices of the rdms, eetc, so as to keep everything consistent
-                subj_sample_no515_bool = [False if x in conditions_515 else True for x in conditions_3repeats]
-                betas = betas[:, :, :, subj_sample_no515_bool]  # [voxx, voxy, voxz, n_subj_conditions-515]
-
             # initialise batch generator. Retrieves 100x100 sampled RDM from upper tri of 10000x10000 full RDM
             batchg = BatchGen(model_rdms, all_conditions)
 
             # now we start the sampling procedure
             saved_samples_file = os.path.join(samples_dir, f"{subj}_nsd-allsubstim_sampling.npy")
-            # we also save shuffled indices to shuffle RDM rows and columns to use as a null hypothesis (not used in paper)
-            saved_shuffled_samples_file = os.path.join(samples_dir, f"{subj}_nsd-allsubstim_shuffling.npy",)
 
             # compute sampling if we are computing mpnet and it does not exist yet, else load
             if not os.path.exists(saved_samples_file):
                 if MODEL_NAME == "mpnet":
                     print("Running MPNET and DID NOT FIND existing saved_samples_file. Computing from scratch.")
                     subj_sample_pool = []
-                    subj_shuffle_pool = []
                     for j in range(subj_n_samples):
                         choices = np.random.choice(all_conditions, 100, replace=False)
                         choices.sort()
                         subj_sample_pool.append(choices)
                         all_conditions = np.setdiff1d(all_conditions, choices)
-                        shuffler = np.random.permutation(range(100))
-                        subj_shuffle_pool.append(shuffler)
                     np.save(saved_samples_file, subj_sample_pool)
-                    np.save(saved_shuffled_samples_file, subj_shuffle_pool)
                 else:
                     raise FileNotFoundError(
                         "Saved samples not found for MPNET. Raising an error for security."
@@ -186,13 +144,12 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
             else:
                 print(f"Loading 100x100 sample choices from {saved_samples_file}")
                 subj_sample_pool = np.load(saved_samples_file, allow_pickle=True)
-                subj_shuffle_pool = np.load(saved_shuffled_samples_file, allow_pickle=True)
 
             # run the searchlight mappings
             for j in range(subj_n_samples):
                 file_save = os.path.join(
                     searchlight_correlations_dir,
-                    f'{subj}_nsd-{MODEL_NAME}_{targetspace}{"_noShared515" if remove_shared_515 else ""}_sample-{j}.npy',
+                    f'{subj}_nsd-{MODEL_NAME}_{targetspace}_sample-{j}.npy',
                 )
 
                 if os.path.exists(file_save) and not OVERWRITE:
@@ -231,30 +188,6 @@ def nsd_searchlight_main_tf(MODEL_NAMES, rdm_distance,
 
                     # save correlation vol for that sample
                     np.save(file_save, brain_vols)
-
-                    # now permute models and re-run correlation (used for statistical analysis at the single subject level, see above)
-                    # exactly same steps as above
-                    shuffler = subj_shuffle_pool[j]
-                    shuffled_rdms = np.asarray([reorder_rdm(utv, shuffler) for utv in model_rdms_sample])
-                    brain_maps_perm = corr_rdms(brain_sl_rdms_sample, shuffled_rdms)
-
-                    brain_vols_perm = []
-                    for map_i in range(n_models):
-                        brain_map = brain_maps_perm[:, map_i]
-                        brain_vect = np.zeros(np.prod(n_voxels))
-                        brain_vect[rdms_sort] = brain_map.squeeze()
-                        brain_vols_perm.append(np.reshape(brain_vect, n_voxels))
-                    brain_vols_perm = np.asarray(brain_vols_perm)
-
-                    # save correlation maps for that shuffle
-                    file_save = os.path.join(
-                        searchlight_correlations_dir,
-                        f'{subj}_nsd-{MODEL_NAME}_{targetspace}{"_noShared515" if remove_shared_515 else ""}_shuffle-{j}.npy',
-                    )
-                    np.save(file_save, brain_vols_perm)
-
-                    elapsed_time = time.time() - start_time
-                    print(f"boot {j} : elapsedtime : ", f'{time.strftime("%H:%M:%S", time.gmtime(elapsed_time))}')
 
             del betas
             

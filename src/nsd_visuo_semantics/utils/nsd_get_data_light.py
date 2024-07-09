@@ -162,7 +162,7 @@ def get_betas(nsd_dir, sub, n_sessions, mask=None, targetspace="func1pt8mm"):
         ses_i = ses + 1
         si_str = str(ses_i).zfill(2)  # e.g. '01'
 
-        print(f"\t\tsub: {sub} fetching betas for trials in session: {ses_i}")
+        print(f"\r\t\tsub: {sub} fetching betas for trials in session: {ses_i}", end='')
         this_ses = read_behavior(nsd_dir, subject=sub, session_index=ses_i)
         # these are the 73K ids.
         ses_conditions = np.asarray(this_ses["73KID"])
@@ -220,9 +220,8 @@ def get_conditions(nsd_dir, sub, n_sessions):
     # loop over sessions
     for ses in range(n_sessions):
         ses_i = ses + 1
-        print(f"\t\tsub: {sub} fetching condition trials in session: {ses_i}")
+        print(f"\r\t\tsub: {sub} fetching condition trials in session: {ses_i}", end='')
 
-        # we only want to keep the shared_1000
         this_ses = np.asarray(read_behavior(nsd_dir, subject=sub, session_index=ses_i)["73KID"])
 
         # these are the 73K ids.
@@ -236,7 +235,48 @@ def get_conditions(nsd_dir, sub, n_sessions):
     return conditions
 
 
-def get_1000(nsd_dir):
+
+def get_subject_conditions(nsd_dir, subj, n_sessions, keep_only_3repeats=True):
+
+    # extract conditions data.
+    # NOTES ABOUT HOW THIS WORKS:
+    # get_conditions returns a list with one item for each session the subject attended. Each of these items contains
+    # the NSD_ids for the images presented in that session. Then, we reshape all this into a single array, which now
+    # contains all the NSD_ids for the subject, in the order in which they were shown. Next, we create a boolean list of
+    # the same size as the conditions array, which assigns True to NSD_ids that are present 3x in the condition array.
+    # We use this boolean to create conditions_sampled, which now contains all NSD_indices for stimuli the subject has
+    # seen 3x. This list still contains the 3 repetitions of each stimulus, and is still in the stimulus presentation
+    # order. For example: [46003, 61883,   829, ...]
+    # Hence, we need to only keep each NSD_id once (since we compute everything on the average fMRI data over
+    # the 3 presentations), and we also need to order them in increasing NSD_id order (so that we can then easily
+    # for all subjects/models). Both of these desiderata are addressed by using np.unique (which sorts the unique idx).
+    # So sample contains the unique NSD_ids for that subject, in increasing order (e.g. [ 14,  28,  72, ...]).
+    # Importantly, the average betas loaded above are arranged in the same way, so that if we want to find the betas
+    # for NSD_id=72, we just need to find the idx of 72 in sample (in the present example: 2). Using this method, we can
+    # find the avg_betas corresponding to the shared 515 images as done below with subj_indices_515 (hint: the trick to
+    # go from an ordered list of nsd_ids to finding the idx as described above is to use enumerate).
+    # For example sample[subj_indices_515[0]] = conditions_515[0].
+
+    # extract conditions data
+    conditions = get_conditions(nsd_dir, subj, n_sessions)
+    # we also need to reshape conditions to be ntrials x 1
+    conditions = np.asarray(conditions).ravel()
+    if keep_only_3repeats:
+        # then we find the valid trials for which we do have 3 repetitions.
+        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
+    else:
+        conditions_bool = [True for x in conditions]
+    # and identify those.
+    conditions_sampled = conditions[conditions_bool]
+    # find the subject's condition list (sample pool)
+    # this sample is the same order as the betas
+    sample = np.unique(conditions[conditions_bool])
+
+    return conditions, conditions_sampled, sample
+
+
+
+def get_conditions_1000(nsd_dir):
     """[get condition indices for the special 1000 images.]
 
     Arguments:
@@ -270,7 +310,7 @@ def get_conditions_100(nsd_dir):
         [lit of inds] -- [indices related to the chosen 100 special stimuli in a coco format]
     """
 
-    stim_ids = get_1000(nsd_dir)
+    stim_ids = get_conditions_1000(nsd_dir)
     # kendrick's chosen 100
     chosen_100 = [
         4,
@@ -391,7 +431,7 @@ def get_conditions_515(nsd_dir, n_sessions=40):
         [lit of inds] -- [indices related to the special 515
                           stimuli in a coco format]
     """
-    stim_1000 = get_1000(nsd_dir)
+    stim_1000 = get_conditions_1000(nsd_dir)
 
     sub_conditions = []
     # loop over sessions

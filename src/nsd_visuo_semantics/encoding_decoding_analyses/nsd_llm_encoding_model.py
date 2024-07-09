@@ -2,14 +2,16 @@
 """
 
 import os, pickle
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+try:
+    from sklearnex import patch_sklearn
+    patch_sklearn()
+except:
+    pass
 from fracridge import FracRidgeRegressorCV
 from nsd_access import NSDAccess
-from nsd_visuo_semantics.encoding_decoding_analyses.encoding_decoding_utils import restore_nan_dims, pairwise_corr, make_515_embeddings
-from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
-from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions, get_conditions_515, get_sentence_lists, load_or_compute_betas_average
+from nsd_visuo_semantics.encoding_decoding_analyses.encoding_decoding_utils import restore_nan_dims, pairwise_corr, make_conditions_nsd_embeddings, make_subj_conditional_nsd_embeddings
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_subject_conditions, get_conditions_515, load_or_compute_betas_average
 
 def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_dir):
 
@@ -41,28 +43,16 @@ def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_d
     # prepare the test set embeddings
     embeddings_test_path = f"{nsd_embeddings_path}/captions_515_embeddings.npy"
     if not os.path.exists(embeddings_test_path):
-        embeddings_test = make_515_embeddings(nsd_dir, conditions_515, nsda, EMBEDDING_MODEL_NAME)
+        embeddings_test = make_conditions_nsd_embeddings(nsda, EMBEDDING_MODEL_NAME, conditions_515)
         np.save(embeddings_test_path, embeddings_test)
     else:
         embeddings_test = np.load(embeddings_test_path)
-        embedding_dim = embeddings_test.shape[-1]
 
     for s_n, subj in enumerate(subs):
         # prepare the train/val set embeddings
 
-        # find indices that are NOT in the 515 spacial test images
-        # extract conditions data
-        conditions = get_conditions(nsd_dir, subj, n_sessions)
-        # we also need to reshape conditions to be ntrials x 1
-        conditions = np.asarray(conditions).ravel()
-        # then we find the valid trials for which we do have 3 repetitions.
-        conditions_bool = [True if np.sum(conditions == x) == 3 else False for x in conditions]
-        # and identify those.
-        conditions_sampled = conditions[conditions_bool]
-        # find the subject's condition list (sample pool)
-        # this sample is the same order as the betas
-        sample = np.unique(conditions[conditions_bool])
-
+        # get sampled conditions for this subject
+        conditions, conditions_sampled, sample = get_subject_conditions(nsd_dir, subj, n_sessions, keep_only_3repeats=True)
         # identify which images in the sample are from conditions_515
         sample_515_bool = [True if x in conditions_515 else False for x in sample]
         # and identify which sample images aren't in conditions_515
@@ -73,11 +63,7 @@ def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_d
         # get the embeddings for the training sample
         train_embeddings_path = (f"{nsd_embeddings_path}/captions_not515_embeddings_{subj}.npy")
         if not os.path.exists(train_embeddings_path):
-            embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
-            captions_not515 = get_sentence_lists(nsda, sample_train - 1)
-            embeddings_train = np.empty((len(captions_not515), embedding_dim))
-            for i in range(len(captions_not515)):
-                embeddings_train[i] = np.mean(get_embeddings(captions_not515[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
+            embeddings_train = make_subj_conditional_nsd_embeddings(nsda, sample_train, EMBEDDING_MODEL_NAME, bool_conditional=None)  # none because we are already filtering the conditions above
             np.save(train_embeddings_path, embeddings_train)
         else:
             embeddings_train = np.load(train_embeddings_path)
@@ -108,6 +94,8 @@ def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_d
         corrs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingCorrMap.npy"
         coefs_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingCoefs.npy"
         model_save_path = f"{fitted_models_dir}/{subj}_fittedFracridgeEncodingModel.pkl"
+        nan_idx_to_restore_save_path = f"{fitted_models_dir}/{subj}_NanIdxToRestore.npy"
+        
 
         if not os.path.exists(corrs_save_path):
 
@@ -134,6 +122,9 @@ def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_d
             nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
             fitted_test_corrs = restore_nan_dims(fitted_test_corrs, nan_idx_to_restore, axis=0)
 
+            np.save(nan_idx_to_restore_save_path, nan_idx_to_restore)
+            print(f"... NaN indices to restore saved for {subj}")
+            
             np.save(corrs_save_path, fitted_test_corrs)
             print(f"... Encoding model predictions saved for {subj}")
 
@@ -143,9 +134,5 @@ def nsd_llm_encoding_model(EMBEDDING_MODEL_NAME, nsd_dir, betas_dir, base_save_d
 
         else:
             print("Found saved encoding model predictions, skipping...")
-            with open(model_save_path, "rb") as f:
-                fitted_fracridge = pickle.load(f)
-            nan_idx_to_restore = np.array([i for i, x in enumerate(good_vertex) if not x])
-            restored_coefs = restore_nan_dims(fitted_fracridge.coef_, nan_idx_to_restore, axis=1)
-            np.save(coefs_save_path, restored_coefs)  # [n_embedding_dims, n_voxels]
-            print(f"... Encoding model coeffs saved for {subj}")
+
+

@@ -25,7 +25,7 @@ def get_nsd_allWord_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
 
     save_name = f"nsd_{EMBEDDING_TYPE}_ALLWORDS_embeddings"
 
-    if OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
+    if not OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
     
     else:
@@ -48,7 +48,7 @@ def get_nsd_allWord_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
                 loaded_captions = pickle.load(fp)
 
             n_elements = len(loaded_captions)
-            img_words = [[] for _ in range(n_elements)]  # we will also save all verbs for each image
+            img_words = [[] for _ in range(n_elements)]  # we will also save all words for each image
             final_allWord_embeddings = np.empty((n_elements, get_word_embedding("runs", embeddings, EMBEDDING_TYPE).shape[0]))  # fastext embeddings have 300 dimensions
 
             for i in range(n_elements):
@@ -86,6 +86,8 @@ def get_nsd_allWord_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
                 pickle.dump(final_allWord_embeddings, fp)
             with open(f"{save_embeddings_to}/nsd_allWords_per_image.pkl", "wb") as fp:  # Pickling
                 pickle.dump(img_words, fp)
+
+        del embeddings, final_allWord_embeddings, img_words  # make space
 
 
     if DO_SANITY_CHECK:

@@ -116,6 +116,8 @@ def get_nsd_noun_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
             print(f"nouns that do not have an embedding in fasttext: {skipped_candidates_no_embedding}")
             print(f"n_imgs with NO noun for ANY caption: {no_nouns_counter}")
 
+        del embeddings, loaded_captions, img_nouns, final_noun_embeddings
+
 
     if DO_SANITY_CHECK:
         if not os.path.exists(h5_dataset_path):

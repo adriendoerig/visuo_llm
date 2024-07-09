@@ -27,8 +27,7 @@ def get_nsd_verb_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
     os.makedirs(save_test_imgs_to, exist_ok=1)
 
     save_name = f"nsd_{EMBEDDING_TYPE}_VERB_embeddings"
-
-    if OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
+    if not OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
     
     else:
@@ -119,6 +118,8 @@ def get_nsd_verb_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
             print(f"words classified as verbs but that are not in fact verbs or are unknown words: {skipped_candidates_not_verbs}")
             print(f"verbs that do not have an embedding in {EMBEDDING_TYPE}: {skipped_candidates_no_embedding}")
             print(f"n_imgs with NO verb for ANY caption: {no_verbs_counter}")
+
+        del embeddings, final_verb_embeddings, img_verbs
 
 
     if DO_SANITY_CHECK:

@@ -69,6 +69,8 @@ def get_nsd_sentence_embeddings_simple(embedding_model_type, captions_to_embed_p
             with open(f"{save_embeddings_to}/{save_name}.pkl", "wb") as fp:
                 pickle.dump(mean_embeddings, fp)
 
+        del mean_embeddings
+
 
     if FINAL_CHECK:
         with h5py.File(h5_dataset_path, "r") as h5_dataset:

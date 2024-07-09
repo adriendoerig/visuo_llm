@@ -2,23 +2,57 @@ import os
 import pandas as pd
 from scipy.spatial.distance import cdist
 import numpy as np
-try:
-    import tensorflow_probability as tfp
-except:
-    print("PRINTED FROM DECODING_UTILS: Tensorflow probability cannot be imported, some functions may not work.")
+import tensorflow_probability as tfp
+from nsd_visuo_semantics.get_embeddings.embedding_models_zoo import get_embedding_model, get_embeddings
+from nsd_visuo_semantics.utils.nsd_get_data_light import get_sentence_lists
 
 
-def make_515_embeddings(nsda, conditions_515, EMBEDDING_MODEL_NAME):
-    '''get embeddings for the 515 special images. 
-    This is used as the test set for the encoding/decoding models.'''
+def make_conditions_nsd_embeddings(nsda, EMBEDDING_MODEL_NAME, conditions_list):
+    '''get embeddings for NSD stimuli, selected by conditions_list (e.g. you could use
+    nsd_get_data_light.get_conditions_515). This version of the code is NOT restricted
+    to the images seen by a given subject. For that, see make_subj_conditional_embeddings.
+    For example, his can be used to get the embeddings for the 515 as the test set for 
+    the encoding/decoding models.
+    NOTE: conditions_list should be a list of integers, as returned e.g. by nsd_get_data_light.get_conditions_515.'''
+
     embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
-    captions_515 = get_sentence_lists(nsda, np.asarray(conditions_515) - 1)
-    dummy_embedding = get_embeddings(captions_515[0], embedding_model, EMBEDDING_MODEL_NAME)
+    
+    captions_to_use = get_sentence_lists(nsda, np.asarray(conditions_list) - 1)
+    
+    dummy_embedding = get_embeddings(captions_to_use[0], embedding_model, EMBEDDING_MODEL_NAME)
     embedding_dim = dummy_embedding.shape[-1]
-    embeddings_test = np.empty((515, embedding_dim))
-    for i in range(len(captions_515)):
-        embeddings_test[i] = np.mean(get_embeddings(captions_515[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
-    return embeddings_test
+    
+    embeddings = np.empty((515, embedding_dim))
+    for i in range(len(captions_to_use)):
+        embeddings[i] = np.mean(get_embeddings(captions_to_use[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
+    return embeddings
+
+
+def make_subj_conditional_nsd_embeddings(nsda, subj_sample, EMBEDDING_MODEL_NAME, bool_conditional=None):
+    '''get embeddings for all stimuli seen by a subject. This is different for each subject. 
+    Therefore, we need to pass the subject sample to this function (which you can get using
+    nsd_get_data_light.get_subject_conditions).
+    you can use a boolean conditional to remove certain conditions (e.g., remove the shared 515).
+    NOTE: bool_conditional should be a boolean array of the same length as subj_sample.
+          e.g. [False if x in conditions_515 else True for x in sample]'''
+    
+    if bool_conditional is not None:
+        subj_sample_selected = subj_sample[bool_conditional]
+    else:
+        subj_sample_selected = subj_sample
+    
+    embedding_model = get_embedding_model(EMBEDDING_MODEL_NAME)
+    
+    captions_to_use = get_sentence_lists(nsda, subj_sample_selected - 1)
+
+    dummy_embedding = get_embeddings(captions_to_use[0], embedding_model, EMBEDDING_MODEL_NAME)
+    embedding_dim = dummy_embedding.shape[-1]
+    subj_conditional_embeddings = np.empty((len(captions_to_use), embedding_dim))
+
+    for i in range(len(captions_to_use)):
+        subj_conditional_embeddings[i] = np.mean(get_embeddings(captions_to_use[i], embedding_model, EMBEDDING_MODEL_NAME), axis=0)
+
+    return subj_conditional_embeddings
 
 
 def remove_inert_embedding_dims(embeddings, cutoff=1e-20):
@@ -101,18 +135,9 @@ def load_gcc_embeddings(gcc_dir='/share/klab/datasets/google_conceptual_captions
 
     print("Loading GCC embeddings...")
 
-    lookup_sentences_path = os.path.join(
-        gcc_dir,
-        "conceptual_captions_{}.tsv",
-    )
-    lookup_embeddings_path = os.path.join(
-        gcc_dir,
-        "conceptual_captions_mpnet_{}.npy",
-    )
-    lookup_datasets = [
-        "train",
-        "val",
-    ]  # we can choose to use either the gcc train, val, or both for the lookup
+    lookup_sentences_path = os.path.join(gcc_dir, "conceptual_captions_{}.tsv")
+    lookup_embeddings_path = os.path.join(gcc_dir, "conceptual_captions_mpnet_{}.npy")
+    lookup_datasets = ["train", "val"]  # we can choose to use either the gcc train, val, or both for the lookup
 
     lookup_embeddings = None
     for d in lookup_datasets:

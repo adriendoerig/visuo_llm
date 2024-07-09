@@ -1,5 +1,4 @@
 from itertools import permutations
-
 import numpy as np
 
 
@@ -19,9 +18,7 @@ def give_vector_pos(list_index, m):
         if j[0] == 0:
             vector = j[1] - j[0] - 1
         else:
-            vector = (
-                int((m * j[0]) - (j[0] * (j[0] + 1) / 2) + j[1] - j[0]) - 1
-            )
+            vector = (int((m*j[0]) - (j[0]*(j[0]+1)/2) + j[1]-j[0]) - 1)
         vector_pos.append(vector)
     # Return the sorted vector positions of all possible tuples
     vector_pos.sort()
@@ -90,16 +87,12 @@ class BatchGen:
 
         if type(self.RDM) is list:  # we have RDMs from many models.
             RDM_array = np.asarray(self.RDM)
-            RDM_index = give_vector_pos(
-                condition_subset, len(self.all_conditions)
-            )
+            RDM_index = give_vector_pos(condition_subset, len(self.all_conditions))
 
             RDM_array = RDM_array[:, RDM_index]
             RDM_list = [rdm for rdm in RDM_array]
         else:
-            RDM_index = self.RDM[
-                give_vector_pos(condition_subset, len(self.all_conditions))
-            ]
+            RDM_index = self.RDM[give_vector_pos(condition_subset, len(self.all_conditions))]
             RDM_list.append(RDM_index)
 
         # Return a subsetted RDM vector

@@ -13,7 +13,7 @@ from scipy import stats
 def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_CEIL, custom_model_keys=None, plt_suffix='', 
                             alphabetical_order=False, best_to_worst_order=False,
                             custom_model_labels=None, average_seeds=False,
-                            plot_pval_tables = False):
+                            plot_pval_tables=False):
    
     roi_analyses_dir = os.path.join(base_save_dir, "roi_analyses")
     results_dir = os.path.join(roi_analyses_dir, f"{which_rois}_roi_results_{rdm_distance}")
@@ -23,13 +23,13 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     model_keys = custom_model_keys
 
     roi_keys = [
-        "earlyROI",
-        # "midventralROI",
-        "ventralROI",
-        # "midlateralROI",
-        "lateralROI",
-        # "midparietalROI",
-        "parietalROI",
+        "early",
+        # "midventral",
+        "ventral",
+        # "midlateral",
+        "lateral",
+        # "midparietal",
+        "parietal",
     ]
     roi_labels = [
         "EVC",
@@ -55,16 +55,16 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
     }
 
     if USE_NOISE_CEIL:
-        with open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_corrs.pkl', "rb") as g1, \
-            open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_mean_corrs.pkl', "rb") as g2, \
-            open(f'{results_dir}/subj_roi_rdms/subjWiseNoiseCeiling_group_std_corrs.pkl', "rb") as g3:
+        with open(f'{results_dir}/cache/subjWiseNoiseCeiling_group_corrs.pkl', "rb") as g1, \
+            open(f'{results_dir}/cache/subjWiseNoiseCeiling_group_mean_corrs.pkl', "rb") as g2, \
+            open(f'{results_dir}/cache/subjWiseNoiseCeiling_group_std_corrs.pkl', "rb") as g3:
             group_corrs = pickle.load(g1)
             group_mean_corrs = pickle.load(g2)
             group_std_corrs = pickle.load(g3)
     else:
-        with open(f'{results_dir}/subj_roi_rdms/group_corrs_no_noise_ceiling.pkl', "rb") as g1, \
-            open(f'{results_dir}/subj_roi_rdms/group_mean_corrs_no_noise_ceiling.pkl', "rb") as g2, \
-            open(f'{results_dir}/subj_roi_rdms/group_std_corrs_no_noise_ceiling.pkl', "rb") as g3:
+        with open(f'{results_dir}/cache/group_corrs_no_noise_ceiling.pkl', "rb") as g1, \
+            open(f'{results_dir}/cache/group_mean_corrs_no_noise_ceiling.pkl', "rb") as g2, \
+            open(f'{results_dir}/cache/group_std_corrs_no_noise_ceiling.pkl', "rb") as g3:
             group_corrs = pickle.load(g1)
             group_mean_corrs = pickle.load(g2)
             group_std_corrs = pickle.load(g3)
@@ -80,7 +80,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         roi_key: {model_key: group_corrs[model_key][roi_key]
                 for model_key in model_keys}
                 for roi_key in roi_keys}
-    
+        
     if average_seeds:
 
         seed_models = []

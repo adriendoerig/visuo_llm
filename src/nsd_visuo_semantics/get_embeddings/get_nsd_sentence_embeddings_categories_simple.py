@@ -84,6 +84,8 @@ def get_nsd_sentence_embeddings_categories_simple(embedding_model_type, captions
 
             with open(f"{save_embeddings_to}/{save_name}_categs_per_image.pkl", "wb") as fp:
                 pickle.dump(cats_per_image, fp)
+
+        del mean_embeddings_all, cats_per_image
             
 
     if FINAL_CHECK:
