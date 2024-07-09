@@ -4,7 +4,7 @@ from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses import nsd_roi_analyses
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_figure import nsd_roi_analyses_figure
 from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import correlate_model_rdms_figure
 
-PAPER_FIG = 2  # do the models for paper figure 2 or 3
+PAPER_FIG = 3  # do the models for paper figure 2 or 3
 
 ### DECLARE PARAMS
 OVERWRITE = False
@@ -22,12 +22,12 @@ if PAPER_FIG == 2:
     MODEL_NAMES += [
         "mpnet",
         "mpnet_category_all",
-        # "multihot"
-        # "fasttext_categories",
-        # "mpnet_nouns",
-        # "mpnet_verbs",
-        # "mpnetWordAvg_all",
-        # "fasttext_all",
+        # "multihot",
+        "fasttext_categories",
+        "mpnet_nouns",
+        "mpnet_verbs",
+        "mpnetWordAvg_all",
+        "fasttext_all",
         # "glove_all"
         ]
 elif PAPER_FIG == 3:
@@ -36,11 +36,13 @@ elif PAPER_FIG == 3:
     for target in ['mpnet', 'multihot']:
         for seed in range(1, 11):
             MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep200"]    
-    MODEL_NAMES += ['thingsvision_cornet-s', 'dnn_ecoset_category', 'konkle_alexnetgn_supervised_ref12_augset1_5x', 
-                    'timm_nf_resnet50', 'brainscore_resnet50_julios', 'brainscore_alexnet', 
-                    'sceneCateg_resnet50_finalLayer', 'taskonomy_scenecat_resnet50',
+    MODEL_NAMES += [#'thingsvision_cornet-s', 'dnn_ecoset_category', 
+                    'konkle_alexnetgn_supervised_ref12_augset1_5x', 'konkle_alexnetgn_ipcl_ref01',
+                    'timm_nf_resnet50', 
+                    #'brainscore_resnet50_julios', 'brainscore_alexnet', 
+                    'sceneCateg_resnet50_finalLayer', #'taskonomy_scenecat_resnet50',
                     'CLIP_RN50_images', 'resnext101_32x8d_wsl', 'CLIP_ViT_images',
-                    'google_simclrv1_rn50', 'konkle_alexnetgn_ipcl_ref01']
+                    'resnext101_32x8d_wsl', 'google_simclrv1_rn50']
 else:
     raise ValueError(f"Unknown paper figure {PAPER_FIG}")
 
@@ -59,10 +61,10 @@ rois_dir = os.path.join(nsd_dir, 'nsddata/freesurfer/fsaverage/label')
 
 ### PREPARE RDMs FOR EACH REQUESTED MODEL
 
-# nsd_prepare_modelrdms(MODEL_NAMES, MODELS_RDM_DIST,
-#                       saved_embeddings_dir, rdms_dir, nsd_dir,
-#                       ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
-#                       OVERWRITE, RCNN_LAYER=RCNN_LAYER)
+nsd_prepare_modelrdms(MODEL_NAMES, MODELS_RDM_DIST,
+                      saved_embeddings_dir, rdms_dir, nsd_dir,
+                      ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir,
+                      OVERWRITE, RCNN_LAYER=RCNN_LAYER)
 
 ### RUN ROI ANALYSES
 

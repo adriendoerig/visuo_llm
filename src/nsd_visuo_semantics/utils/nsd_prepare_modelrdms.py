@@ -39,7 +39,10 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
         elif modelname2file[MODEL_NAME][-4:] == ".npy":
             embeddings = np.load(modelname2file[MODEL_NAME], allow_pickle=True)
         elif "dnn" in MODEL_NAME:
-            print("You requested rdm for DNN activities, creating one rdm per layer & timestep")
+            if RCNN_LAYER is not None:
+                print(f"You requested rdm for DNN activities, and layer {RCNN_LAYER} only")
+            else:
+                print("You requested rdm for DNN activities, creating one rdm per layer & timestep")
         else:
             raise Exception(f"Embeddings file type not understood. "
                             f"Found: {modelname2file[MODEL_NAME]}. Please use .pkl or.npy.")
@@ -61,8 +64,9 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                 with h5py.File(modelname2file[MODEL_NAME], "r") as activations_file:
                     if RCNN_LAYER is not None:
                         if RCNN_LAYER == -1:
-                            RCNN_LAYER = len(activations_file.keys())
-                        layer_names = [x for x in activations_file.keys() if re.search(f"layer{RCNN_LAYER}(\\D|$)", x)]
+                            RCNN_LAYER = len(activations_file.keys()) - 1
+                        l, t = RCNN_LAYER // 6, RCNN_LAYER % 6
+                        layer_names = [f'layernorm_layer_{l}_time_{t}']
                     else:
                         # do all layers
                         layer_names = [x for x in activations_file.keys()]

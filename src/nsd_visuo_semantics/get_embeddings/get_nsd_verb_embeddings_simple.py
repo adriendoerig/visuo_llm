@@ -26,7 +26,7 @@ def get_nsd_verb_embeddings_simple(EMBEDDING_TYPE, h5_dataset_path,
     save_test_imgs_to = f"{save_embeddings_to}/_check_imgs"
     os.makedirs(save_test_imgs_to, exist_ok=1)
 
-    save_name = f"nsd_{EMBEDDING_TYPE}_VERB_embeddings"
+    save_name = f"nsd_{EMBEDDING_TYPE}_VERBS_embeddings"
     if not OVERWRITE and os.path.exists(f"{save_embeddings_to}/{save_name}.pkl"):
         print(f"Embeddings already exist at {save_embeddings_to}/{save_name}.pkl. Set OVERWRITE=True to overwrite.")
     
