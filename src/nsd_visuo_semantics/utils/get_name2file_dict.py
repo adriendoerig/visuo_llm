@@ -60,4 +60,13 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         for wt in WORD_TYPES:
             modelname2file[f'{mpnet_moniker}_{wt}'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_{wt.upper()}_embeddings.pkl"
 
+    # sush models
+    sush_model_names = [
+        "test1k_gs_lstm_n_1024_tm_3_loc_1_reg_1_indp_0.25_rnndp_0.25_gaze_dg3_gcpc_1_semc_0_scc_0_locmse_0_tr_train_plus_lr_0.0001_num_1",
+        "test1k_gs_lstm_n_256_tm_5_loc_1_reg_1_indp_0.25_rnndp_0.1_gaze_dg3_gcpc_0_semc_1_scc_0_locmse_0_tr_train_plus_lr_0.0001_num_1"
+        ]
+    
+    for sush_model_name in sush_model_names:
+        modelname2file[sush_model_name] = f"{saved_embeddings_dir}/{sush_model_name}.pkl"
+
     return modelname2file

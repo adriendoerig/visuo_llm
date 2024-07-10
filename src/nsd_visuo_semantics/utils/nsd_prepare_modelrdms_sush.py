@@ -9,9 +9,10 @@ from scipy.spatial.distance import pdist
 from nsd_visuo_semantics.utils.nsd_get_data_light import get_conditions
 from nsd_visuo_semantics.utils.get_name2file_dict import get_name2file_dict
 
-def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
+def nsd_prepare_modelrdms_sush(MODEL_NAMES, rdm_distance,
                                saved_embeddings_dir, rdms_dir, nsd_dir,
                                ms_coco_saved_dnn_activities_dir, ecoset_saved_dnn_activities_dir, 
+                               sush_layers=['joint_proj', 'lstm_h_0', 'lstm_c_0', 'lstm_h_1', 'lstm_c_1', 'lstm_h_2', 'lstm_c_2', 'lstm_out', 'glimpse_hidden', 'glimpse_output'],
                                OVERWRITE, RCNN_LAYER=None):
     
     if not isinstance(MODEL_NAMES, list):
