@@ -4,45 +4,76 @@ from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses import nsd_roi_analyses
 from nsd_visuo_semantics.roi_analyses.nsd_roi_analyses_figure import nsd_roi_analyses_figure
 from nsd_visuo_semantics.get_embeddings.correlate_model_rdms_figure import correlate_model_rdms_figure
 
-PAPER_FIG = 3  # do the models for paper figure 2 or 3
+PAPER_FIG = 'fig3'  # chose which paper figure to run the analysis for
 
 ### DECLARE PARAMS
 OVERWRITE = False
 RCNN_LAYER = -1  # layer to use for the RCNNs
-PLT_SUFFIX = f"_test"  # gets added after the figure we will make
+PLT_SUFFIX = str(PAPER_FIG)  # gets added after the figure we will make
 MODEL_NAMES = []  # we will fill this in with the models we want.
 
 MODELS_RDM_DIST = "correlation"  # RDM distance measure for models NOTE: SEARCHLIGHTS USE CORRELATION
 WHICH_ROIS = "streams"  # streams, highlevelvisual, mpnet_sig0.05_fsaverage, ...
 DO_NOISE_CEILING = True  # if True, plot noise-ceiling corrected corrs. If false, do not use noise ceiling
 
-if PAPER_FIG == 2:
-    ### MODELS FOR PAPER FIGURE 2
-    # models from original paper
+if PAPER_FIG == 'fig3':
+    ### MODELS FOR PAPER FIGURE 3
     MODEL_NAMES += [
         "mpnet",
         "mpnet_category_all",
-        # "multihot",
+        "multihot",
         "fasttext_categories",
+        "glove_categories",
         "mpnet_nouns",
         "mpnet_verbs",
         "mpnetWordAvg_all",
         "fasttext_all",
-        # "glove_all"
+        "glove_all"
         ]
-elif PAPER_FIG == 3:
-    ### MODELS FOR PAPER FIGURE 3 (YOU WILL FIRST NEED TO EXTRACT THE DNN ACTIVATIONS USING get_dnn_activities.py)
+elif PAPER_FIG == 'fig4':
+    ### MODELS FOR PAPER FIGURE 4 (YOU WILL FIRST NEED TO EXTRACT THE DNN ACTIVATIONS USING get_dnn_activities.py)
     # dnn 10 seeds
     for target in ['mpnet', 'multihot']:
         for seed in range(1, 11):
             MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep200"]    
-    MODEL_NAMES += [#'thingsvision_cornet-s', 'dnn_ecoset_category', 
+    MODEL_NAMES += ['thingsvision_cornet-s', 'dnn_ecoset_category', 
                     'konkle_alexnetgn_supervised_ref12_augset1_5x', 'konkle_alexnetgn_ipcl_ref01',
                     'timm_nf_resnet50', 
-                    #'brainscore_resnet50_julios', 'brainscore_alexnet', 
-                    'sceneCateg_resnet50_finalLayer', #'taskonomy_scenecat_resnet50',
+                    'brainscore_resnet50_julios', 'brainscore_alexnet', 
+                    'sceneCateg_resnet50_finalLayer', 'taskonomy_scenecat_resnet50',
                     'CLIP_RN50_images', 'resnext101_32x8d_wsl', 'CLIP_ViT_images',
                     'resnext101_32x8d_wsl', 'google_simclrv1_rn50']
+elif PAPER_FIG == 's9':
+    ### MODELS FOR SUPPLEMENTAL FIGURE 9
+    MODEL_NAMES += [
+        "mpnet",
+        "mpnet_nouns",
+        "mpnet_verbs",
+        "mpnet_prepositions",
+        "mpnet_adjectives",
+        "mpnet_adverbs"
+        ]
+elif PAPER_FIG == 's10':
+    ### MODELS FOR SUPPLEMENTAL FIGURE 10
+    MODEL_NAMES += [
+        "mpnet",
+        "mpnet_scrambled"
+        ]
+elif PAPER_FIG == 's11':
+    ### MODELS FOR SUPPLEMENTAL FIGURE 11
+    MODEL_NAMES += ['mpnet', 'multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
+                    'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
+                    'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
+                    'GUSE_transformer']
+elif PAPER_FIG == 's19a':
+    ### MODELS FOR SUPPLEMENTAL FIGURE 19
+    for target in ['mpnet', 'multihot']:
+        for seed in range(1, 11):
+            MODEL_NAMES += [f"dnn_{target}_rec_seed{seed}_ep200"]   
+    MODEL_NAMES += ['dnn_ecoset_category']
+elif PAPER_FIG == 's19b':
+    ### MODELS FOR SUPPLEMENTAL FIGURE 19
+    MODEL_NAMES += ['mpnet_resnet50_finalLayer', 'multihot_resnet50_finalLayer', 'brainscore_resnet50_julios']   
 else:
     raise ValueError(f"Unknown paper figure {PAPER_FIG}")
 

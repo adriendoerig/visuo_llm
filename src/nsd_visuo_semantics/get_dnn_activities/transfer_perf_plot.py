@@ -54,8 +54,22 @@ bar_values = [multihot_to_multihot_perf, MPNet_to_multihot_transfer_perf, MPNet_
 bar_errors = [multihot_to_multihot_std, MPNet_to_multihot_transfer_std, MPNet_to_MPNet_std, multihot_to_MPNet_transfer_std]
 bar_colors = ['skyblue', 'skyblue', 'salmon', 'salmon']
 bar_positions = np.array([0, 0.6, 1.8, 2.4])
+bar_width = 0.4
 
-ax.bar(bar_positions, bar_values, yerr=bar_errors, color=bar_colors, width=0.4)
+# Bar plot
+ax.bar(bar_positions, bar_values, yerr=bar_errors, color=bar_colors, width=bar_width)
+
+# Add individual datapoints (with jitter)
+all_data = [
+    multihot_to_multihot_perfs,
+    MPNet_to_multihot_transfer_perfs,
+    MPNet_to_MPNet_perfs,
+    multihot_to_MPNet_transfer_perfs
+]
+
+for x, data_points in zip(bar_positions, all_data):
+    jittered_x = x + np.random.uniform(-bar_width/4, bar_width/4, size=len(data_points))
+    ax.plot(jittered_x, data_points, 'k.', alpha=0.7)
 
 # Set title and labels
 ax.set_xticks([0, 0.6, 1.8, 2.4])

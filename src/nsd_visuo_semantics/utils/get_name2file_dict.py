@@ -37,7 +37,8 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         "mpnet_resnet50_finalLayer": f"{saved_dnn_activities_dir}/mpnet_resnet50_finalLayer_nsd_image_features.pkl",
         "multihot_resnet50_finalLayer": f"{saved_dnn_activities_dir}/multihot_resnet50_finalLayer_nsd_image_features.pkl",
         "sceneCateg_resnet50_finalLayer": f"{saved_dnn_activities_dir}/sceneCateg_resnet50_finalLayer_nsd_image_features.pkl",
-        
+        'mpnet_scrambled': f"{saved_embeddings_dir}/nsd_all-mpnet-base-v2_mean_embeddings_scrambled.pkl",
+
         # DNNs trained on ecoset activities
         "dnn_ecoset_category": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_category_post_gn_epoch80.h5",
         "dnn_ecoset_fasttext": f"{ecoset_saved_dnn_activities_dir}/blt_vnet_fasttext_post_gn_epoch80.h5",
@@ -51,7 +52,7 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
                 modelname2file[f"dnn_{modelname}_seed{seed}_ep{epoch}"] = f"{saved_dnn_activities_dir}/{modelname}_seed{seed}_nsd_activations_epoch{epoch}.h5"
 
     # word types embeddings
-    WORD_TYPES = ['nouns', 'verbs', 'noun', 'verb']
+    WORD_TYPES = ['nouns', 'verbs', 'noun', 'verb', 'prepositions', 'adjectives', 'adverbs']
 
     # sentence embeddings on (lists of) words
     for mpnet_moniker in ["mpnet", "all-mpnet-base-v2"]:
@@ -60,13 +61,11 @@ def get_name2file_dict(saved_embeddings_dir, saved_dnn_activities_dir,
         for wt in WORD_TYPES:
             modelname2file[f'{mpnet_moniker}_{wt}'] = f"{saved_embeddings_dir}/nsd_{mpnet_full_name}_{wt.upper()}_embeddings.pkl"
 
-    # sush models
-    sush_model_names = [
-        "test1k_gs_lstm_n_1024_tm_3_loc_1_reg_1_indp_0.25_rnndp_0.25_gaze_dg3_gcpc_1_semc_0_scc_0_locmse_0_tr_train_plus_lr_0.0001_num_1",
-        "test1k_gs_lstm_n_256_tm_5_loc_1_reg_1_indp_0.25_rnndp_0.1_gaze_dg3_gcpc_0_semc_1_scc_0_locmse_0_tr_train_plus_lr_0.0001_num_1"
-        ]
-    
-    for sush_model_name in sush_model_names:
-        modelname2file[sush_model_name] = f"{saved_embeddings_dir}/{sush_model_name}.pkl"
+    SENTENCE_EMBEDDING_MODEL_TYPES = ['multi-qa-mpnet-base-dot-v1', 'all-distilroberta-v1', 'all-MiniLM-L12-v2', 
+                                      'paraphrase-multilingual-mpnet-base-v2', 'paraphrase-albert-small-v2', 
+                                      'paraphrase-MiniLM-L3-v2', 'distiluse-base-multilingual-cased-v2',
+                                      'GUSE_transformer', 'GUSE_DAN', 'USE_CMLM_Base', 'T5']
+    for SENTENCE_EMBEDDING_MODEL_TYPE in SENTENCE_EMBEDDING_MODEL_TYPES:
+        modelname2file[SENTENCE_EMBEDDING_MODEL_TYPE] = f"{saved_embeddings_dir}/nsd_{SENTENCE_EMBEDDING_MODEL_TYPE}_mean_embeddings.pkl"
 
     return modelname2file

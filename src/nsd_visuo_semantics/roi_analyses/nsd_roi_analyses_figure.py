@@ -105,7 +105,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
         model_keys = list(seed_avg_corrs[roi_keys[0]].keys()) + non_seed_models
         means = {roi_key: {model_key: means[roi_key][model_key] if model_key in non_seed_models else np.mean(seed_avg_corrs[roi_key][model_key]) for model_key in model_keys} for roi_key in roi_keys}
         stds = {roi_key: {model_key: stds[roi_key][model_key] if model_key in non_seed_models else np.std(seed_avg_corrs[roi_key][model_key])/np.sqrt(8) for model_key in model_keys} for roi_key in roi_keys}
-
+        corr_samples = {roi_key: {model_key: corr_samples[roi_key][model_key] if model_key in non_seed_models else seed_avg_corrs[roi_key][model_key] for model_key in model_keys} for roi_key in roi_keys}
 
     n_models = len(model_keys)
     model_labels = model_keys
@@ -167,15 +167,24 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
             perf = means[roi_key][model_key]
             std = stds[roi_key][model_key]
             bar_pos = i + j * bar_width
+            
+            # Plot bar and error bar
             ax.bar(
                 bar_pos,
                 perf,
                 **bar_specs,
                 facecolor=facecolor,
                 label="_no_legend_",
-            )  # roi_label)
+            )
             ax.errorbar(bar_pos, perf, yerr=std, color="black", capsize=1, capthick=(0.00975/0.021), lw=(0.00975/0.021), zorder=11)
+
+            # Plot individual datapoints
+            dot_data = corr_samples[roi_key][model_key]
+            jitter = np.random.uniform(-bar_width/4, bar_width/4, size=len(dot_data))
+            ax.plot(bar_pos + jitter, dot_data, 'k.', alpha=0.7, zorder=12)
+
             x_positions.append(bar_pos)
+
 
             # statistics
             s = stats.ttest_1samp(corr_samples[roi_key][model_key], 0, alternative="two-sided")
@@ -221,7 +230,7 @@ def nsd_roi_analyses_figure(base_save_dir, which_rois, rdm_distance, USE_NOISE_C
 
     # Save figure
     plt.tight_layout()
-    plt.savefig(f"{results_dir}/ROIFIG{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.png")  # , dpi=300)
+    plt.savefig(f"{results_dir}/ROIFIG{'_SubjWiseNoiseCeiling' if USE_NOISE_CEIL else ''}{plt_suffix}.svg", dpi=300)
 
     if plot_pval_tables:
         import pandas as pd

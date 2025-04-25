@@ -47,8 +47,6 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
             raise Exception(f"Embeddings file type not understood. "
                             f"Found: {modelname2file[MODEL_NAME]}. Please use .pkl or.npy.")
         
-        import pdb; pdb.set_trace()
-
         # loop over subjects
         for sub in subs:
 
@@ -68,7 +66,10 @@ def nsd_prepare_modelrdms(MODEL_NAMES, rdm_distance,
                         if RCNN_LAYER == -1:
                             RCNN_LAYER = len(activations_file.keys()) - 1
                         l, t = RCNN_LAYER // 6, RCNN_LAYER % 6
-                        layer_names = [f'layernorm_layer_{l}_time_{t}']
+                        if 'ecoset' in MODEL_NAME:
+                            layer_names = [f'groupnorm_layer_{l}_time_{t}']
+                        else:
+                            layer_names = [f'layernorm_layer_{l}_time_{t}']
                     else:
                         # do all layers
                         layer_names = [x for x in activations_file.keys()]
