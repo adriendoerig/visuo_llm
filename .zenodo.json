@@ -1,0 +1,14 @@
+{
+    "title": "visuo_llm (v1.0)",
+    "upload_type": "software",
+    "description": "Code for the analyses in the paper 'High-level visual representations in the human brain are aligned with large language models', published in Nature Machine Intelligence.",
+    "creators": [
+      {
+        "name": "Adrien Doerig",
+        "affiliation": "Freie Universität Berlin",
+        "orcid": "0000-0001-5120-9750"
+      }
+    ],
+    "license": "MIT"
+  }
+  

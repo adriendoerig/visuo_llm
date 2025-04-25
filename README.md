@@ -1,36 +1,25 @@
-# nsd_visuo_semantics
+# High-level visual representations in the human brain are aligned with large language models
+**Authors: Adrien Doerig, Tim C Kietzmann, Emily Allen, Yihan Wu, Thomas Naselaris, Kendrick Kay, & Ian Charest**
 
-[![License BSD-3](https://img.shields.io/pypi/l/nsd_visuo_semantics.svg?color=green)](https://github.com/KietzmannLab/nsd_visuo_semantics/raw/main/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/nsd_visuo_semantics.svg?color=green)](https://pypi.org/project/nsd_visuo_semantics)
-[![Python Version](https://img.shields.io/pypi/pyversions/nsd_visuo_semantics.svg?color=green)](https://python.org)
-[![tests](https://github.com/KietzmannLab/nsd_visuo_semantics/workflows/tests/badge.svg)](https://github.com/KietzmannLab/nsd_visuo_semantics/actions)
-[![codecov](https://codecov.io/gh/KietzmannLab/nsd_visuo_semantics/branch/main/graph/badge.svg)](https://codecov.io/gh/KietzmannLab/nsd_visuo_semantics)
+Accepted in Nature Machine Intelligence
+🔗 You can find our preprint [here](https://arxiv.org/abs/2209.11737) 🔗
 
-
-Code to reproduce results from Doerig et al. "Semantic scene descriptions as an objective of the human visual system"
-
-----------------------------------
-
-This [KietzmannLab] package was generated with [Cookiecutter] using [@KietzmannLab]'s [cookiecutter-template] template.
-
+### Abstract
+*The human brain extracts complex information from visual inputs, including objects, their spatial and semantic interrelations, and their interactions with the environment. However, a quantitative approach for studying this information remains elusive. Here, we test whether the contextual information encoded in large language models (LLMs) is beneficial for modelling the complex visual  information extracted by the brain from natural scenes. We show that LLM embeddings of scene captions successfully characterise brain activity evoked by viewing the natural scenes. This mapping captures selectivities of different brain areas, and is sufficiently robust that accurate scene captions can be reconstructed from brain activity. Using carefully controlled model comparisons, we then proceed to show that the accuracy with which LLM representations match brain representations derives from the ability of LLMs to integrate complex information contained in scene captions beyond that conveyed by individual words. Finally, we train deep neural network models to transform image inputs into LLM representations. Remarkably, these networks learn representations that are better aligned with brain representations than a large number of state-of-the-art alternative models, despite being trained on orders-of-magnitude less data. Overall, our results suggest that LLM embeddings of scene captions provide a representational format that accounts for complex information extracted by the brain from visual inputs.*
 
 
 ## Installation
 
-
 To install latest development version :
 
-    git clone https://github.com/KietzmannLab/nsd_visuo_semantics.git
-    cd code_directory/
+    git clone https://github.com/adriendoerig/visuo_llm.git
+    cd visuo_llm
     pip install -e . 
-
     
-To install the most stable version, please select a tagged release on Github (currently v0.0.2):
+## Reproducing paper results
+The ```./examples``` folder contains code to run the paper's analyses.
 
-    pip install  git+https://github.com/KietzmannLab/pytorch-dataset-loaders.git@v0.0.2
-    
-
-## Downloading the NSD dat and RCNN weights
+## Downloading the NSD data and RCNN weights
 
 ### Download the required elements of NSD
 
@@ -46,7 +35,7 @@ dl.get_nsd('path_to_desired_download_location')
 
 ### Download RCNN weights
 
-You also need to download the RCNN weights. [NEED TO UPDATE WHEN WE DECIDE HOW TO DO IT]
+Analyses based on RCNN models require downloading the RCNN weights. They will be uploaded soon. In the interval, feel free to send an email to the paper's corresponding author.
 
 
 ### Running analyses
@@ -56,22 +45,30 @@ Please note that most analyses require a large amount of memory. The searchlight
 
 ### Plotting brain maps
 
-This is done in MATLAB and requires an installation of the following libraries:
+Paper brain maps are created using MATLAB and requires an installation of the following libraries:
 
-Freesurfer: wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz
-cvncode: git clone https://github.com/cvnlab/cvncode.git
-knkutils: git clone https://github.com/cvnlab/knkutils.git
-npy-matlab: git clone https://github.com/kwikteam/npy-matlab.git
+Freesurfer: ```wget https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-centos7_x86_64-7.4.1.tar.gz```
+cvncode: ```git clone https://github.com/cvnlab/cvncode.git```
+knkutils: ```git clone https://github.com/cvnlab/knkutils.git```
+npy-matlab: ```git clone https://github.com/kwikteam/npy-matlab.git```
 
-Then edit the paths in the matlab plot_brains.m script to point to the locations where this is downloaded.
+Then edit the paths in the matlab examples/plot_searchlight_brain_maps.m or other relevant scripts to point to the locations where this is downloaded.
+
+Alternatively, you can use other python braim plotting functions (e.g. nibabel).
+
 
 ## Citation
 
-Please cite Doerig et al., Nature, 2023 if you use any of this code in your work.
-
+@misc{doerig2024visualrepresentationshumanbrain,
+      title={Visual representations in the human brain are aligned with large language models}, 
+      author={Adrien Doerig and Tim C Kietzmann and Emily Allen and Yihan Wu and Thomas Naselaris and Kendrick Kay and Ian Charest},
+      year={2024},
+      eprint={2209.11737},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2209.11737}, 
+}
 
 ## License
 
-Distributed under the terms of the [BSD-3] license,
-"nsd_visuo_semantics" is free and open source software.
-
+This project is licensed under the [MIT License](LICENSE).
